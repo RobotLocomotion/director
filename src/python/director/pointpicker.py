@@ -19,6 +19,7 @@ class PointPicker(object):
         self.tolerance = 0.01
         self.numberOfPoints = numberOfPoints
         self.drawLines = drawLines
+        self.drawClosedLoop = False
         self.annotationObj = None
         self.annotationFunc = callback
         self.abortFunc = abortCallback
@@ -70,6 +71,8 @@ class PointPicker(object):
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
 
     def clear(self):
+        if self.annotationObj:
+            self.annotationObj.setProperty('Visible', False)
         self.annotationObj = None
         self.points = [None for i in xrange(self.numberOfPoints)]
         self.hoverPos = None
@@ -116,10 +119,13 @@ class PointPicker(object):
                     d.addLine(a, b)
 
             # connect end points
-            if points[-1] is not None:
+            if points[-1] is not None and self.drawClosedLoop:
                 d.addLine(points[0], points[-1])
 
-        self.annotationObj = vis.updatePolyData(d.getPolyData(), self.annotationName, parent=self.annotationFolder)
+        self.annotationObj = vis.updatePolyData(d.getPolyData(),
+                                                self.annotationName,
+                                                parent=self.annotationFolder,
+                                                view=self.view)
         self.annotationObj.setProperty('Color', [1,0,0])
         self.annotationObj.actor.SetPickable(False)
 
