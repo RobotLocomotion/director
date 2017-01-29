@@ -764,13 +764,30 @@ public:
 
 };
 
-URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QString& rootDir="")
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QString& rootDir="", const QString& floating_base_type = "ROLLPITCHYAW")
 {
   URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
 
+  // parse the floating_base_type
+  drake::multibody::joints::FloatingBaseType drake_floating_base_type;
+
+  if (floating_base_type == QString("ROLLPITCHYAW")){
+    drake_floating_base_type = drake::multibody::joints::kRollPitchYaw;
+  } else if (floating_base_type == QString("FIXED")){
+    drake_floating_base_type = drake::multibody::joints::kFixed;
+  } else if (floating_base_type == QString("QUATERNION")){
+    drake_floating_base_type  = drake::multibody::joints::kQuaternion;
+  }
+
+  else{
+    std::cerr << "floating base type must be one of [ROLLPITCHYAW, FIXED, QUATERNION]" << std::endl;
+    return URDFRigidBodyTreeVTK::Ptr();
+  }
+
+
   drake::parsers::urdf::AddModelInstanceFromUrdfStringSearchingInRosPackages(
       xmlString.toUtf8().constData(), PackageSearchPaths,
-      rootDir.toLatin1().constData(), drake::multibody::joints::kRollPitchYaw,
+      rootDir.toLatin1().constData(), drake_floating_base_type,
       nullptr /* weld to frame */, model.get());
 
   model->computeDofMap();
@@ -778,7 +795,7 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QS
   return model;
 }
 
-URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const QString &urdfFilename)
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const QString &urdfFilename, const QString& floating_base_type = "ROLLPITCHYAW")
 {
   QFile f(urdfFilename);
 
@@ -793,7 +810,7 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const QString &urdfFilename)
   f.close();
 
   QString rootDir = QFileInfo(urdfFilename).dir().absolutePath();
-  return loadVTKModelFromXML(xmlString, rootDir);
+  return loadVTKModelFromXML(xmlString, rootDir, floating_base_type);
 }
 
 
@@ -1206,9 +1223,11 @@ QString ddDrakeModel::getBodyOrFrameName(int body_or_frame_id)
 
 
 //-----------------------------------------------------------------------------
-bool ddDrakeModel::loadFromFile(const QString& filename)
+bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floating_base_type)
 {
-  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
+
+  // std::cout << "loadFromFile: floating base type << " << floating_base_type.toAscii().data() << std::endl;
+  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data(), floating_base_type);
   if (!model)
   {
     return false;

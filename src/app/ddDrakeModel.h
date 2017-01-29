@@ -32,7 +32,7 @@ public:
   ddDrakeModel(QObject* parent=0);
   virtual ~ddDrakeModel();
 
-  bool loadFromFile(const QString& filename);
+  bool loadFromFile(const QString& filename, const QString& floating_base_type = "ROLLPITCHYAW");
   bool loadFromXML(const QString& xmlString);
   const QString& filename() const;
 
