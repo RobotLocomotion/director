@@ -939,41 +939,7 @@ def getRandomColor():
     Return a random color as a list of RGB values between 0.0 and 1.0.
     '''
     return colorsys.hsv_to_rgb(np.random.rand(), 1.0, 0.9)
-def showHandCloud(hand='left', view=None):
 
-    view = view or app.getCurrentRenderView()
-    if view is None:
-        return
-
-    assert hand in ('left', 'right')
-
-    maps = om.findObjectByName('Map Server')
-    assert maps is not None
-
-    viewId = 52 if hand == 'left' else 53
-    reader = maps.source.reader
-
-    def getCurrentViewId():
-        return reader.GetCurrentMapId(viewId)
-
-    p = vtk.vtkPolyData()
-    obj = showPolyData(p, '%s hand cloud' % hand, view=view, parent='sensors')
-    obj.currentViewId = -1
-
-    def updateCloud():
-        currentViewId = getCurrentViewId()
-        #print 'updateCloud: current view id:', currentViewId
-        if currentViewId != obj.currentViewId:
-            reader.GetDataForMapId(viewId, currentViewId, p)
-            #print 'updated poly data.  %d points.' % p.GetNumberOfPoints()
-            obj._renderAllViews()
-
-    t = TimerCallback()
-    t.targetFps = 1
-    t.callback = updateCloud
-    t.start()
-    obj.updater = t
-    return obj
 
 
 def showClusterObjects(clusters, parent):
