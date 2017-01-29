@@ -526,7 +526,7 @@ public:
 
   std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName){
 
-    std::shared_ptr<RigidBody> rb = this->findLink(linkName);
+    auto rb = this->FindBody(linkName);
     std::vector<ddMeshVisual::Ptr> visuals;
 
     if (this->meshMap.find(rb) != this->meshMap.end()){
@@ -1048,7 +1048,7 @@ QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int 
   auto cache = this->Internal->Model->cache;
   MatrixXd linkJacobian = this->Internal->Model->geometricJacobian(*this->Internal->Model->cache, base_body_or_frame_ind, end_effector_body_or_frame_ind,expressed_in_body_or_frame_ind, in_terms_of_qdot, &v_indices);
 
-  int num_velocities = this->Internal->Model->num_velocities;
+  int num_velocities = this->Internal->Model->get_num_velocities();
 
   MatrixXd linkJacobianFull = MatrixXd::Zero(6, num_velocities);
   for (int i=0; i < v_indices.size(); i++){
@@ -1148,13 +1148,13 @@ int ddDrakeModel::findLinkID(const QString& linkName) const
 
 int ddDrakeModel::findFrameID(const QString& frameName) const
 {
-  return this->Internal->Model->findFrame(frameName.toAscii().data())->frame_index;
+  return this->Internal->Model->findFrame(frameName.toAscii().data())->get_frame_index();
 }
 
 //-----------------------------------------------------------------------------
 int ddDrakeModel::findJointID(const QString& jointName) const
 {
-  return this->Internal->Model->findJointId(jointName.toAscii().data(), -1);
+  return this->Internal->Model->FindIndexOfChildBodyOfJoint(jointName.toAscii().data(), -1);
 }
 
 
@@ -1270,7 +1270,7 @@ void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
   vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
   for (const auto & rb: this->Internal->Model->bodies){
-    std::string linkNameString = rb->linkname;
+    std::string linkNameString = rb->get_name();
     QString linkName = QString::fromStdString(linkNameString);
     vtkSmartPointer<vtkPolyData> tempPolyData = vtkSmartPointer<vtkPolyData>::New();
     this->getLinkModelMesh(linkName, tempPolyData);
@@ -1287,7 +1287,7 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
   }
 
   std::string linkNameString = linkName.toAscii().data();
-  if (this->Internal->Model->findLink(linkNameString, -1) == nullptr){
+  if (this->Internal->Model->FindBody(linkNameString) == nullptr){
     std::cout << "couldn't find link " << linkNameString << " in ddDrakeModel::getLinkModelMesh, returning" << std::endl;
     return;
   }
