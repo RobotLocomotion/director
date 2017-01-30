@@ -9,6 +9,8 @@ from director import vtkAll as vtk
 import PythonQt
 from PythonQt import QtGui
 
+import bot_core as lcmbotcore
+
 
 class ImageViewApp(object):
 
@@ -24,6 +26,7 @@ class ImageViewApp(object):
         parser = argparse.ArgumentParser()
         parser.add_argument('--channel', type=str, help='image channel', default=defaultChannel)
         parser.add_argument('--pointcloud', action='store_true', help='display pointcloud view for RGB-D messages')
+        parser.add_argument('--disparity', action='store_true', help='receive disparity images for --rgbd flag')
         imageType = parser.add_mutually_exclusive_group(required=False)
         imageType.add_argument('--rgb', action='store_const', const='rgb', help='receive RGB image messages', dest='imageType')
         imageType.add_argument('--rgbd', action='store_const', const='rgbd', help='receive RGB-D images messages', dest='imageType')
@@ -66,8 +69,11 @@ class ImageViewApp(object):
             cameraView.view.renderWindow().GetInteractor().SetInteractorStyle(vtk.vtkInteractorStyleImage())
             self.views.append(cameraView.view)
 
-            imageName2 = channel + '_DEPTH'
-            imageManager.queue.addCameraStream(channel, imageName2, 6)
+            imageName2 = channel + '_D'
+            if args.disparity:
+                imageManager.queue.addCameraStream(channel, imageName2, lcmbotcore.images_t.DISPARITY_ZIPPED)
+            else:
+                imageManager.queue.addCameraStream(channel, imageName2, lcmbotcore.images_t.DEPTH_MM_ZIPPED)
             imageManager.addImage(imageName2)
             cameraView2 = cameraview.CameraImageView(imageManager, imageName2, view=PythonQt.dd.ddQVTKWidgetView())
             cameraView2.eventFilterEnabled = False
