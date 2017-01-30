@@ -6,8 +6,11 @@
 
 #include <lcmtypes/kinect/frame_msg_t.hpp>
 #include <lcmtypes/kinect_frame_msg_t.h>
-#include <zlib.h>
 
+#include <image_utils/jpeg.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <zlib.h>
 
 //-----------------------------------------------------------------------------
 ddKinectLCM::ddKinectLCM(QObject* parent) : QObject(parent)
