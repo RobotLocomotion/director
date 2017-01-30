@@ -467,6 +467,11 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
     pixelFormat = bot_core::image_t::PIXEL_FORMAT_LE_GRAY16;
     isZlibCompressed = true;
   }
+  else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_GRAY
+          && cameraData->mImageMessage.row_stride/w == 2)
+  {
+    pixelFormat = bot_core::image_t::PIXEL_FORMAT_LE_GRAY16;
+  }
 
 
   if (!cameraData->mImageBuffer.size())
