@@ -116,6 +116,19 @@ def removeNonFinitePoints(polyData, arrayName='Points'):
     return thresholdPoints(polyData, 'is_nonfinite', [0, 0])
 
 
+def flipImage(image, flipAxis=1):
+    '''
+    Flip a vtkImageData using the vtkImageFlip filter.
+    The flipAxis can be 0 or 1 to flip horizontally or vertically.
+    '''
+    assert flipAxis in (0, 1)
+    f = vtk.vtkImageFlip()
+    f.SetFilteredAxis(flipAxis)
+    f.SetInput(image)
+    f.Update()
+    return shallowCopy(f.GetOutput())
+
+
 def rotateImage180(image):
     '''
     rotates an image by 180 degrees

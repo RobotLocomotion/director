@@ -9,7 +9,7 @@ from director.utime import getUtime
 from director.uuidutil import newUUID
 
 try:
-    import drc as lcmdrc
+    import bot_core as lcmbotcore
     USE_LCM = True
 except ImportError:
     USE_LCM = False
@@ -35,7 +35,7 @@ class LCMObjectCollection(object):
         self._modified()
 
         if USE_LCM:
-            self.sub = lcmUtils.addSubscriber(self.channel, messageClass=lcmdrc.affordance_collection_t, callback=self._onCommandMessage)
+            self.sub = lcmUtils.addSubscriber(self.channel, messageClass=lcmbotcore.system_status_t, callback=self._onCommandMessage)
             self.sub.setNotifyAllMessagesEnabled(True)
 
     def __del__(self):
@@ -117,14 +117,14 @@ class LCMObjectCollection(object):
         commandArgs['commandId'] = commandId
         commandArgs['collectionId'] = self.collectionId
         commandArgs['command'] = commandName
-        msg = lcmdrc.affordance_collection_t()
-        msg.name = numpyjsoncoder.encode(commandArgs)
+        msg = lcmbotcore.system_status_t()
+        msg.value = numpyjsoncoder.encode(commandArgs)
         msg.utime = getUtime()
         return msg
 
     def _onCommandMessage(self, msg):
 
-        data = numpyjsoncoder.decode(msg.name)
+        data = numpyjsoncoder.decode(msg.value)
 
         commandId = data['commandId']
         if commandId in self.sentCommands:

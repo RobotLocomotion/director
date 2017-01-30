@@ -57,6 +57,7 @@ def readImage(filename):
     readers = {
             '.png' : vtk.vtkPNGReader,
             '.jpg' : vtk.vtkJPEGReader,
+            '.vti' : vtk.vtkXMLImageDataReader,
               }
 
     if ext not in readers:
