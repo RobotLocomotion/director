@@ -50,8 +50,7 @@ public:
   QVector<double> getCenterOfMass() const;
   QVector<double> getJointLimits(const QString& jointName) const;
   QVector<double> getBodyContactPoints(const QString& bodyName) const;
-  void doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients = false,
-  bool compute_JdotV = true);
+
 
   QVector<double> geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot = false);
 

@@ -12,7 +12,6 @@ QVector<double> ddDrakeModel::getJointPositions() const;
 QVector<double> ddDrakeModel::getCenterOfMass() const;
 QVector<double> ddDrakeModel::getJointLimits(const QString&) const;
 QVector<double> ddDrakeModel::getBodyContactPoints(const QString&) const;
-void ddDrakeModel::doKinematics(const QVector<double>&, const QVector<double>&, bool, bool);
 QVector<double> ddDrakeModel::geometricJacobian(int, int, int, int, bool);
 bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 bool ddDrakeModel::getFrameToWorld(int, vtkTransform*);
