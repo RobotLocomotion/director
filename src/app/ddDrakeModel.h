@@ -62,6 +62,7 @@ public:
   int findLinkID(const QString& linkName) const;
   int findJointID(const QString& jointName) const;
   int findFrameID(const QString& frameName) const;
+  QString FindNameOfChildBodyOfJoint(const QString& joint_name) const;
 
   void getModelMesh(vtkPolyData* polyData);
   void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);

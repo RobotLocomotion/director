@@ -1155,6 +1155,13 @@ int ddDrakeModel::findJointID(const QString& jointName) const
   return this->Internal->Model->FindIndexOfChildBodyOfJoint(jointName.toAscii().data(), -1);
 }
 
+QString ddDrakeModel::FindNameOfChildBodyOfJoint(const QString &joint_name) const{
+
+  std::string body_name = this->Internal->Model->FindChildBodyOfJoint(joint_name.toAscii().data())->get_name();
+
+  return body_name.c_str();
+}
+
 
 //-----------------------------------------------------------------------------
 QList<QString> ddDrakeModel::getJointNames()
