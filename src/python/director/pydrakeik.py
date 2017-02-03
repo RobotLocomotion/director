@@ -142,6 +142,26 @@ class RigidBodyTreeCompatNew(object):
     def get_num_velocities(rbt):
         return rbt.get_num_velocities()
 
+    @staticmethod
+    def makePackageMap(packagePaths):
+        packageMap = pydrake.rbtree.PackageMap()
+        for path in packagePaths:
+            packageMap.Add(os.path.basename(path), path)
+        return packageMap
+
+    @staticmethod
+    def addModelInstanceFromUrdfString(rbt, urdfString, packageMap, baseDir):
+        floatingBaseType = pydrake.rbtree.kRollPitchYaw
+        weldFrame = None
+
+        pydrake.rbtree.AddModelInstanceFromUrdfStringSearchingInRosPackages(
+          urdfString,
+          packageMap,
+          baseDir,
+          floatingBaseType,
+          weldFrame,
+          rbt)
+
 
 class RigidBodyTreeCompatOld(object):
 
@@ -168,6 +188,17 @@ class RigidBodyTreeCompatOld(object):
     @staticmethod
     def get_num_velocities(rbt):
         return rbt.num_velocities
+
+    @staticmethod
+    def makePackageMap(packagePaths):
+        packageMap = pydrake.rbtree.mapStringString()
+        for path in packagePaths:
+            packageMap[os.path.basename(path)] = path
+        return packageMap
+
+    @staticmethod
+    def addModelInstanceFromUrdfString(rbt, urdfString, packageMap, baseDir):
+        rbt.addRobotFromURDFString(urdfString, packageMap, baseDir)
 
 
 if hasattr(pydrake.rbtree.RigidBodyTree, 'get_num_bodies'):
@@ -200,25 +231,13 @@ class PyDrakeIkServer(object):
 
         assert os.path.isfile(urdfFile)
 
-        packageMap = pydrake.rbtree.PackageMap()
-        for path in packagePaths:
-            packageMap.Add(os.path.basename(path), path)
+        packageMap = rbt.makePackageMap(packagePaths)
 
         urdfString = open(urdfFile, 'r').read()
         baseDir = str(os.path.dirname(urdfFile))
-        floatingBaseType = pydrake.rbtree.kRollPitchYaw
-        weldFrame = None
 
         rigidBodyTree = pydrake.rbtree.RigidBodyTree()
-
-        pydrake.rbtree.AddModelInstanceFromUrdfStringSearchingInRosPackages(
-          urdfString,
-          packageMap,
-          baseDir,
-          floatingBaseType,
-          weldFrame,
-          rigidBodyTree)
-
+        rbt.addModelInstanceFromUrdfString(rigidBodyTree, urdfString, packageMap, baseDir)
         return rigidBodyTree
 
     def makeIkOptions(self, fields):
