@@ -22,7 +22,7 @@ QString ddDrakeModel::getBodyOrFrameName(int);
 int ddDrakeModel::findLinkID(const QString&) const;
 int ddDrakeModel::findJointID(const QString&) const;
 int ddDrakeModel::findFrameID(const QString&) const;
-QString ddDrakeModel::FindNameOfChildBodyOfJoint(const QString &) const;
+QString ddDrakeModel::findNameOfChildBodyOfJoint(const QString &) const;
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
 void ddDrakeModel::setTexturesEnabled(bool);

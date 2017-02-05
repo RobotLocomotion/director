@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QColor>
 #include <QVector>
-#include <QGenericMatrix>
 #include "ddSharedPtr.h"
 #include "ddAppConfigure.h"
 #include "ddDrakeVersion.h"
@@ -32,7 +31,7 @@ public:
   ddDrakeModel(QObject* parent=0);
   virtual ~ddDrakeModel();
 
-  bool loadFromFile(const QString& filename, const QString& floating_base_type = "ROLLPITCHYAW");
+  bool loadFromFile(const QString& filename, const QString& floatingBaseType = "ROLLPITCHYAW");
   bool loadFromXML(const QString& xmlString);
   const QString& filename() const;
 
@@ -62,7 +61,7 @@ public:
   int findLinkID(const QString& linkName) const;
   int findJointID(const QString& jointName) const;
   int findFrameID(const QString& frameName) const;
-  QString FindNameOfChildBodyOfJoint(const QString& joint_name) const;
+  QString findNameOfChildBodyOfJoint(const QString& jointName) const;
 
   void getModelMesh(vtkPolyData* polyData);
   void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);

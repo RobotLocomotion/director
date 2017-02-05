@@ -155,11 +155,11 @@ def saveDataToFile(filename, dataDict, overwrite=False):
     if overwrite is False and os.path.isfile(filename):
         raise ValueError("file already exists, overwrite option was False")
 
-    my_shelf = shelve.open(filename,'n')
-    my_shelf['dataDict'] = dataDict
-    my_shelf.close()
+    myShelf = shelve.open(filename,'n')
+    myShelf['dataDict'] = dataDict
+    myShelf.close()
 
 def readDataFromFile(filename):
-    my_shelf = shelve.open(filename)
-    dataDict = my_shelf['dataDict']
+    myShelf = shelve.open(filename)
+    dataDict = myShelf['dataDict']
     return dataDict

@@ -240,10 +240,9 @@ def loadRobotModel(name=None, view=None, parent='scene', urdfFile=None, color=No
     return obj, jointController
 
 # floating joint type can be one of 'FIXED','ROLLPITCHYAW','QUATERNION'
-def loadRobotModelFromFile(filename, floating_joint_type='ROLLPITCHYAW'):
+def loadRobotModelFromFile(filename, floatingJointType='ROLLPITCHYAW'):
     model = PythonQt.dd.ddDrakeModel()
-    print ("Python: floating joint type = " + floating_joint_type)
-    if not model.loadFromFile(filename, floating_joint_type):
+    if not model.loadFromFile(filename, floatingJointType):
         return None
     return model
 
