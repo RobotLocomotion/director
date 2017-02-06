@@ -23,7 +23,6 @@ set(python_tests_core
 set(python_tests_lcm
   testDrakeVisualizer.py
   testDrakeVisualizerInterface.py
-  testTreeViewerInterface.py
 )
 
 set(python_tests_robot
@@ -52,6 +51,13 @@ set(python_tests_robot
 
 set(python_tests_standalone
 )
+
+
+# todo
+# need this special case until robotlocomotion/lcmtypes are added to openhumanoids
+if(NOT USE_DRC)
+  list(APPEND python_tests_lcm testTreeViewerInterface.py)
+endif()
 
 
 # Tests are run by default on the default robot
