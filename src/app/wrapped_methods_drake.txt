@@ -1,6 +1,7 @@
 ddDrakeModel::ddDrakeModel();
 ddDrakeModel::~ddDrakeModel();
-bool ddDrakeModel::loadFromFile(const QString&, const QString& );
+bool ddDrakeModel::loadFromFile(const QString&);
+bool ddDrakeModel::loadFromFile(const QString&, const QString&);
 bool ddDrakeModel::loadFromXML(const QString&);
 void ddDrakeModel::addToRenderer(vtkRenderer*);
 void ddDrakeModel::removeFromRenderer(vtkRenderer*);

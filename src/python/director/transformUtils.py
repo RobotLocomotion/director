@@ -180,7 +180,6 @@ def poseFromTransform(transform):
     mat = getNumpyFromTransform(transform)
     return np.array(mat[:3,3]), transformations.quaternion_from_matrix(mat, isprecise=True)
 
-
 def frameFromPositionAndRPY(position, rpy):
     '''
     rpy specified in degrees

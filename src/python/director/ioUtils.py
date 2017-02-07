@@ -136,7 +136,6 @@ def writeImage(image, filename):
     writer.SetInput(image)
     writer.Write()
 
-
 def _computeNormals(polyData):
     normals = vtk.vtkPolyDataNormals()
     normals.SetFeatureAngle(45)
@@ -149,7 +148,6 @@ def _triangulate(polyData):
     normals.SetInput(polyData)
     normals.Update()
     return shallowCopy(normals.GetOutput())
-
 
 def saveDataToFile(filename, dataDict, overwrite=False):
     if overwrite is False and os.path.isfile(filename):

@@ -517,8 +517,8 @@ public:
   }
 
 
-  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName){
-
+  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName)
+  {
     auto rb = this->FindBody(linkName);
     std::vector<ddMeshVisual::Ptr> visuals;
 
@@ -526,7 +526,6 @@ public:
     {
       visuals = this->meshMap.at(rb);
     }
-
     return visuals;
   }
 
@@ -750,9 +749,7 @@ public:
 
   vtkSmartPointer<vtkTransform> getFrameToWorld(int frameId)
   {
-
     vtkSmartPointer<vtkTransform> frameToWorld = makeTransform(relativeTransform(*cache, 0, frameId));
-
     return frameToWorld;
   }
 
@@ -765,18 +762,21 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QS
   // parse the floatingBaseType
   drake::multibody::joints::FloatingBaseType drakeFloatingBaseType;
 
-  if (floatingBaseType == QString("ROLLPITCHYAW")){
+  if (floatingBaseType == QString("ROLLPITCHYAW"))
+  {
     drakeFloatingBaseType = drake::multibody::joints::kRollPitchYaw;
-  } else if (floatingBaseType == QString("FIXED")){
+  } else if (floatingBaseType == QString("FIXED"))
+  {
     drakeFloatingBaseType = drake::multibody::joints::kFixed;
-  } else if (floatingBaseType == QString("QUATERNION")){
+  } else if (floatingBaseType == QString("QUATERNION"))
+  {
     drakeFloatingBaseType  = drake::multibody::joints::kQuaternion;
   }
-  else{
+  else
+  {
     std::cerr << "floating base type must be one of [ROLLPITCHYAW, FIXED, QUATERNION]" << std::endl;
     return URDFRigidBodyTreeVTK::Ptr();
   }
-
 
   drake::parsers::urdf::AddModelInstanceFromUrdfStringSearchingInRosPackages(
       xmlString.toUtf8().constData(), PackageSearchPaths,
@@ -1035,19 +1035,15 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
 // make sure we call setJointPositions before we get here
 QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot)
 {
-
   std::vector<int> v_indices;
-
   MatrixXd linkJacobian = this->Internal->Model->geometricJacobian(*this->Internal->Model->cache, base_body_or_frame_ind, end_effector_body_or_frame_ind,expressed_in_body_or_frame_ind, in_terms_of_qdot, &v_indices);
 
   int num_velocities = this->Internal->Model->get_num_velocities();
-
   MatrixXd linkJacobianFull = MatrixXd::Zero(6, num_velocities);
   for (int i=0; i < v_indices.size(); i++)
   {
     linkJacobianFull.col(v_indices[i]) = linkJacobian.col(i);
   }
-
 
   QVector<double> linkJacobianVec(6*num_velocities);
   for (int i = 0; i < 6; i++)
@@ -1058,7 +1054,6 @@ QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int 
   }
 
   return linkJacobianVec;
-
 }
 
 //-----------------------------------------------------------------------------
@@ -1153,12 +1148,9 @@ int ddDrakeModel::findJointID(const QString& jointName) const
 
 QString ddDrakeModel::findNameOfChildBodyOfJoint(const QString &jointName) const
 {
-
   std::string body_name = this->Internal->Model->FindChildBodyOfJoint(jointName.toAscii().data())->get_name();
-
   return body_name.c_str();
 }
-
 
 //-----------------------------------------------------------------------------
 QList<QString> ddDrakeModel::getJointNames()
