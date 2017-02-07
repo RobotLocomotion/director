@@ -27,6 +27,8 @@ class PackageMap(object):
         return self.map.get(packageName)
 
     def populateFromSearchPaths(self, paths):
+        if isinstance(paths, str):
+            paths = [paths]
         packagePaths = []
         for path in paths:
             for root, dirnames, filenames in os.walk(path):

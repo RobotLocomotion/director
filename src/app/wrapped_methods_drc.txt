@@ -8,6 +8,8 @@ qint64 ddBotImageQueue::getImage(const QString&, vtkImageData*);
 qint64 ddBotImageQueue::getCurrentImageTime(const QString&);
 void ddBotImageQueue::getCameraProjectionTransform(const QString&, vtkTransform*);
 void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
+void ddBotImageQueue::publishRGBImageMessage(const QString&, vtkImageData*, qint64);
+void ddBotImageQueue::publishRGBDImagesMessage(const QString&, vtkImageData*, vtkImageData*, qint64);
 void ddBotImageQueue::getPointCloudFromImages(const QString&, vtkPolyData*, int, int, float);
 int ddBotImageQueue::projectPoints(const QString&, vtkPolyData*);
 int ddBotImageQueue::getTransform(const QString&, const QString&, qint64, vtkTransform*);
@@ -23,4 +25,11 @@ void ddKinectLCM::init(ddLCMThread*, const QString&);
 qint64 ddKinectLCM::getPointCloudFromKinect(vtkPolyData*)
 ddPointCloudLCM::ddPointCloudLCM(QObject*);
 void ddPointCloudLCM::init(ddLCMThread*, const QString&);
-qint64 ddPointCloudLCM::getPointCloudFromPointCloud(vtkPolyData*)
+qint64 ddPointCloudLCM::getPointCloudFromPointCloud(vtkPolyData*);
+QStringList ddPointCloudLCM::getLidarNames() const;
+QString ddPointCloudLCM::getLidarFriendlyName(const QString&);
+QString ddPointCloudLCM::getLidarChannelName(const QString&);
+QString ddPointCloudLCM::getLidarCoordinateFrame(const QString&);
+int ddPointCloudLCM::getLidarFrequency(const QString&);
+bool ddPointCloudLCM::displayLidar(const QString&);
+QList<int> ddPointCloudLCM::getLidarIntensity(const QString&);

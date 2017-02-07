@@ -153,10 +153,10 @@ class ComponentFactory(object):
                 componentFields[name] = newFields
 
 
-#        for componentName, componentFields in app.iteritems():
-#            print componentName, 'exports fields:'
-#            for name in componentFields._fields:
-#                print '  ', name
+        #for k, v in componentFields.iteritems():
+        #    print k, 'exports fields:'
+        #    for name in v._fields:
+        #        print '  ', name
 
         fields = self._joinFields([defaultFields] + componentFields.values())
         return fields

@@ -57,6 +57,10 @@ public:
   void GetDataForScanLine(int scanLine, vtkPolyData* polyData);
   vtkIdType GetCurrentScanTime();
 
+  void subscribe(const char* channelName);
+
+  void setCoordinateFrame(const char* coordinateFrame);
+
   void InitBotConfig(const char* filename);
 
   void GetTransform(const char* fromFrame, const char* toFrame, vtkIdType utime, vtkTransform* transform);

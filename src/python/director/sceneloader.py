@@ -35,7 +35,8 @@ class SceneLoader(object):
                 t.PreMultiply()
                 t.Concatenate(t3)
                 p = transformUtils.poseFromTransform(t)
-                name = model.name;
+                name = model.name
+                color = col.color[0:3] if col.color is not None else [0.8,0.8,0.8]
                 if len(link.name)>0 and link.name != model.name:
                     name+='-'+link.name
                 if len(col.name)>0 and len(link.collisions)>1:
@@ -51,10 +52,10 @@ class SceneLoader(object):
                 if col.geometry_type=='sphere':
                     print 'Sphere geometry is unsupported - SKIPPING!'
                 if col.geometry_type=='box':
-                    desc = dict(classname='BoxAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=[0.8, 0.8, 0.8], Dimensions=map(float, col.geometry_data['size'].split(' ')))
+                    desc = dict(classname='BoxAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=color, Dimensions=map(float, col.geometry_data['size'].split(' ')))
                     self.affordanceManager.newAffordanceFromDescription(desc)
                 if col.geometry_type=='cylinder':
-                    desc = dict(classname='CylinderAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=[0.8, 0.8, 0.8], Radius=float(col.geometry_data['radius']), Length = float(col.geometry_data['length']))
+                    desc = dict(classname='CylinderAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=color, Radius=float(col.geometry_data['radius']), Length = float(col.geometry_data['length']))
                     self.affordanceManager.newAffordanceFromDescription(desc)
     
     def generateBoxLinkNode(self, aff):

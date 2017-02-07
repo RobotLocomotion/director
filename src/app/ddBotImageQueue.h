@@ -46,6 +46,7 @@ public:
     public:
 
     bool mHasCalibration;
+    bool mZlibCompression;
     std::string mName;
     std::string mCoordFrame;
     BotCamTrans* mCamTrans;
@@ -58,6 +59,7 @@ public:
     CameraData()
     {
       mHasCalibration = false;
+      mZlibCompression = false;
       mImageMessage.width = 0;
       mImageMessage.height = 0;
       mImageMessage.utime = 0;
@@ -100,6 +102,9 @@ public:
   void colorizePoints(const QString& cameraName, vtkPolyData* polyData);
 
   void computeTextureCoords(const QString& cameraName, vtkPolyData* polyData);
+
+  void publishRGBDImagesMessage(const QString& channel, vtkImageData* colorImage, vtkImageData* depthImage, qint64 utime);
+  void publishRGBImageMessage(const QString& channel, vtkImageData* image, qint64 utime);
 
   // Computes a point cloud with rgb and copies it into the given polyData.
   // The channel argument names an lcm channel where an images message are received

@@ -870,7 +870,7 @@ class IKPlanner(object):
         return self.computePostureGoal(startPose, endPose)
 
 
-    def computeHomeNominalPose(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167, ikParameters=None):
+    def computeHomeNominalPose(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167, ikParameters=None, moveArms=True):
         ''' Compute a pose with the pelvis above the mid point of the feet with zero roll and pitch.
             The back and neck joints are also zeroed. Don't move the arm joints.
             The default height is Valkyrie specific
@@ -894,8 +894,12 @@ class IKPlanner(object):
         q.tspan = [1.0, 1.0]
         constraints.extend([p, q])
 
-        constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
-        constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
+        if moveArms:
+            constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
+            constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
+        else:
+            constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
+            constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append( self.createPostureConstraint('q_zero', self.neckJoints) )
 
         constraintSet = ConstraintSet(self, constraints, '', startPoseName)
@@ -904,9 +908,9 @@ class IKPlanner(object):
         return endPose, info
 
 
-    def computeHomeNominalPlan(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167):
+    def computeHomeNominalPlan(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167, moveArms=True):
 
-        endPose, info = self.computeHomeNominalPose(startPose, footReferenceFrame, pelvisHeightAboveFeet)
+        endPose, info = self.computeHomeNominalPose(startPose, footReferenceFrame, pelvisHeightAboveFeet, None, moveArms)
         print 'info:', info
 
         return self.computePostureGoal(startPose, endPose)

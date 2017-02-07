@@ -224,9 +224,12 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         self.lastUtime = utime
 
 
-def extractLargestCluster(polyData, minClusterSize=100):
-
-    polyData = applyEuclideanClustering(polyData, minClusterSize=minClusterSize)
+def extractLargestCluster(polyData, **kwargs):
+    '''
+    Calls applyEuclideanClustering and then extracts the first (largest) cluster.
+    The given keyword arguments are passed into the applyEuclideanClustering function.
+    '''
+    polyData = applyEuclideanClustering(polyData, **kwargs)
     return thresholdPoints(polyData, 'cluster_labels', [1, 1])
 
 
@@ -2341,17 +2344,20 @@ def makePolyDataFields(pd):
     axes = [edge / np.linalg.norm(edge) for edge in edges]
 
 
-    # Use upward axis for z direction
-    zaxis = [0, 0, 1]
-    dot_products = [  np.dot(axe, zaxis)  for axe in axes  ]
-    axes = [ axes[i] for i in np.argsort( dot_products ) ]
-    edgeLengths = [ edgeLengths[i] for i in np.argsort( dot_products ) ]
+    # find axis nearest to the +/- up vector
+    upVector = [0, 0, 1]
+    dotProducts = [np.abs(np.dot(axe, upVector)) for axe in axes]
+    zAxisIndex = np.argmax(dotProducts)
 
-#    zEdgeIndex = 2
-#    if np.dot(axes[2], [0,0,1]) < 0:
-#        print 'flipping z axis'
-#        axes[1] = -axes[1]
-#        axes[2] = -axes[2]
+    # re-index axes and edge lengths so that the found axis is the z axis
+    axesInds = [(zAxisIndex+1)%3, (zAxisIndex+2)%3, zAxisIndex]
+    axes = [axes[i] for i in axesInds]
+    edgeLengths = [edgeLengths[i] for i in axesInds]
+
+    # flip if necessary so that z axis points toward up
+    if np.dot(axes[2], upVector) < 0:
+        axes[1] = -axes[1]
+        axes[2] = -axes[2]
 
     boxCenter = computeCentroid(wireframe)
 

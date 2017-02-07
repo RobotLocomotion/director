@@ -78,9 +78,6 @@ class PyDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
 
         from director import robotstate
 
-        # rescale poseTimes
-        poseTimes = np.array(poseTimes)*2.0
-
         states = [robotstate.drakePoseToRobotState(pose) for pose in poses]
         for i, state in enumerate(states):
             state.utime = poseTimes[i]*1e6
@@ -145,6 +142,26 @@ class RigidBodyTreeCompatNew(object):
     def get_num_velocities(rbt):
         return rbt.get_num_velocities()
 
+    @staticmethod
+    def makePackageMap(packagePaths):
+        packageMap = pydrake.rbtree.PackageMap()
+        for path in packagePaths:
+            packageMap.Add(os.path.basename(path), path)
+        return packageMap
+
+    @staticmethod
+    def addModelInstanceFromUrdfString(rbt, urdfString, packageMap, baseDir):
+        floatingBaseType = pydrake.rbtree.kRollPitchYaw
+        weldFrame = None
+
+        pydrake.rbtree.AddModelInstanceFromUrdfStringSearchingInRosPackages(
+          urdfString,
+          packageMap,
+          baseDir,
+          floatingBaseType,
+          weldFrame,
+          rbt)
+
 
 class RigidBodyTreeCompatOld(object):
 
@@ -171,6 +188,17 @@ class RigidBodyTreeCompatOld(object):
     @staticmethod
     def get_num_velocities(rbt):
         return rbt.num_velocities
+
+    @staticmethod
+    def makePackageMap(packagePaths):
+        packageMap = pydrake.rbtree.mapStringString()
+        for path in packagePaths:
+            packageMap[os.path.basename(path)] = path
+        return packageMap
+
+    @staticmethod
+    def addModelInstanceFromUrdfString(rbt, urdfString, packageMap, baseDir):
+        rbt.addRobotFromURDFString(urdfString, packageMap, baseDir)
 
 
 if hasattr(pydrake.rbtree.RigidBodyTree, 'get_num_bodies'):
@@ -203,25 +231,13 @@ class PyDrakeIkServer(object):
 
         assert os.path.isfile(urdfFile)
 
-        packageMap = pydrake.rbtree.PackageMap()
-        for path in packagePaths:
-            packageMap.Add(os.path.basename(path), path)
+        packageMap = rbt.makePackageMap(packagePaths)
 
         urdfString = open(urdfFile, 'r').read()
         baseDir = str(os.path.dirname(urdfFile))
-        floatingBaseType = pydrake.rbtree.kRollPitchYaw
-        weldFrame = None
 
         rigidBodyTree = pydrake.rbtree.RigidBodyTree()
-
-        pydrake.rbtree.AddModelInstanceFromUrdfStringSearchingInRosPackages(
-          urdfString,
-          packageMap,
-          baseDir,
-          floatingBaseType,
-          weldFrame,
-          rigidBodyTree)
-
+        rbt.addModelInstanceFromUrdfString(rigidBodyTree, urdfString, packageMap, baseDir)
         return rigidBodyTree
 
     def makeIkOptions(self, fields):
@@ -525,19 +541,16 @@ class PyDrakeIkServer(object):
 
 
         if fields.options.usePointwise:
-            numPointwiseSamples = 20
             pointwiseTimeSamples = np.linspace(timeRange[0], timeRange[1], numPointwiseSamples)
 
             q_seed_array = self.getInterpolationFunction(timeSamples, np.array(poses),
                                     kind=self.trajInterpolationMode)(pointwiseTimeSamples).transpose()
+
             assert q_seed_array.shape == (len(q_nom), numPointwiseSamples)
 
             results = pydrakeik.InverseKinPointwise(self.rigidBodyTree, pointwiseTimeSamples, q_seed_array, q_seed_array, constraints, ikoptions)
 
-
             assert len(results.q_sol) == len(pointwiseTimeSamples)
-
-            print 'pointwise info len:', len(results.info)
 
             poses = []
             for i in xrange(len(results.q_sol)):
@@ -549,4 +562,57 @@ class PyDrakeIkServer(object):
             timeSamples = pointwiseTimeSamples
 
 
+        assert timeSamples[0] == 0.0
+
+        # rescale timeSamples to respect max degrees per second option and min plan time
+        vel = np.diff(np.transpose(poses))/np.diff(timeSamples)
+        timeScaleFactor = np.max(np.abs(vel/np.radians(fields.options.maxDegreesPerSecond)))
+        timeScaleFactorMin = minPlanTime / timeSamples[-1]
+        timeScaleFactor = np.max([timeScaleFactor, timeScaleFactorMin])
+        timeSamples = np.array(timeSamples, dtype=float)*timeScaleFactor
+
+        # resample plan with warped time to adjust acceleration/deceleration profile
+        if useWarpTime:
+            tFine = np.linspace(timeSamples[0], timeSamples[-1], 100)
+            posesFine = self.getInterpolationFunction(timeSamples, np.array(poses), kind='linear')(tFine)
+            tFineWarped = warpTime(tFine/tFine[-1])*tFine[-1]
+            timeSamples = np.linspace(tFineWarped[0], tFineWarped[-1], numPointwiseSamples)
+            poses = self.getInterpolationFunction(tFineWarped, posesFine, kind=self.trajInterpolationMode)(timeSamples)
+
         return poses, timeSamples, info
+
+
+#########################################
+# todo: cleanup.
+# for testing use some global variables so they can be adjusted at runtime
+useWarpTime = True
+minPlanTime = 1.5
+acceleration_param=4
+t_acc=0.05
+t_dec=0.2
+numPointwiseSamples = 20
+
+
+def warpTime(t):
+    '''This routine has been ported from the openhumanoids Matlab code'''
+
+    assert t_acc + t_dec <= 1, 't_acc + t_dec must be less than or equal to 1'
+
+    t_max = 1 - t_acc - t_dec;
+
+    # Set up scaling constants
+    alpha = 1.0/acceleration_param;
+    C_acc = (alpha*(t_acc)**(alpha - 1))**(-1)
+    C_dec = (alpha*(t_dec)**(alpha - 1))**(-1)
+
+    # Compute indices for acceleration, max velocity, and deceleration segments
+    idx_acc = (t <= t_acc)
+    idx_dec = (t >= (1-t_dec))
+    idx_max = np.logical_and(np.logical_not(idx_acc), np.logical_not(idx_dec))
+
+    # Generate warped time
+    t_warped = np.zeros(len(t))
+    t_warped[idx_acc] = C_acc*t[idx_acc]**alpha
+    t_warped[idx_max] = C_acc*(t_acc)**alpha - t_acc + t[idx_max]
+    t_warped[idx_dec] = C_acc*(t_acc)**alpha + C_dec*(t_dec)**alpha + t_max - C_dec*(1-t[idx_dec])**alpha;
+    return t_warped

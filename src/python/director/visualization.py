@@ -17,7 +17,7 @@ import numpy as np
 class PolyDataItem(om.ObjectModelItem):
 
     defaultScalarRangeMap = {
-        'intensity' : (400, 4000),
+        # 'intensity' : (400, 4000),
         'spindle_angle' : (0, 360),
         'azimuth' : (-2.5, 2.5),
         'scan_delta' : (0.0, 0.3),
@@ -79,6 +79,8 @@ class PolyDataItem(om.ObjectModelItem):
         if self.getProperty('Visible'):
             self._renderAllViews()
 
+    def setRangeMap(self, key, value):
+        self.rangeMap[key] = value
 
     def getArrayNames(self):
         pointData = self.polyData.GetPointData()
@@ -420,6 +422,23 @@ def showText(text, name, fontSize=18, position=(10, 10), parent=None, view=None)
     return item
 
 
+def createAxesPolyData(scale, useTube):
+    axes = vtk.vtkAxes()
+    axes.SetComputeNormals(0)
+    axes.SetScaleFactor(scale)
+    axes.Update()
+
+    if useTube:
+        tube = vtk.vtkTubeFilter()
+        tube.SetInput(axes.GetOutput())
+        tube.SetRadius(0.002)
+        tube.SetNumberOfSides(12)
+        tube.Update()
+        axes = tube
+
+    return shallowCopy(axes.GetOutput())
+
+
 class FrameItem(PolyDataItem):
 
     def __init__(self, name, transform, view):
@@ -469,22 +488,6 @@ class FrameItem(PolyDataItem):
                 self.onTransformModifiedCallback(self)
             self.callbacks.process('FrameModified', self)
 
-    def _createAxes(self, scale, useTube):
-        axes = vtk.vtkAxes()
-        axes.SetComputeNormals(0)
-        axes.SetScaleFactor(scale)
-        axes.Update()
-
-        if useTube:
-            tube = vtk.vtkTubeFilter()
-            tube.SetInput(axes.GetOutput())
-            tube.SetRadius(0.002)
-            tube.SetNumberOfSides(12)
-            tube.Update()
-            axes = tube
-
-        return shallowCopy(axes.GetOutput())
-
     def addToView(self, view):
         PolyDataItem.addToView(self, view)
 
@@ -506,7 +509,7 @@ class FrameItem(PolyDataItem):
     def _updateAxesGeometry(self):
         scale = self.getProperty('Scale')
         self.rep.SetWorldSize(scale)
-        self.setPolyData(self._createAxes(scale, self.getProperty('Tube')))
+        self.setPolyData(createAxesPolyData(scale, self.getProperty('Tube')))
 
     def _onPropertyChanged(self, propertySet, propertyName):
         PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
@@ -520,7 +523,7 @@ class FrameItem(PolyDataItem):
             if view not in self.views:
                 view = self.views[0]
             self.widget.SetInteractor(view.renderWindow().GetInteractor())
-            
+
             self.widget.SetEnabled(self.getProperty(propertyName))
             isEditing = self.getProperty(propertyName)
             if isEditing:

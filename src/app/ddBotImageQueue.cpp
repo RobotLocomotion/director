@@ -7,6 +7,8 @@
 #include <vtkNew.h>
 
 #include <multisense_utils/multisense_utils.hpp>
+#include <vector>
+
 
 //-----------------------------------------------------------------------------
 ddBotImageQueue::ddBotImageQueue(QObject* parent) : QObject(parent)
@@ -29,6 +31,7 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
 {
   cameraData->mName = cameraName.toAscii().data();
   cameraData->mHasCalibration = true;
+  cameraData->mImageMessage.utime = 0;
 
   cameraData->mCamTrans = bot_param_get_new_camtrans(mBotParam, cameraName.toAscii().data());
   if (!cameraData->mCamTrans)
@@ -94,6 +97,12 @@ bool ddBotImageQueue::addCameraStream(const QString& channel, const QString& cam
     }
 
     this->mCameraData[cameraName] = cameraData;
+    if (   imageType == bot_core::images_t::MASK_ZIPPED
+        || imageType == bot_core::images_t::DISPARITY_ZIPPED
+        || imageType == bot_core::images_t::DEPTH_MM_ZIPPED)
+    {
+      cameraData->mZlibCompression = true;
+    }
   }
 
   this->mChannelMap[channel][imageType] = cameraName;
@@ -391,7 +400,6 @@ void ddBotImageQueue::onImagesMessage(const QByteArray& data, const QString& cha
       return;
     }
 
-
     CameraData* cameraData = this->getCameraData(cameraName);
 
     QMutexLocker locker(&cameraData->mMutex);
@@ -415,10 +423,16 @@ void ddBotImageQueue::onImageMessage(const QByteArray& data, const QString& chan
 
   CameraData* cameraData = this->getCameraData(cameraName);
 
+  int64_t prevTimestamp = cameraData->mImageMessage.utime;
 
   QMutexLocker locker(&cameraData->mMutex);
   cameraData->mImageMessage.decode(data.data(), 0, data.size());
   cameraData->mImageBuffer.clear();
+
+  if (cameraData->mImageMessage.utime == 0)
+  {
+    cameraData->mImageMessage.utime = prevTimestamp + 1;
+  }
 
   if (cameraData->mHasCalibration)
   {
@@ -436,9 +450,8 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
 
   size_t w = cameraData->mImageMessage.width;
   size_t h = cameraData->mImageMessage.height;
-  size_t buf_size = w*h*3;
 
-  if (buf_size == 0)
+  if (w == 0 || h == 0)
   {
     return vtkSmartPointer<vtkImageData>::New();
   }
@@ -446,37 +459,60 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
   int nComponents = 3;
   int componentType = VTK_UNSIGNED_CHAR;
 
+  int pixelFormat = cameraData->mImageMessage.pixelformat;
+  bool isZlibCompressed = cameraData->mZlibCompression;
+
+  if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_INVALID)
+  {
+    pixelFormat = bot_core::image_t::PIXEL_FORMAT_LE_GRAY16;
+    isZlibCompressed = true;
+  }
+  else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_GRAY
+          && cameraData->mImageMessage.row_stride/w == 2)
+  {
+    pixelFormat = bot_core::image_t::PIXEL_FORMAT_LE_GRAY16;
+  }
+
+
   if (!cameraData->mImageBuffer.size())
   {
-    if (cameraData->mImageMessage.pixelformat == bot_core::image_t::PIXEL_FORMAT_RGB)
+    if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_RGB)
     {
       cameraData->mImageBuffer = cameraData->mImageMessage.data;
     }
-    /*
-    else if (cameraData->mImageMessage.pixelformat == bot_core::image_t::PIXEL_FORMAT_GRAY)
+    else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_MJPEG)
     {
-      cameraData->mImageBuffer.resize(w*h*2);
-      unsigned long len = cameraData->mImageBuffer.size();
-
-      uncompress(cameraData->mImageBuffer.data(), &len, cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size);
-
-      componentType = VTK_UNSIGNED_SHORT;
+      cameraData->mImageBuffer.resize(w*h*3);
+      jpeg_decompress_8u_rgb(cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size, cameraData->mImageBuffer.data(), w, h, w*3);
+    }
+    else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_GRAY)
+    {
+      cameraData->mImageBuffer = cameraData->mImageMessage.data;
       nComponents = 1;
     }
-    */
-    else if (cameraData->mImageMessage.pixelformat != bot_core::image_t::PIXEL_FORMAT_MJPEG)
+    else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_LE_GRAY16)
     {
-      printf("Error: expected PIXEL_FORMAT_MJPEG for camera %s\n", cameraData->mName.c_str());
-      return vtkSmartPointer<vtkImageData>::New();
+
+      if (isZlibCompressed)
+      {
+        cameraData->mImageBuffer.resize(w*h*2);
+        unsigned long len = cameraData->mImageBuffer.size();
+        uncompress(cameraData->mImageBuffer.data(), &len, cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size);
+      }
+      else
+      {
+        cameraData->mImageBuffer = cameraData->mImageMessage.data;
+      }
+
+      nComponents = 1;
+      componentType = VTK_UNSIGNED_SHORT;
     }
     else
     {
-      //printf("jpeg decompress: %s\n", cameraData->mName.c_str());
-      cameraData->mImageBuffer.resize(buf_size);
-      jpeg_decompress_8u_rgb(cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size, cameraData->mImageBuffer.data(), w, h, w*3);
+      std::cout << "unhandled image pixelformat " << pixelFormat << " for camera " << cameraData->mName.c_str() << std::endl;
+      return vtkSmartPointer<vtkImageData>::New();
     }
   }
-  //else printf("already decompressed: %s\n", cameraData->mName.c_str());
 
   vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
 
@@ -556,6 +592,89 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
 
 
 };
+
+namespace {
+
+  void vtkToRGBImageMessage(vtkImageData* image, bot_core::image_t& msg)
+  {
+    int width = image->GetDimensions()[0];
+    int height = image->GetDimensions()[1];
+    int nComponents = image->GetNumberOfScalarComponents();
+
+    msg.width = width;
+    msg.height = height;
+    msg.nmetadata = 0;
+    msg.row_stride = nComponents * width;
+    msg.pixelformat = bot_core::image_t::PIXEL_FORMAT_RGB;
+
+    msg.data.resize(width*height*nComponents);
+    msg.size = msg.data.size();
+    memcpy(&msg.data[0], image->GetScalarPointer(), msg.size);
+  }
+
+  void vtkToCompressedDepthMessage(vtkImageData* image, bot_core::image_t& msg)
+  {
+    int width = image->GetDimensions()[0];
+    int height = image->GetDimensions()[1];
+    int nComponents = image->GetNumberOfScalarComponents();
+
+
+    static std::vector<uint8_t> compressBuffer;
+
+    uLongf sourceSize = width*height*nComponents*2;
+    uLongf bufferSize = compressBound(sourceSize);
+
+    if (compressBuffer.size() < bufferSize)
+    {
+      printf("--->resizing compress buffer to %lu\n", bufferSize);
+      compressBuffer.resize(bufferSize);
+    }
+
+    uLongf compressedSize = compressBuffer.size();
+
+    compress2(&compressBuffer[0], &compressedSize,
+      static_cast<Bytef*>(image->GetScalarPointer()), sourceSize, Z_BEST_SPEED);
+
+    msg.width = width;
+    msg.height = height;
+    msg.nmetadata = 0;
+    msg.row_stride = 0;
+    msg.pixelformat = bot_core::image_t::PIXEL_FORMAT_INVALID;
+    msg.data.resize(compressedSize);
+    msg.size = msg.data.size();
+    memcpy(&msg.data[0], &compressBuffer[0], compressedSize);
+  }
+
+}
+
+
+//-----------------------------------------------------------------------------
+void ddBotImageQueue::publishRGBDImagesMessage(const QString& channel,
+    vtkImageData* colorImage, vtkImageData* depthImage, qint64 utime)
+{
+  bot_core::images_t msg;
+  msg.images.resize(2);
+  msg.n_images = msg.images.size();
+  msg.image_types.push_back(int(bot_core::images_t::LEFT));
+  msg.image_types.push_back(int(bot_core::images_t::DEPTH_MM_ZIPPED));
+
+  msg.utime = utime;
+  msg.images[0].utime = utime;
+  msg.images[1].utime = utime;
+
+  vtkToRGBImageMessage(colorImage, msg.images[0]);
+  vtkToCompressedDepthMessage(depthImage, msg.images[1]);
+  mLCM->lcmHandle()->publish(channel.toLatin1().data(), &msg);
+}
+
+//-----------------------------------------------------------------------------
+void ddBotImageQueue::publishRGBImageMessage(const QString& channel, vtkImageData* image, qint64 utime)
+{
+  bot_core::image_t msg;
+  msg.utime = utime;
+  vtkToRGBImageMessage(image, msg);
+  mLCM->lcmHandle()->publish(channel.toLatin1().data(), &msg);
+}
 
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize, float rangeThreshold)

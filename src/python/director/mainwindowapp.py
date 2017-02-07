@@ -219,11 +219,14 @@ class MainWindowAppFactory(ComponentFactory):
 
         organizationName = 'RobotLocomotion'
         applicationName = 'DirectorMainWindow'
+        windowTitle = 'Director App'
 
         if hasattr(fields, 'organizationName'):
             organizationName = fields.organizationName
         if hasattr(fields, 'applicationName'):
             applicationName = fields.applicationName
+        if hasattr(fields, 'windowTitle'):
+            windowTitle = fields.windowTitle
 
         MainWindowApp.applicationInstance().setOrganizationName(organizationName)
         MainWindowApp.applicationInstance().setApplicationName(applicationName)
@@ -232,7 +235,7 @@ class MainWindowAppFactory(ComponentFactory):
         app = MainWindowApp()
 
         app.mainWindow.setCentralWidget(fields.view)
-        app.mainWindow.setWindowTitle('Director App')
+        app.mainWindow.setWindowTitle(windowTitle)
         app.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
 
         sceneBrowserDock = app.addWidgetToDock(fields.objectModel.getTreeWidget(),
@@ -293,6 +296,7 @@ class MainWindowAppFactory(ComponentFactory):
 
     def initGlobalModules(self, fields):
 
+        from PythonQt import QtCore, QtGui
         from director import objectmodel as om
         from director import visualization as vis
         from director import applogic
@@ -308,6 +312,7 @@ class MainWindowAppFactory(ComponentFactory):
 
         modules = dict(locals())
         del modules['fields']
+        del modules['self']
         fields.globalsDict.update(modules)
 
     def initGlobals(self, fields):
@@ -341,22 +346,57 @@ class MainWindowPanelFactory(ComponentFactory):
         determines which components should be disabled.
         '''
 
-        # drake visualizer depends on lcm so this
-        # module is disabled by default
+        # these components depend on lcm and lcmgl, so they
+        # are disabled by default
         options.useDrakeVisualizer = False
+        options.useTreeViewer = False
+        options.useLCMGLRenderer = False
 
     def addComponents(self, componentGraph):
 
         addComponent = componentGraph.addComponent
 
         addComponent('MainWindow', [])
+        addComponent('OpenDataHandler', ['MainWindow'])
         addComponent('ScreenGrabberPanel', ['MainWindow'])
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
+        addComponent('MeasurementPanel', ['MainWindow'])
+        addComponent('OutputConsole', ['MainWindow'])
         addComponent('DrakeVisualizer', ['MainWindow'])
+        addComponent('TreeViewer', ['MainWindow'])
+        addComponent('LCMGLRenderer', ['MainWindow'])
 
     def initMainWindow(self, fields):
         assert fields.view and fields.app
+
+    def initOpenDataHandler(self, fields):
+        from director import opendatahandler
+        openDataHandler = opendatahandler.OpenDataHandler(fields.app)
+
+        def loadData():
+            for filename in drcargs.args().data_files:
+                openDataHandler.openGeometry(filename)
+        fields.app.registerStartupCallback(loadData)
+
+        return FieldContainer(openDataHandler=openDataHandler)
+
+    def initOutputConsole(self, fields):
+        from director import outputconsole
+        outputConsole = outputconsole.OutputConsole()
+        outputConsole.addToAppWindow(fields.app, visible=False)
+
+        return FieldContainer(outputConsole=outputConsole)
+
+    def initMeasurementPanel(self, fields):
+        from director import measurementpanel
+        measurementPanel = measurementpanel.MeasurementPanel(fields.app, fields.view)
+        measurementDock = fields.app.addWidgetToDock(measurementPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        return FieldContainer(
+          measurementPanel=measurementPanel,
+          measurementDock=measurementDock
+          )
 
     def initScreenGrabberPanel(self, fields):
 
@@ -376,22 +416,57 @@ class MainWindowPanelFactory(ComponentFactory):
         cameraBookmarksPanel = camerabookmarks.CameraBookmarkWidget(fields.view)
         cameraBookmarksDock = fields.app.addWidgetToDock(cameraBookmarksPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
 
+        return FieldContainer(
+          cameraBookmarksPanel=cameraBookmarksPanel,
+          cameraBookmarksDock=cameraBookmarksDock
+          )
+
     def initCameraControlPanel(self, fields):
 
         from director import cameracontrolpanel
         cameraControlPanel = cameracontrolpanel.CameraControlPanel(fields.view)
         cameraControlDock = fields.app.addWidgetToDock(cameraControlPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
 
+        return FieldContainer(
+          cameraControlPanel=cameraControlPanel,
+          cameraControlDock=cameraControlDock
+          )
+
     def initDrakeVisualizer(self, fields):
 
         from director import drakevisualizer
         drakeVisualizer = drakevisualizer.DrakeVisualizer(fields.view)
 
-        applogic.MenuActionToggleHelper('Tools', 'Renderer - Drake', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
+        applogic.MenuActionToggleHelper('Tools', drakeVisualizer.name, drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
 
         return FieldContainer(
           drakeVisualizer=drakeVisualizer
           )
+
+    def initTreeViewer(self, fields):
+
+        from director import treeviewer
+        treeViewer = treeviewer.TreeViewer(fields.view)
+
+        applogic.MenuActionToggleHelper('Tools', treeViewer.name, treeViewer.isEnabled, treeViewer.setEnabled)
+
+        return FieldContainer(
+          treeViewer=treeViewer
+          )
+
+    def initLCMGLRenderer(self, fields):
+
+        from director import lcmgl
+        if lcmgl.LCMGL_AVAILABLE:
+            lcmglManager = lcmgl.LCMGLManager(fields.view)
+            applogic.MenuActionToggleHelper('Tools', 'LCMGL Renderer', lcmglManager.isEnabled, lcmglManager.setEnabled)
+        else:
+            lcmglManager = None
+
+        return FieldContainer(
+          lcmglManager=lcmglManager
+          )
+
 
 
 def construct(globalsDict=None):

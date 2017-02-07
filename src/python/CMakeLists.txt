@@ -33,6 +33,7 @@ set(python_files
   director/depthscanner.py
   director/doordemo.py
   director/drakevisualizer.py
+  director/drakevisualizerapp.py
   director/drcargs.py
   director/drilldemo.py
   director/drivingplanner.py
@@ -53,6 +54,7 @@ set(python_files
   director/ikparameters.py
   director/ikplanner.py
   director/imageview.py
+  director/imageviewapp.py
   director/ioUtils.py
   director/irisUtils.py
   director/irisdriver.py
@@ -71,13 +73,16 @@ set(python_files
   director/mapsregistrar.py
   director/matlab.py
   director/matlabik.py
+  director/measurementpanel.py
   director/meshmanager.py
   director/midi.py
   director/multisensepanel.py
   director/navigationpanel.py
   director/objectmodel.py
-  director/otdfmodel.py
+  director/opendatahandler.py
   director/openscope.py
+  director/otdfmodel.py
+  director/outputconsole.py
   director/packagepath.py
   director/perception.py
   director/planningutils.py
@@ -122,6 +127,8 @@ set(python_files
   director/timercallback.py
   director/transformUtils.py
   director/trackers.py
+  director/treeviewer.py
+  director/uipanel.py
   director/utime.py
   director/uuidutil.py
   director/valvedemo.py
