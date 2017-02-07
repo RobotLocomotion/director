@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import time
 import json
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import numpy as np
 from lcm import LCM
 from robotlocomotion import viewer2_comms_t
@@ -46,17 +46,21 @@ class BaseGeometry:
         raise NotImplementedError()
 
 
-class Box(BaseGeometry):
-    __slots__ = ["lengths"]
-    def __init__(self, lengths):
-        assert len(lengths) == 3
-        self.lengths = lengths
-
+class Box(BaseGeometry, namedtuple("Box", ["lengths"])):
     def serialize(self):
         return {
             "type": "box",
             "lengths": self.lengths
         }
+
+
+class Sphere(BaseGeometry, namedtuple("Sphere", ["radius"])):
+    def serialize(self):
+        return {
+            "type": "sphere",
+            "radius": self.radius
+        }
+
 
 
 class VisData:
@@ -201,9 +205,14 @@ if __name__ == '__main__':
 
     box = Box([1, 1, 1])
     geom = GeometryData(box, [0, 1, 0, 0.5])
-    vis.load(geom)
+    vis["box"].load(geom)
+
+    vis["sphere"].load(Sphere(1.0))
+    vis["sphere"].draw(transformations.translation_matrix([1, 0, 0]))
 
     for i in range(10):
         for theta in np.linspace(0, 2 * np.pi, 100):
             vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
             time.sleep(0.01)
+
+
