@@ -93,6 +93,30 @@ class CommandQueue:
         return not (self.draw or self.load or self.delete)
 
 
+class Visualizer:
+    __slots__ = ["core", "path"]
+    def __init__(self, core=None, path=None, lcm=LCM()):
+        if core is None:
+            core = CoreVisualizer(lcm)
+        if path is None:
+            path = tuple()
+        self.core = core
+        self.path = path
+
+    def load(self, geomdata):
+        self.core.load(self.path, geomdata)
+        return self
+
+    def draw(self, tform):
+        self.core.draw(self.path, tform)
+
+    def delete(self):
+        self.core.delete(self.path)
+
+    def __getitem__(self, path):
+        return Visualizer(self.core, self.path + (path,))
+
+
 class CoreVisualizer:
     def __init__(self, lcm=LCM()):
         self.lcm = lcm
@@ -170,12 +194,16 @@ class CoreVisualizer:
 
 
 if __name__ == '__main__':
-    vis = CoreVisualizer()
+    vis = Visualizer()
+
+    # Index into the visualizer to get a sub-tree:
+    vis = vis["foo"]["bar"]
+
     box = Box([1, 1, 1])
     geom = GeometryData(box, [0, 1, 0, 0.5])
-    vis.load(("foo", "bar"), geom)
+    vis.load(geom)
 
     for i in range(10):
         for theta in np.linspace(0, 2 * np.pi, 100):
-            vis.draw(("foo", "bar"), transformations.rotation_matrix(theta, [0, 0, 1]))
+            vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
             time.sleep(0.01)
