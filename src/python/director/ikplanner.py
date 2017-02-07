@@ -1482,14 +1482,13 @@ class IKPlanner(object):
         newIkParameters.fillInWith(self.defaultIkParameters)
         return newIkParameters
 
-    def clipState(self, q, l, u):
-        state = np.array(q)
-        ret = np.clip(state, l, u)
-        if np.max(np.abs(state-ret)) > 1e-6:
+    def clipState(self, jointPositions, lowerBound, upperBound):
+        jointPositions = np.array(jointPositions)
+        jointPositionsClipped = np.clip(jointPositions, lowerBound, upperBound)
+        if np.max(np.abs(jointPositions-jointPositionsClipped)) > 1e-6:
             print 'State is outside of joint limits! clipped to limits.'
-            return ret.tolist()
-        else:
-            return ret.tolist()
+        return jointPositionsClipped.tolist()
+        
 
     def clipPlan(self, plan):
         names = plan.plan[0].joint_name
