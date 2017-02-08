@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import time
 import json
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, Iterable
 import numpy as np
 from lcm import LCM
 from robotlocomotion import viewer2_comms_t
@@ -36,7 +36,7 @@ class GeometryData(object):
 
     def serialize(self):
         params = self.geometry.serialize()
-        params["color"] = self.color
+        params["color"] = list(self.color)
         params["transform"] = serialize_transform(self.transform)
         return params
 
@@ -112,11 +112,18 @@ class CommandQueue(object):
     def isempty(self):
         return not (self.draw or self.load or self.delete)
 
+    def empty(self):
+        self.draw = set()
+        self.load = set()
+        self.delete = set()
+
 
 class Visualizer(object):
     __slots__ = ["core", "path"]
-    def __init__(self, core=None, path=None, lcm=LCM()):
+    def __init__(self, core=None, path=None, lcm=None):
         if core is None:
+            if lcm is None:
+                lcm = LCM()
             core = CoreVisualizer(lcm)
         if path is None:
             path = tuple()
@@ -155,17 +162,21 @@ class CoreVisualizer(object):
         print(msg)
 
     def load(self, path, geomdata):
-        if isinstance(geomdata, GeometryData):
+        if isinstance(geomdata, BaseGeometry):
+            self._load(path, [GeometryData(geomdata)])
+        elif isinstance(geomdata, Iterable):
             self._load(path, geomdata)
         else:
-            self._load(path, GeometryData(geomdata))
+            self._load(path, [geomdata])
 
-    def _load(self, path, geomdata=None):
-        if geomdata is not None:
-            if isinstance(geomdata, GeometryData):
-                self.tree.getdescendant(path).geometries = [geomdata]
-            else:  # then assume it's a list of geometries
-                self.tree.getdescendant(path).geometries = geomdata
+    def _load(self, path, geoms):
+        converted_geom_data = []
+        for geom in geoms:
+            if isinstance(geom, GeometryData):
+                converted_geom_data.append(geom)
+            else:
+                converted_geom_data.append(GeometryData(geom))
+        self.tree.getdescendant(path).geometries = converted_geom_data
         self.queue.load.add(path)
         self._maybe_publish()
 
@@ -192,6 +203,7 @@ class CoreVisualizer(object):
             data = self.serialize_queue()
             msg = to_lcm(data)
             self.lcm.publish("DIRECTOR_TREE_VIEWER_REQUEST", msg.encode())
+            self.queue.empty()
 
     def serialize_queue(self):
         delete = []
@@ -202,11 +214,9 @@ class CoreVisualizer(object):
         for path in self.queue.load:
             geoms = self.tree.getdescendant(path).geometries
             if geoms:
-                if len(geoms) > 1:
-                    raise NotImplementedError("I haven't implemented the ability to have multiple geometries share a path yet. Please give each geometry a unique path")
                 load.append({
                     "path": path,
-                    "geometry": geoms[0].serialize()
+                    "geometries": [geom.serialize() for geom in geoms]
                 })
         for path in self.queue.draw:
             draw.append({
@@ -225,10 +235,15 @@ if __name__ == '__main__':
     # We can provide an initial path if we want
     vis = Visualizer(path="/root/folder1")
 
+    vis["boxes"].load([GeometryData(Box([1, 1, 1]),
+                           color=np.random.rand(4),
+                           transform=transformations.translation_matrix([x, -2, 0])) \
+                       for x in range(10)])
+
     # Index into the visualizer to get a sub-tree. vis.__getitem__ is lazily
     # implemented, so these sub-visualizers come into being as soon as they're
     # asked for
-    vis = vis["foo"]["bar"]
+    vis = vis["group1"]
 
     box_vis = vis["box"]
     sphere_vis = vis["sphere"]
@@ -240,11 +255,11 @@ if __name__ == '__main__':
     sphere_vis.load(Sphere(1.0))
     sphere_vis.draw(transformations.translation_matrix([1, 0, 0]))
 
-    for i in range(5):
-        for theta in np.linspace(0, 2 * np.pi, 100):
-            vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
-            time.sleep(0.01)
+    for theta in np.linspace(0, 2 * np.pi, 100):
+        vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
+        time.sleep(0.01)
     vis.delete()
+
 
 
 

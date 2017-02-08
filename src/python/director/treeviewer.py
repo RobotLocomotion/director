@@ -17,6 +17,7 @@ from director import vtkAll as vtk
 from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
+from director.shallowCopy import shallowCopy
 
 import robotlocomotion as lcmrl
 
@@ -53,22 +54,26 @@ class Geometry(object):
     @staticmethod
     def createBox(params):
         d = DebugData()
-        d.addCube(dimensions=params["lengths"], center=(0, 0, 0))
+        color = params.get("color", [1, 1, 1])[:3]
+        d.addCube(dimensions=params["lengths"], center=(0, 0, 0), color=color)
         return [d.getPolyData()]
 
     @staticmethod
     def createSphere(params):
         d = DebugData()
-        d.addSphere(center=(0, 0, 0), radius=params["radius"])
+        color = params.get("color", [1, 1, 1])[:3]
+        d.addSphere(center=(0, 0, 0), radius=params["radius"], color=color)
         return [d.getPolyData()]
 
     @staticmethod
     def createCylinder(params):
         d = DebugData()
+        color = params.get("color", [1, 1, 1])[:3]
         d.addCylinder(center=(0, 0, 0),
                       axis=(0, 0, 1),
                       radius=params["radius"],
-                      length=params["length"])
+                      length=params["length"],
+                      color=color)
         return [d.getPolyData()]
 
     @staticmethod
@@ -76,19 +81,22 @@ class Geometry(object):
         d = DebugData()
         radius = params["radius"]
         length = params["length"]
+        color = params.get("color", [1, 1, 1])[:3]
         d.addCylinder(center=(0, 0, 0),
                       axis=(0, 0, 1),
                       radius=radius,
-                      length=length)
-        d.addSphere(center=(0, 0, length / 2.0), radius=radius)
-        d.addSphere(center=(0, 0, -length / 2.0), radius=radius)
+                      length=length,
+                      color=color)
+        d.addSphere(center=(0, 0, length / 2.0), radius=radius, color=color)
+        d.addSphere(center=(0, 0, -length / 2.0), radius=radius, color=color)
         return [d.getPolyData()]
 
     @staticmethod
     def createEllipsoid(params):
         d = DebugData()
+        color = params.get("color", [1, 1, 1])[:3]
         radii = params["radii"]
-        d.addEllipsoid(center=(0, 0, 0), radii=radii)
+        d.addEllipsoid(center=(0, 0, 0), radii=radii, color=color)
         return [d.getPolyData()]
 
     @staticmethod
@@ -109,6 +117,8 @@ class Geometry(object):
     def createPointcloud(params):
         polyData = vnp.numpyToPolyData(np.asarray(params["points"]),
                                        createVertexCells=True)
+        if "channels" in params:
+            Geometry.addColorChannels(polyData, params["channels"])
         return [polyData]
 
     @staticmethod
@@ -124,7 +134,10 @@ class Geometry(object):
         y = ranges * np.sin(angles)
         z = np.zeros(x.shape)
         points = np.vstack((x, y, z)).T
-        return [vnp.numpyToPolyData(points, createVertexCells=True)]
+        polyData = vnp.numpyToPolyData(points, createVertexCells=True)
+        if "channels" in params:
+            Geometry.addColorChannels(polyData, params["channels"])
+        return [polyData]
 
     @staticmethod
     def createTriad(params):
@@ -294,14 +307,15 @@ class Geometry(object):
         return polyDataList
 
     @staticmethod
-    def createGeometry(geom):
-        polyDataList = Geometry.createPolyDataForGeometry(geom)
+    def createGeometry(geomDatas):
+        appendData = vtk.vtkAppendPolyData()
+        for geomData in geomDatas:
+            for polyData in Geometry.createPolyDataForGeometry(geomData):
+                appendData.AddInput(polyData)
 
-        geometry = []
-        for polyData in polyDataList:
-            g = Geometry(geom, polyData)
-            geometry.append(g)
-        return geometry
+        appendData.Update()
+
+        return Geometry(geomDatas, shallowCopy(appendData.GetOutput()))
 
     @staticmethod
     def addColorChannels(polyData, channels):
@@ -316,13 +330,11 @@ class Geometry(object):
             colorArray = np.asarray(channels["rgb"]) * 255
             vnp.addNumpyToVtk(polyData, colorArray.astype(np.uint8), "rgb")
 
-    def __init__(self, geomData, polyData):
-        if "channels" in geomData:
-            Geometry.addColorChannels(polyData, geomData["channels"])
+    def __init__(self, geomDatas, polyData):
         self.polyDataItem = vis.PolyDataItem("geometry", polyData, view=None)
         self.polyDataItem._updateColorByProperty()
 
-        color = geomData.get("color", [1, 0, 0, 0.5])
+        color = geomDatas[0].get("color", [1, 1, 1, 0.5])
         self.polyDataItem.setProperty('Alpha', color[3])
         self.polyDataItem.actor.SetTexture(
             Geometry.TextureCache.get(
@@ -357,7 +369,7 @@ class TreeViewer(object):
 
     def __init__(self, view):
 
-        self.subscribers = []
+        self.subscriber = None
         self.view = view
         self.itemToPathCache = {}
         self.pathToItemCache = {}
@@ -365,25 +377,25 @@ class TreeViewer(object):
         self.sendStatusMessage(
             0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
 
-    def _addSubscribers(self):
-        self.subscribers.append(lcmUtils.addSubscriber(
+    def _addSubscriber(self):
+        self.subscriber = lcmUtils.addSubscriber(
             'DIRECTOR_TREE_VIEWER_REQUEST',
             lcmrl.viewer2_comms_t,
-            self.onViewerRequest))
+            self.onViewerRequest)
+        self.subscriber.setNotifyAllMessagesEnabled(True)
 
-    def _removeSubscribers(self):
-        for sub in self.subscribers:
-            lcmUtils.removeSubscriber(sub)
-        self.subscribers = []
+    def _removeSubscriber(self):
+        lcmUtils.removeSubscriber(self.subscriber)
+        self.subscriber = None
 
     def isEnabled(self):
-        return bool(self.subscribers)
+        return self.subscriber is not None
 
     def setEnabled(self, enabled):
         if enabled and not self.isEnabled():
-            self._addSubscribers()
+            self._addSubscriber()
         elif not enabled and self.isEnabled():
-            self._removeSubscribers()
+            self._removeSubscriber()
 
     def enable(self):
         self.setEnabled(True)
@@ -459,10 +471,13 @@ class TreeViewer(object):
 
     def handleAddGeometry(self, command):
         path = command["path"]
-        vtkGeoms = Geometry.createGeometry(command["geometry"])
-        return self.addGeometry(path, vtkGeoms)
+        if "geometry" in command:
+            geometry = Geometry.createGeometry([command["geometry"]])
+        else:
+            geometry = Geometry.createGeometry(command["geometries"])
+        return self.addGeometry(path, geometry)
 
-    def addGeometry(self, path, geomItems):
+    def addGeometry(self, path, geometry):
         folder = self.getPathFolder(path)
         ancestors = findPathToAncestor(folder, self.getRootFolder())
         geomTransform = vtk.vtkTransform()
@@ -472,25 +487,24 @@ class TreeViewer(object):
                 item.transform.PostMultiply()
             geomTransform.Concatenate(item.transform)
 
-        for geom in geomItems:
-            existing_item = folder.findChild("geometry")
-            item = geom.polyDataItem
-            if existing_item is not None:
-                for prop in existing_item.propertyNames():
-                    item.setProperty(prop, existing_item.getProperty(prop))
-                om.removeFromObjectModel(existing_item)
-            else:
-                item.setProperty("Point Size", 2)
-                availableColorModes = set(
-                    item.getPropertyAttribute('Color By', 'enumNames'))
-                for colorBy in ["rgb", "intensity", "Axes"]:
-                    if colorBy in availableColorModes:
-                        item.setProperty("Color By", colorBy)
-                        break
+        item = geometry.polyDataItem
+        existing_item = folder.findChild("geometry")
+        if existing_item is not None:
+            for prop in existing_item.propertyNames():
+                item.setProperty(prop, existing_item.getProperty(prop))
+            om.removeFromObjectModel(existing_item)
+        else:
+            item.setProperty("Point Size", 2)
+            availableColorModes = set(
+                item.getPropertyAttribute('Color By', 'enumNames'))
+            for colorBy in ["rgb", "intensity", "Axes", "RGB255"]:
+                if colorBy in availableColorModes:
+                    item.setProperty("Color By", colorBy)
+                    break
 
-            item.addToView(self.view)
-            om.addToObjectModel(item, parentObj=folder)
-            item.actor.SetUserTransform(geomTransform)
+        item.addToView(self.view)
+        om.addToObjectModel(item, parentObj=folder)
+        item.actor.SetUserTransform(geomTransform)
 
         return path
 
