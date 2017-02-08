@@ -308,14 +308,10 @@ class Geometry(object):
 
     @staticmethod
     def createGeometry(geomDatas):
-        appendData = vtk.vtkAppendPolyData()
+        polyDatas = []
         for geomData in geomDatas:
-            for polyData in Geometry.createPolyDataForGeometry(geomData):
-                appendData.AddInput(polyData)
-
-        appendData.Update()
-
-        return Geometry(geomDatas, shallowCopy(appendData.GetOutput()))
+            polyDatas.extend(Geometry.createPolyDataForGeometry(geomData))
+        return Geometry(geomDatas, filterUtils.appendPolyData(polyDatas))
 
     @staticmethod
     def addColorChannels(polyData, channels):

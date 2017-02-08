@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
 
     vis["boxes"].load([GeometryData(Box([1, 1, 1]),
-                           color=np.random.rand(4),
+                           color=np.hstack((np.random.rand(3), 0.5)),
                            transform=transformations.translation_matrix([x, -2, 0])) \
                        for x in range(10)])
 
