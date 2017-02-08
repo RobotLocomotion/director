@@ -27,7 +27,7 @@ def serialize_transform(tform):
     }
 
 
-class GeometryData:
+class GeometryData(object):
     __slots__ = ["geometry", "color", "transform"]
     def __init__(self, geometry, color=[1, 0, 0, 0.5], transform=np.eye(4)):
         self.geometry = geometry
@@ -41,7 +41,7 @@ class GeometryData:
         return params
 
 
-class BaseGeometry:
+class BaseGeometry(object):
     def serialize(self):
         raise NotImplementedError()
 
@@ -86,7 +86,7 @@ class Triad(BaseGeometry, namedtuple("Triad", [])):
         }
 
 
-class LazyTree:
+class LazyTree(object):
     __slots__ = ["geometries", "transform", "children"]
     def __init__(self, geometries=[], transform=np.eye(4)):
         self.geometries = geometries
@@ -103,7 +103,7 @@ class LazyTree:
         return t
 
 
-class CommandQueue:
+class CommandQueue(object):
     def __init__(self):
         self.draw = set()
         self.load = set()
@@ -113,13 +113,18 @@ class CommandQueue:
         return not (self.draw or self.load or self.delete)
 
 
-class Visualizer:
+class Visualizer(object):
     __slots__ = ["core", "path"]
     def __init__(self, core=None, path=None, lcm=LCM()):
         if core is None:
             core = CoreVisualizer(lcm)
         if path is None:
             path = tuple()
+        else:
+            if isinstance(path, str):
+                path = tuple(path.split("/"))
+                if not path[0]:
+                    path = tuple([p for p in path if p])
         self.core = core
         self.path = path
 
@@ -134,10 +139,10 @@ class Visualizer:
         self.core.delete(self.path)
 
     def __getitem__(self, path):
-        return Visualizer(self.core, self.path + (path,))
+        return Visualizer(core=self.core, path=self.path + (path,), lcm=self.core.lcm)
 
 
-class CoreVisualizer:
+class CoreVisualizer(object):
     def __init__(self, lcm=LCM()):
         self.lcm = lcm
         self.tree = LazyTree()
@@ -157,7 +162,10 @@ class CoreVisualizer:
 
     def _load(self, path, geomdata=None):
         if geomdata is not None:
-            self.tree.getdescendant(path).geometries = [geomdata]
+            if isinstance(geomdata, GeometryData):
+                self.tree.getdescendant(path).geometries = [geomdata]
+            else:  # then assume it's a list of geometries
+                self.tree.getdescendant(path).geometries = geomdata
         self.queue.load.add(path)
         self._maybe_publish()
 
@@ -214,7 +222,8 @@ class CoreVisualizer:
 
 
 if __name__ == '__main__':
-    vis = Visualizer()
+    # We can provide an initial path if we want
+    vis = Visualizer(path="/root/folder1")
 
     # Index into the visualizer to get a sub-tree. vis.__getitem__ is lazily
     # implemented, so these sub-visualizers come into being as soon as they're
@@ -236,5 +245,6 @@ if __name__ == '__main__':
             vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
             time.sleep(0.01)
     vis.delete()
+
 
 
