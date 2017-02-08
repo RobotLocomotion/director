@@ -62,19 +62,11 @@ class Sphere(BaseGeometry, namedtuple("Sphere", ["radius"])):
         }
 
 
-
-class VisData:
-    __slots__ = ["geometries", "transform"]
+class LazyTree:
+    __slots__ = ["geometries", "transform", "children"]
     def __init__(self, geometries=[], transform=np.eye(4)):
         self.geometries = geometries
         self.transform = transform
-
-
-class LazyTree:
-    __slots__ = ["data", "children"]
-    def __init__(self, data=None):
-        if data is None:
-            data = VisData()
         self.children = defaultdict(lambda: LazyTree())
 
     def __getitem__(self, item):
@@ -155,7 +147,7 @@ class CoreVisualizer:
             self.tree = LazyTree()
         else:
             t = self.tree.getdescendant(path[:-1])
-            del t[path[-1]]
+            del t.children[path[-1]]
         self.queue.delete.add(path)
         self._maybe_publish()
 
@@ -203,16 +195,20 @@ if __name__ == '__main__':
     # Index into the visualizer to get a sub-tree:
     vis = vis["foo"]["bar"]
 
+    box_vis = vis["box"]
+    sphere_vis = vis["sphere"]
+
     box = Box([1, 1, 1])
-    geom = GeometryData(box, [0, 1, 0, 0.5])
-    vis["box"].load(geom)
+    geom = GeometryData(box, color=[0, 1, 0, 0.5])
+    box_vis.load(geom)
 
-    vis["sphere"].load(Sphere(1.0))
-    vis["sphere"].draw(transformations.translation_matrix([1, 0, 0]))
+    sphere_vis.load(Sphere(1.0))
+    sphere_vis.draw(transformations.translation_matrix([1, 0, 0]))
 
-    for i in range(10):
+    for i in range(5):
         for theta in np.linspace(0, 2 * np.pi, 100):
             vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
             time.sleep(0.01)
+    vis.delete()
 
 
