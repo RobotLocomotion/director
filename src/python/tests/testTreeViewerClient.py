@@ -52,6 +52,6 @@ if __name__ == '__main__':
     for theta in np.linspace(0, 2 * np.pi, 100):
         vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
         time.sleep(0.01)
-    vis.delete()
+    sphere_vis.delete()
 
     vis_process.terminate()
