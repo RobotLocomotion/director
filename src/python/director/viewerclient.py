@@ -50,7 +50,7 @@ class Box(BaseGeometry, namedtuple("Box", ["lengths"])):
     def serialize(self):
         return {
             "type": "box",
-            "lengths": self.lengths
+            "lengths": list(self.lengths)
         }
 
 
@@ -59,6 +59,30 @@ class Sphere(BaseGeometry, namedtuple("Sphere", ["radius"])):
         return {
             "type": "sphere",
             "radius": self.radius
+        }
+
+
+class Ellipsoid(BaseGeometry, namedtuple("Ellipsoid", ["radii"])):
+    def serialize(self):
+        return {
+            "type": "ellipsoid",
+            "radii": list(self.radii)
+        }
+
+
+class Cylinder(BaseGeometry, namedtuple("Cylinder", ["length", "radius"])):
+    def serialize(self):
+        return {
+            "type": "cylinder",
+            "length": self.length,
+            "radius": self.radius
+        }
+
+
+class Triad(BaseGeometry, namedtuple("Triad", [])):
+    def serialize(self):
+        return {
+            "type": "triad"
         }
 
 
@@ -192,7 +216,9 @@ class CoreVisualizer:
 if __name__ == '__main__':
     vis = Visualizer()
 
-    # Index into the visualizer to get a sub-tree:
+    # Index into the visualizer to get a sub-tree. vis.__getitem__ is lazily
+    # implemented, so these sub-visualizers come into being as soon as they're
+    # asked for
     vis = vis["foo"]["bar"]
 
     box_vis = vis["box"]
