@@ -6,12 +6,11 @@ from director import transformUtils
 from director import callbacks
 from director import frameupdater
 from PythonQt import QtCore, QtGui
-
+import numpy as np
 import os
 import colorsys
 import weakref
 import itertools
-import numpy as np
 
 
 class PolyDataItem(om.ObjectModelItem):
@@ -1062,7 +1061,10 @@ def pickProp(displayPoint, view):
 
     for tolerance in (0.0, 0.005, 0.01):
         pickType = 'render' if tolerance == 0.0 else 'cells'
-        pickedPoint, pickedProp, pickedDataset = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickData = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickedPoint = pickData[0]
+        pickedProp = pickData[1]
+        pickedDataset = pickData[2]
         if pickedProp is not None:
             return pickedPoint, pickedProp, pickedDataset
 
@@ -1103,6 +1105,10 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
     pickedDataset = pickedProp.GetMapper().GetInput() if isinstance(pickedProp, vtk.vtkActor) else None
 
     pickedNormal = np.zeros(3)
+    pickedCellId = 0 # only fill this in if we are picking with cells
+
+    if pickType == "cells":
+        pickedCellId = picker.GetCellId()
 
     if returnNormal:
         if pickType == 'cells':
@@ -1124,6 +1130,9 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
         else:
             return pickedPoint if pickedProp else None
     else:
+        if pickType == "cells":
+            return (pickedPoint, pickedProp, pickedDataset, pickedNormal, pickedCellId)
+
         return (pickedPoint, pickedProp, pickedDataset, pickedNormal) if returnNormal else (pickedPoint, pickedProp, pickedDataset)
 
 
