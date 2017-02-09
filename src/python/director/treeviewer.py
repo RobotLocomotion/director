@@ -142,7 +142,7 @@ class Geometry(object):
     @staticmethod
     def createTriad(params):
         polyData = vis.createAxesPolyData(params.get("scale", 1.0),
-                                          params.get("tube", True))
+                                          params.get("tube", False))
         return [polyData]
 
     @staticmethod
