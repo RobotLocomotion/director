@@ -235,7 +235,7 @@ class CoreVisualizer(object):
                 self.queue.draw.add(path)
         else:
             raise ValueError(
-                "Unhandles response from viewer: {}".format(msg.data))
+                "Unhandled response from viewer: {}".format(msg.data))
 
     def load(self, path, geomdata):
         if isinstance(geomdata, BaseGeometry):
