@@ -1,13 +1,14 @@
+import json
 import math
 import os
-import json
 import time
+import warnings
 import numpy as np
 from collections import namedtuple
-from director import lcmUtils
 
-import director.objectmodel as om
-import director.applogic as app
+from director import objectmodel as om
+from director import applogic as app
+from director import lcmUtils
 from director import transformUtils
 from director.debugVis import DebugData
 from director import ioUtils
@@ -307,13 +308,6 @@ class Geometry(object):
         return polyDataList
 
     @staticmethod
-    def createGeometry(geomDatas):
-        polyDatas = []
-        for geomData in geomDatas:
-            polyDatas.extend(Geometry.createPolyDataForGeometry(geomData))
-        return Geometry(geomDatas, filterUtils.appendPolyData(polyDatas))
-
-    @staticmethod
     def addColorChannels(polyData, channels):
         if "intensity" in channels:
             colorBy = "intensity"
@@ -326,26 +320,38 @@ class Geometry(object):
             colorArray = np.asarray(channels["rgb"]) * 255
             vnp.addNumpyToVtk(polyData, colorArray.astype(np.uint8), "rgb")
 
-    def __init__(self, geomDatas, polyData):
-        self.polyDataItem = vis.PolyDataItem("geometry", polyData, view=None)
-        self.polyDataItem._updateColorByProperty()
+    def __init__(self, geomDatas):
+        polyDatas = []
+        for geomData in geomDatas:
+            polyDatas.extend(Geometry.createPolyDataForGeometry(geomData))
 
-        color = geomDatas[0].get("color", [1, 1, 1, 0.5])
-        self.polyDataItem.setProperty('Alpha', color[3])
-        self.polyDataItem.actor.SetTexture(
+        self.polyData = filterUtils.appendPolyData(polyDatas)
+        self.color = geomDatas[0].get("color", [1, 1, 1, 0.5])
+
+    def createPolyDataItem(self):
+        polyDataItem = vis.PolyDataItem("geometry", self.polyData, view=None)
+        polyDataItem.setProperty("Point Size", 2)
+        self.updatePolyDataItemProperties(polyDataItem)
+        return polyDataItem
+
+    def updatePolyDataItemProperties(self, polyDataItem):
+        polyDataItem._updateColorByProperty()
+
+        polyDataItem.setProperty('Alpha', self.color[3])
+        polyDataItem.actor.SetTexture(
             Geometry.TextureCache.get(
-                Geometry.getTextureFileName(polyData)))
+                Geometry.getTextureFileName(self.polyData)))
 
-        if self.polyDataItem.actor.GetTexture():
-            self.polyDataItem.setProperty('Color',
-                                          QtGui.QColor(255, 255, 255))
+        if polyDataItem.actor.GetTexture():
+            polyDataItem.setProperty('Color',
+                                     QtGui.QColor(255, 255, 255))
         else:
-            self.polyDataItem.setProperty(
+            polyDataItem.setProperty(
                 'Color',
-                QtGui.QColor(*(255 * np.asarray(color[:3]))))
+                QtGui.QColor(*(255 * np.asarray(self.color[:3]))))
 
         if USE_SHADOWS:
-            self.polyDataItem.shadowOn()
+            polyDataItem.shadowOn()
 
 
 def findPathToAncestor(fromItem, toItem):
@@ -471,15 +477,24 @@ class TreeViewer(object):
         else:
             return ViewerResponse(ViewerStatus.MISSING_PATHS, result)
 
-    def handleAddGeometry(self, command):
+    def handleSetGeometry(self, command):
         path = command["path"]
         if "geometry" in command:
-            geometry = Geometry.createGeometry([command["geometry"]])
+            geometry = Geometry([command["geometry"]])
         else:
-            geometry = Geometry.createGeometry(command["geometries"])
-        return self.addGeometry(path, geometry)
+            geometry = Geometry(command["geometries"])
+        return self.setGeometry(path, geometry)
 
-    def addGeometry(self, path, geometry):
+    @staticmethod
+    def setDefaultColorBy(item):
+        availableColorModes = set(
+            item.getPropertyAttribute('Color By', 'enumNames'))
+        for colorBy in ["rgb", "intensity", "Axes", "RGB255"]:
+            if colorBy in availableColorModes:
+                item.setProperty("Color By", colorBy)
+                break
+
+    def setGeometry(self, path, geometry):
         folder = self.getPathFolder(path)
         ancestors = findPathToAncestor(folder, self.getRootFolder())
         geomTransform = vtk.vtkTransform()
@@ -489,23 +504,16 @@ class TreeViewer(object):
                 item.transform.PostMultiply()
             geomTransform.Concatenate(item.transform)
 
-        item = geometry.polyDataItem
-        existing_item = folder.findChild("geometry")
-        if existing_item is not None:
-            for prop in existing_item.propertyNames():
-                item.setProperty(prop, existing_item.getProperty(prop))
-            om.removeFromObjectModel(existing_item)
+        item = folder.findChild("geometry")
+        if item is None:
+            item = geometry.createPolyDataItem()
+            item.addToView(self.view)
+            om.addToObjectModel(item, parentObj=folder)
         else:
-            item.setProperty("Point Size", 2)
-            availableColorModes = set(
-                item.getPropertyAttribute('Color By', 'enumNames'))
-            for colorBy in ["rgb", "intensity", "Axes", "RGB255"]:
-                if colorBy in availableColorModes:
-                    item.setProperty("Color By", colorBy)
-                    break
+            item.setPolyData(geometry.polyData)
+            geometry.updatePolyDataItemProperties(item)
 
-        item.addToView(self.view)
-        om.addToObjectModel(item, parentObj=folder)
+        self.setDefaultColorBy(item)
         item.actor.SetUserTransform(geomTransform)
 
         return path
