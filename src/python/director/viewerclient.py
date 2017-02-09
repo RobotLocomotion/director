@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import time
 import json
+import threading
 from collections import defaultdict, namedtuple, Iterable
 import numpy as np
 from lcm import LCM
@@ -104,6 +105,14 @@ class LazyTree(object):
             t = t[p]
         return t
 
+    def descendants(self, prefix=tuple()):
+        result = []
+        for (key, val) in self.children.items():
+            childpath = prefix + (key,)
+            result.append(childpath)
+            result.extend(val.descendants(childpath))
+        return result
+
 
 class CommandQueue(object):
     def __init__(self):
@@ -153,6 +162,9 @@ class Visualizer(object):
                           path=self.path + (path,),
                           lcm=self.core.lcm)
 
+    def start_handler(self):
+        self.core.start_handler()
+
 
 class CoreVisualizer(object):
     def __init__(self, lcm=LCM()):
@@ -161,11 +173,33 @@ class CoreVisualizer(object):
         self.queue = CommandQueue()
         self.publish_immediately = True
         self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE",
-                           self.handle_response)
+                           self._handle_response)
+        self.handler_thread = None
 
-    def handle_response(self, channel, msgdata):
+    def _handler_loop(self):
+        while True:
+            self.lcm.handle()
+
+    def start_handler(self):
+        if self.handler_thread is not None:
+            return
+        self.handler_thread = threading.Thread(
+            target=self._handler_loop)
+        self.handler_thread.daemon = True
+        self.handler_thread.start()
+
+    def _handle_response(self, channel, msgdata):
         msg = viewer2_comms_t.decode(msgdata)
-        print(msg)
+        data = json.loads(msg.data)
+        if data["status"] == 0:
+            pass
+        elif data["status"] == 1:
+            for path in self.tree.descendants():
+                self.queue.load.add(path)
+                self.queue.draw.add(path)
+        else:
+            raise ValueError(
+                "Unhandles response from viewer: {}".format(msg.data))
 
     def load(self, path, geomdata):
         if isinstance(geomdata, BaseGeometry):
@@ -241,6 +275,10 @@ class CoreVisualizer(object):
 if __name__ == '__main__':
     # We can provide an initial path if we want
     vis = Visualizer(path="/root/folder1")
+
+    # Start a thread to handle responses from the viewer. Doing this enables
+    # the automatic reloading of missing geometry if the viewer is restarted.
+    vis.start_handler()
 
     vis["boxes"].load(
         [GeometryData(Box([1, 1, 1]),
