@@ -31,7 +31,7 @@ def serialize_transform(tform):
 class GeometryData(object):
     __slots__ = ["geometry", "color", "transform"]
 
-    def __init__(self, geometry, color=[1, 0, 0, 0.5], transform=np.eye(4)):
+    def __init__(self, geometry, color=(1., 1., 1., 1.), transform=np.eye(4)):
         self.geometry = geometry
         self.color = color
         self.transform = transform
@@ -91,7 +91,9 @@ class Triad(BaseGeometry, namedtuple("Triad", [])):
 class LazyTree(object):
     __slots__ = ["geometries", "transform", "children"]
 
-    def __init__(self, geometries=[], transform=np.eye(4)):
+    def __init__(self, geometries=None, transform=np.eye(4)):
+        if geometries is None:
+            geometries = []
         self.geometries = geometries
         self.transform = transform
         self.children = defaultdict(lambda: LazyTree())
@@ -140,10 +142,8 @@ class Visualizer(object):
     """
     __slots__ = ["core", "path"]
 
-    def __init__(self, core=None, path=None, lcm=None):
+    def __init__(self, path=None, lcm=None, core=None):
         if core is None:
-            if lcm is None:
-                lcm = LCM()
             core = CoreVisualizer(lcm)
         if path is None:
             path = tuple()
@@ -186,9 +186,9 @@ class Visualizer(object):
         Indexing into a visualizer returns a new visualizer with the given
         path appended to this visualizer's path.
         """
-        return Visualizer(core=self.core,
-                          path=self.path + (path,),
-                          lcm=self.core.lcm)
+        return Visualizer(path=self.path + (path,),
+                          lcm=self.core.lcm,
+                          core=self.core)
 
     def start_handler(self):
         """
@@ -201,7 +201,9 @@ class Visualizer(object):
 
 
 class CoreVisualizer(object):
-    def __init__(self, lcm=LCM()):
+    def __init__(self, lcm=None):
+        if lcm is None:
+            lcm = LCM()
         self.lcm = lcm
         self.tree = LazyTree()
         self.queue = CommandQueue()
@@ -332,10 +334,27 @@ if __name__ == '__main__':
     geom = GeometryData(box, color=[0, 1, 0, 0.5])
     box_vis.load(geom)
 
-    sphere_vis.load(Sphere(1.0))
+    sphere_vis.load(Sphere(0.5))
     sphere_vis.draw(transformations.translation_matrix([1, 0, 0]))
+
+    vis["test"].load(Triad())
+    vis["test"].draw(transformations.concatenate_matrices(
+        transformations.rotation_matrix(1.0, [0, 0, 1]),
+        transformations.translation_matrix([-1, 0, 1])))
+
+    # the triad geometry is reloaded, but it keeps
+    # the transform from the last draw call.  is that
+    # a bug?  should a geometry reload also reset the
+    # transform?
+    vis["test"].load(Triad())
+
+    # bug, the sphere is loaded and replaces the previous
+    # geometry but it is not drawn with the correct color mode
+    vis["test"].load(Sphere(0.5))
+
 
     for theta in np.linspace(0, 2 * np.pi, 100):
         vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
         time.sleep(0.01)
-    vis.delete()
+
+    #vis.delete()

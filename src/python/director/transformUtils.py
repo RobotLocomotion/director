@@ -1,5 +1,6 @@
 from director.thirdparty import transformations
 import vtkAll as vtk
+import math
 import numpy as np
 
 try:
@@ -167,7 +168,6 @@ def transformFromPose(position, quaternion):
     '''
     Returns a vtkTransform
     '''
-
     mat = transformations.quaternion_matrix(quaternion)
     mat[:3,3] = position
     return getTransformFromNumpy(mat)
@@ -179,7 +179,6 @@ def poseFromTransform(transform):
     '''
     mat = getNumpyFromTransform(transform)
     return np.array(mat[:3,3]), transformations.quaternion_from_matrix(mat, isprecise=True)
-
 
 def frameFromPositionAndRPY(position, rpy):
     '''
@@ -205,3 +204,48 @@ def copyFrame(transform):
     t.PostMultiply()
     t.SetMatrix(transform.GetMatrix())
     return t
+
+
+def forceMomentTransformation(inputFrame, outputFrame):
+    """
+    Utility getting the force-moment transformation for converting wrenches from
+    one frame to another. Ff wrench is 6 x 1 (moment, force) expressed in input frame,
+    then corresponding wrench in output frame would be numpy.dot(FM, wrench) = wrench_in_output_frame.
+    :param inputFrame: A vtkTransform defining the input frame
+    :param outputFrame: A vtkTransform defining the output frame
+    :return: 4x4 matrix that transform a wrench from the input frame to the output frame
+    """
+    
+    FM = np.zeros((6,6))
+
+    inputToOutputFrame = copyFrame(inputFrame)
+    inputToOutputFrame.PostMultiply()
+    inputToOutputFrame.Concatenate(outputFrame.GetLinearInverse())
+
+    position, quaternion = poseFromTransform(inputToOutputFrame)
+    inputToOutputRotationMatrix = transformations.quaternion_matrix(quaternion)[:3,:3]
+
+    FM[0:3, 0:3] = inputToOutputRotationMatrix
+    FM[3:,3:] = inputToOutputRotationMatrix
+    cross = crossProductMatrix(position)
+    FM[0:3,3:] = np.dot(cross,inputToOutputRotationMatrix)
+
+    return FM
+
+def crossProductMatrix(x):
+    """
+    Computes the matrix P such that P*y = cross product of x and y
+    :param x:
+    :return: P, a 3x3 matrix
+    """
+    cross = np.zeros((3,3))
+    cross[0,1] = -x[2]
+    cross[0,2] = x[1]
+    cross[1,0] = x[2]
+    cross[1,2] = -x[0]
+    cross[2,0] = -x[1]
+    cross[2,1] = x[0]
+
+    return cross
+
+
