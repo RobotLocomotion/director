@@ -118,16 +118,16 @@ class LazyTree(object):
 
 class CommandQueue(object):
     def __init__(self):
-        self.draw = set()
-        self.load = set()
+        self.settransform = set()
+        self.setgeometry = set()
         self.delete = set()
 
     def isempty(self):
-        return not (self.draw or self.load or self.delete)
+        return not (self.settransform or self.setgeometry or self.delete)
 
     def empty(self):
-        self.draw = set()
-        self.load = set()
+        self.settransform = set()
+        self.setgeometry = set()
         self.delete = set()
 
 
@@ -155,7 +155,7 @@ class Visualizer(object):
         self.core = core
         self.path = path
 
-    def load(self, geomdata):
+    def setgeometry(self, geomdata):
         """
         Set the geometries at this visualizer's path to the given
         geomdata (replacing whatever was there before).
@@ -164,16 +164,16 @@ class Visualizer(object):
           * a single GeometryData
           * a collection of any combinations of BaseGeometry and GeometryData
         """
-        self.core.load(self.path, geomdata)
+        self.core.setgeometry(self.path, geomdata)
         return self
 
-    def draw(self, tform):
+    def settransform(self, tform):
         """
         Set the transform for this visualizer's path (and, implicitly,
         any descendants of that path).
         tform should be a 4x4 numpy array representing a homogeneous transform
         """
-        self.core.draw(self.path, tform)
+        self.core.settransform(self.path, tform)
 
     def delete(self):
         """
@@ -231,13 +231,13 @@ class CoreVisualizer(object):
             pass
         elif data["status"] == 1:
             for path in self.tree.descendants():
-                self.queue.load.add(path)
-                self.queue.draw.add(path)
+                self.queue.setgeometry.add(path)
+                self.queue.settransform.add(path)
         else:
             raise ValueError(
                 "Unhandled response from viewer: {}".format(msg.data))
 
-    def load(self, path, geomdata):
+    def setgeometry(self, path, geomdata):
         if isinstance(geomdata, BaseGeometry):
             self._load(path, [GeometryData(geomdata)])
         elif isinstance(geomdata, Iterable):
@@ -253,12 +253,12 @@ class CoreVisualizer(object):
             else:
                 converted_geom_data.append(GeometryData(geom))
         self.tree.getdescendant(path).geometries = converted_geom_data
-        self.queue.load.add(path)
+        self.queue.setgeometry.add(path)
         self._maybe_publish()
 
-    def draw(self, path, tform):
+    def settransform(self, path, tform):
         self.tree.getdescendant(path).transform = tform
-        self.queue.draw.add(path)
+        self.queue.settransform.add(path)
         self._maybe_publish()
 
     def delete(self, path):
@@ -283,19 +283,19 @@ class CoreVisualizer(object):
 
     def serialize_queue(self):
         delete = []
-        load = []
-        draw = []
+        setgeometry = []
+        settransform = []
         for path in self.queue.delete:
             delete.append({"path": path})
-        for path in self.queue.load:
+        for path in self.queue.setgeometry:
             geoms = self.tree.getdescendant(path).geometries
             if geoms:
-                load.append({
+                setgeometry.append({
                     "path": path,
                     "geometries": [geom.serialize() for geom in geoms]
                 })
-        for path in self.queue.draw:
-            draw.append({
+        for path in self.queue.settransform:
+            settransform.append({
                 "path": path,
                 "transform": serialize_transform(
                     self.tree.getdescendant(path).transform)
@@ -303,8 +303,8 @@ class CoreVisualizer(object):
         return {
             "utime": int(time.time() * 1e6),
             "delete": delete,
-            "load": load,
-            "draw": draw
+            "setgeometry": setgeometry,
+            "settransform": settransform
         }
 
 
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     # the automatic reloading of missing geometry if the viewer is restarted.
     vis.start_handler()
 
-    vis["boxes"].load(
+    vis["boxes"].setgeometry(
         [GeometryData(Box([1, 1, 1]),
          color=np.random.rand(4),
          transform=transformations.translation_matrix([x, -2, 0]))
@@ -332,29 +332,29 @@ if __name__ == '__main__':
 
     box = Box([1, 1, 1])
     geom = GeometryData(box, color=[0, 1, 0, 0.5])
-    box_vis.load(geom)
+    box_vis.setgeometry(geom)
 
-    sphere_vis.load(Sphere(0.5))
-    sphere_vis.draw(transformations.translation_matrix([1, 0, 0]))
+    sphere_vis.setgeometry(Sphere(0.5))
+    sphere_vis.settransform(transformations.translation_matrix([1, 0, 0]))
 
-    vis["test"].load(Triad())
-    vis["test"].draw(transformations.concatenate_matrices(
+    vis["test"].setgeometry(Triad())
+    vis["test"].settransform(transformations.concatenate_matrices(
         transformations.rotation_matrix(1.0, [0, 0, 1]),
         transformations.translation_matrix([-1, 0, 1])))
 
-    # the triad geometry is reloaded, but it keeps
-    # the transform from the last draw call.  is that
-    # a bug?  should a geometry reload also reset the
-    # transform?
-    vis["test"].load(Triad())
+    vis["triad"].setgeometry(Triad())
+
+    # Setting the geometry preserves the transform at that path.
+    # Call settransform(np.eye(4)) if you want to clear the transform.
+    vis["test"].setgeometry(Triad())
 
     # bug, the sphere is loaded and replaces the previous
     # geometry but it is not drawn with the correct color mode
-    vis["test"].load(Sphere(0.5))
+    vis["test"].setgeometry(Sphere(0.5))
 
 
     for theta in np.linspace(0, 2 * np.pi, 100):
-        vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
+        vis.settransform(transformations.rotation_matrix(theta, [0, 0, 1]))
         time.sleep(0.01)
 
     #vis.delete()
