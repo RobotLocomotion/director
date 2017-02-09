@@ -30,7 +30,7 @@ def serialize_transform(tform):
 class GeometryData(object):
     __slots__ = ["geometry", "color", "transform"]
 
-    def __init__(self, geometry, color=[1, 0, 0, 0.5], transform=np.eye(4)):
+    def __init__(self, geometry, color=(1., 1., 1., 1.), transform=np.eye(4)):
         self.geometry = geometry
         self.color = color
         self.transform = transform
@@ -90,7 +90,9 @@ class Triad(BaseGeometry, namedtuple("Triad", [])):
 class LazyTree(object):
     __slots__ = ["geometries", "transform", "children"]
 
-    def __init__(self, geometries=[], transform=np.eye(4)):
+    def __init__(self, geometries=None, transform=np.eye(4)):
+        if geometries is None:
+            geometries = []
         self.geometries = geometries
         self.transform = transform
         self.children = defaultdict(lambda: LazyTree())
@@ -123,10 +125,8 @@ class CommandQueue(object):
 class Visualizer(object):
     __slots__ = ["core", "path"]
 
-    def __init__(self, core=None, path=None, lcm=None):
+    def __init__(self, path=None, lcm=None, core=None):
         if core is None:
-            if lcm is None:
-                lcm = LCM()
             core = CoreVisualizer(lcm)
         if path is None:
             path = tuple()
@@ -149,13 +149,15 @@ class Visualizer(object):
         self.core.delete(self.path)
 
     def __getitem__(self, path):
-        return Visualizer(core=self.core,
-                          path=self.path + (path,),
-                          lcm=self.core.lcm)
+        return Visualizer(path=self.path + (path,),
+                          lcm=self.core.lcm,
+                          core=self.core)
 
 
 class CoreVisualizer(object):
-    def __init__(self, lcm=LCM()):
+    def __init__(self, lcm=None):
+        if lcm is None:
+            lcm = LCM()
         self.lcm = lcm
         self.tree = LazyTree()
         self.queue = CommandQueue()
