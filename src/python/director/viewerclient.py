@@ -262,10 +262,27 @@ if __name__ == '__main__':
     geom = GeometryData(box, color=[0, 1, 0, 0.5])
     box_vis.load(geom)
 
-    sphere_vis.load(Sphere(1.0))
+    sphere_vis.load(Sphere(0.5))
     sphere_vis.draw(transformations.translation_matrix([1, 0, 0]))
+
+    vis["test"].load(Triad())
+    vis["test"].draw(transformations.concatenate_matrices(
+        transformations.rotation_matrix(1.0, [0, 0, 1]),
+        transformations.translation_matrix([-1, 0, 1])))
+
+    # the triad geometry is reloaded, but it keeps
+    # the transform from the last draw call.  is that
+    # a bug?  should a geometry reload also reset the
+    # transform?
+    vis["test"].load(Triad())
+
+    # bug, the sphere is loaded and replaces the previous
+    # geometry but it is not drawn with the correct color mode
+    vis["test"].load(Sphere(0.5))
+
 
     for theta in np.linspace(0, 2 * np.pi, 100):
         vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
         time.sleep(0.01)
-    vis.delete()
+
+    #vis.delete()
