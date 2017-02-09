@@ -29,6 +29,7 @@ def serialize_transform(tform):
 
 class GeometryData(object):
     __slots__ = ["geometry", "color", "transform"]
+
     def __init__(self, geometry, color=[1, 0, 0, 0.5], transform=np.eye(4)):
         self.geometry = geometry
         self.color = color
@@ -88,6 +89,7 @@ class Triad(BaseGeometry, namedtuple("Triad", [])):
 
 class LazyTree(object):
     __slots__ = ["geometries", "transform", "children"]
+
     def __init__(self, geometries=[], transform=np.eye(4)):
         self.geometries = geometries
         self.transform = transform
@@ -120,6 +122,7 @@ class CommandQueue(object):
 
 class Visualizer(object):
     __slots__ = ["core", "path"]
+
     def __init__(self, core=None, path=None, lcm=None):
         if core is None:
             if lcm is None:
@@ -146,7 +149,9 @@ class Visualizer(object):
         self.core.delete(self.path)
 
     def __getitem__(self, path):
-        return Visualizer(core=self.core, path=self.path + (path,), lcm=self.core.lcm)
+        return Visualizer(core=self.core,
+                          path=self.path + (path,),
+                          lcm=self.core.lcm)
 
 
 class CoreVisualizer(object):
@@ -155,7 +160,8 @@ class CoreVisualizer(object):
         self.tree = LazyTree()
         self.queue = CommandQueue()
         self.publish_immediately = True
-        self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE", self.handle_response)
+        self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE",
+                           self.handle_response)
 
     def handle_response(self, channel, msgdata):
         msg = viewer2_comms_t.decode(msgdata)
@@ -221,7 +227,8 @@ class CoreVisualizer(object):
         for path in self.queue.draw:
             draw.append({
                 "path": path,
-                "transform": serialize_transform(self.tree.getdescendant(path).transform)
+                "transform": serialize_transform(
+                    self.tree.getdescendant(path).transform)
             })
         return {
             "utime": int(time.time() * 1e6),
@@ -235,10 +242,11 @@ if __name__ == '__main__':
     # We can provide an initial path if we want
     vis = Visualizer(path="/root/folder1")
 
-    vis["boxes"].load([GeometryData(Box([1, 1, 1]),
-                           color=np.random.rand(4),
-                           transform=transformations.translation_matrix([x, -2, 0])) \
-                       for x in range(10)])
+    vis["boxes"].load(
+        [GeometryData(Box([1, 1, 1]),
+         color=np.random.rand(4),
+         transform=transformations.translation_matrix([x, -2, 0]))
+         for x in range(10)])
 
     # Index into the visualizer to get a sub-tree. vis.__getitem__ is lazily
     # implemented, so these sub-visualizers come into being as soon as they're
@@ -259,7 +267,3 @@ if __name__ == '__main__':
         vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
         time.sleep(0.01)
     vis.delete()
-
-
-
-
