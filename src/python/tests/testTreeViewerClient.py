@@ -28,11 +28,11 @@ if __name__ == '__main__':
     # We can provide an initial path if we want
     vis = Visualizer(path="/root/folder1")
 
-
-    vis["boxes"].load([GeometryData(Box([1, 1, 1]),
-                           color=np.hstack((np.random.rand(3), 0.5)),
-                           transform=transformations.translation_matrix([x, -2, 0])) \
-                       for x in range(10)])
+    vis["boxes"].setgeometry(
+        [GeometryData(Box([1, 1, 1]),
+                      color=np.hstack((np.random.rand(3), 0.5)),
+                      transform=transformations.translation_matrix([x, -2, 0]))
+         for x in range(10)])
 
     # Index into the visualizer to get a sub-tree. vis.__getitem__ is lazily
     # implemented, so these sub-visualizers come into being as soon as they're
@@ -44,13 +44,13 @@ if __name__ == '__main__':
 
     box = Box([1, 1, 1])
     geom = GeometryData(box, color=[0, 1, 0, 0.5])
-    box_vis.load(geom)
+    box_vis.setgeometry(geom)
 
-    sphere_vis.load(Sphere(1.0))
-    sphere_vis.draw(transformations.translation_matrix([1, 0, 0]))
+    sphere_vis.setgeometry(Sphere(1.0))
+    sphere_vis.settransform(transformations.translation_matrix([1, 0, 0]))
 
     for theta in np.linspace(0, 2 * np.pi, 100):
-        vis.draw(transformations.rotation_matrix(theta, [0, 0, 1]))
+        vis.settransform(transformations.rotation_matrix(theta, [0, 0, 1]))
         time.sleep(0.01)
     sphere_vis.delete()
 

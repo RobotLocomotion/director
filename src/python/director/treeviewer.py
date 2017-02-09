@@ -445,9 +445,15 @@ class TreeViewer(object):
         missingPaths = set()
         for command in data["delete"]:
             deletedPaths.add(tuple(self.handleDeletePath(command)))
-        for command in data["load"]:
-            addedGeometries.add(tuple(self.handleAddGeometry(command)))
-        for command in data["draw"]:
+        if "load" in data:
+            warnings.warn("The 'load' comand has been deprecated. Please use 'setgeometry' instead", DeprecationWarning)
+            data["setgeometry"] = data["load"]
+        if "draw" in data:
+            warnings.warn("The 'draw' cmmand has been deprecated. Please use 'settransform' instead", DeprecationWarning)
+            data["settransform"] = data["draw"]
+        for command in data["setgeometry"]:
+            addedGeometries.add(tuple(self.handleSetGeometry(command)))
+        for command in data["settransform"]:
             path, missingGeometry = self.handleSetTransform(command)
             setTransforms.add(tuple(path))
             if missingGeometry:

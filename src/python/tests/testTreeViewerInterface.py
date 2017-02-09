@@ -26,9 +26,9 @@ class Visualizer:
     def __init__(self, geometries={}):
         self.geometries = {}
         self.poses = {}
-        self.queue = {"load": [], "draw": [], "delete": []}
+        self.queue = {"setgeometry": [], "settransform": [], "delete": []}
         for (path, geom) in geometries.items():
-            self.load(path, geom)
+            self.setgeometry(path, geom)
         self.lcm = lcm.LCM()
         self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE", self.onResponse)
         self.listener = threading.Thread(target=self.listen)
@@ -44,25 +44,25 @@ class Visualizer:
         data = {
             "timestamp": timestamp,
             "delete": self.queue["delete"],
-            "load": self.queue["load"],
-            "draw": self.queue["draw"]
+            "setgeometry": self.queue["setgeometry"],
+            "settransform": self.queue["settransform"]
         }
         msg = comms_msg(timestamp, data)
         self.lcm.publish("DIRECTOR_TREE_VIEWER_REQUEST", msg.encode())
-        self.queue["load"] = []
+        self.queue["setgeometry"] = []
         self.queue["delete"] = []
-        self.queue["draw"] = []
+        self.queue["settransform"] = []
 
-    def load(self, path, geometry):
+    def setgeometry(self, path, geometry):
         self.geometries[path] = geometry
-        self.queue["load"].append({
+        self.queue["setgeometry"].append({
             "path": path.split("/"),
             "geometry": geometry
         })
 
-    def draw(self, path, pose):
+    def settransform(self, path, pose):
         self.poses[path] = pose
-        self.queue["draw"].append({
+        self.queue["settransform"].append({
             "path": path.split("/"),
             "transform": pose
         })
@@ -83,9 +83,9 @@ class Visualizer:
             print("ok")
         elif response["status"] == 1:
             for path, geom in self.geometries.items():
-                self.load(path, geom)
+                self.setgeometry(path, geom)
             for path, pose in self.poses.items():
-                self.draw(path, pose)
+                self.settransform(path, pose)
         else:
             print("unhandled:", response)
 
@@ -139,9 +139,9 @@ if __name__ == '__main__':
     }
     vis = Visualizer(geometries)
 
-    vis.draw("robot1/link1/box2", {"translation": [1, 0, 0], "quaternion": [1, 0, 0, 0]})
-    vis.draw("robot1/link1/points", {"translation": [0, 1, 0], "quaternion": [1, 0, 0, 0]})
-    vis.draw("robot1/link1/planar lidar", {"translation": [0, 2, 0], "quaternion": [1, 0, 0, 0]})
+    vis.settransform("robot1/link1/box2", {"translation": [1, 0, 0], "quaternion": [1, 0, 0, 0]})
+    vis.settransform("robot1/link1/points", {"translation": [0, 1, 0], "quaternion": [1, 0, 0, 0]})
+    vis.settransform("robot1/link1/planar lidar", {"translation": [0, 2, 0], "quaternion": [1, 0, 0, 0]})
     for j in range(2):
         for i in range(1000):
             x1 = math.sin(math.pi * 2 * i / 1000.0)
@@ -149,14 +149,14 @@ if __name__ == '__main__':
                 "translation": [x1, 0, 0],
                 "quaternion": [1, 0, 0, 0]
             }
-            vis.draw("robot1/link1", pose)
+            vis.settransform("robot1/link1", pose)
 
             x2 = math.sin(math.pi * 2 * i / 500.0)
             pose = {
                 "translation": [x2, 0, 0],
                 "quaternion": [1, 0, 0, 0]
             }
-            vis.draw("robot1/link1/box1", pose)
+            vis.settransform("robot1/link1/box1", pose)
 
             vis.publish()
             time.sleep(0.001)
