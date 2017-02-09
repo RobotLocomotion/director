@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import time
 import json
+import threading
 from collections import defaultdict, namedtuple, Iterable
 import numpy as np
 from lcm import LCM
@@ -106,6 +107,14 @@ class LazyTree(object):
             t = t[p]
         return t
 
+    def descendants(self, prefix=tuple()):
+        result = []
+        for (key, val) in self.children.items():
+            childpath = prefix + (key,)
+            result.append(childpath)
+            result.extend(val.descendants(childpath))
+        return result
+
 
 class CommandQueue(object):
     def __init__(self):
@@ -123,6 +132,14 @@ class CommandQueue(object):
 
 
 class Visualizer(object):
+    """
+    A Visualizer is a lightweight object that contains a CoreVisualizer and a
+    path. The CoreVisualizer does all of the work of storing geometries and
+    publishing LCM messages. By storing the path in the Visualizer instance,
+    we make it easy to do things like store or pass a Visualizer that draws to
+    a sub-part of the viewer tree.
+    Many Visualizer objects can all share the same CoreVisualizer.
+    """
     __slots__ = ["core", "path"]
 
     def __init__(self, path=None, lcm=None, core=None):
@@ -139,19 +156,48 @@ class Visualizer(object):
         self.path = path
 
     def load(self, geomdata):
+        """
+        Set the geometries at this visualizer's path to the given
+        geomdata (replacing whatever was there before).
+        geomdata can be any one of:
+          * a single BaseGeometry
+          * a single GeometryData
+          * a collection of any combinations of BaseGeometry and GeometryData
+        """
         self.core.load(self.path, geomdata)
         return self
 
     def draw(self, tform):
+        """
+        Set the transform for this visualizer's path (and, implicitly,
+        any descendants of that path).
+        tform should be a 4x4 numpy array representing a homogeneous transform
+        """
         self.core.draw(self.path, tform)
 
     def delete(self):
+        """
+        Delete the geometry at this visualizer's path.
+        """
         self.core.delete(self.path)
 
     def __getitem__(self, path):
+        """
+        Indexing into a visualizer returns a new visualizer with the given
+        path appended to this visualizer's path.
+        """
         return Visualizer(path=self.path + (path,),
                           lcm=self.core.lcm,
                           core=self.core)
+
+    def start_handler(self):
+        """
+        Start a Python thread that will subscribe to messages from the remote
+        viewer and handle those responses. This enables automatic reloading of
+        geometry into the viewer if, for example, the viewer is restarted
+        later.
+        """
+        self.core.start_handler()
 
 
 class CoreVisualizer(object):
@@ -163,11 +209,33 @@ class CoreVisualizer(object):
         self.queue = CommandQueue()
         self.publish_immediately = True
         self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE",
-                           self.handle_response)
+                           self._handle_response)
+        self.handler_thread = None
 
-    def handle_response(self, channel, msgdata):
+    def _handler_loop(self):
+        while True:
+            self.lcm.handle()
+
+    def start_handler(self):
+        if self.handler_thread is not None:
+            return
+        self.handler_thread = threading.Thread(
+            target=self._handler_loop)
+        self.handler_thread.daemon = True
+        self.handler_thread.start()
+
+    def _handle_response(self, channel, msgdata):
         msg = viewer2_comms_t.decode(msgdata)
-        print(msg)
+        data = json.loads(msg.data)
+        if data["status"] == 0:
+            pass
+        elif data["status"] == 1:
+            for path in self.tree.descendants():
+                self.queue.load.add(path)
+                self.queue.draw.add(path)
+        else:
+            raise ValueError(
+                "Unhandled response from viewer: {}".format(msg.data))
 
     def load(self, path, geomdata):
         if isinstance(geomdata, BaseGeometry):
@@ -243,6 +311,10 @@ class CoreVisualizer(object):
 if __name__ == '__main__':
     # We can provide an initial path if we want
     vis = Visualizer(path="/root/folder1")
+
+    # Start a thread to handle responses from the viewer. Doing this enables
+    # the automatic reloading of missing geometry if the viewer is restarted.
+    vis.start_handler()
 
     vis["boxes"].load(
         [GeometryData(Box([1, 1, 1]),
