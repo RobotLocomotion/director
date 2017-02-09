@@ -176,18 +176,21 @@ class Geometry(object):
     def createPolyDataFromMeshArrays(pts, faces):
         pd = vtk.vtkPolyData()
         pd.SetPoints(vtk.vtkPoints())
-        pd.GetPoints().SetData(vnp.getVtkFromNumpy(pts.copy()))
 
-        cells = vtk.vtkCellArray()
-        for face in faces:
-            assert len(face) == 3, "Non-triangular faces are not supported."
+        if pts.size > 0:
+            pd.GetPoints().SetData(vnp.getVtkFromNumpy(pts.copy()))
+
+            cells = vtk.vtkCellArray()
             tri = vtk.vtkTriangle()
-            tri.GetPointIds().SetId(0, face[0])
-            tri.GetPointIds().SetId(1, face[1])
-            tri.GetPointIds().SetId(2, face[2])
-            cells.InsertNextCell(tri)
+            setId = tri.GetPointIds().SetId  # bind the method for convenience
+            for face in faces:
+                assert len(face) == 3, "Non-triangular faces are not supported."
+                setId(0, face[0])
+                setId(1, face[1])
+                setId(2, face[2])
+                cells.InsertNextCell(tri)
 
-        pd.SetPolys(cells)
+            pd.SetPolys(cells)
         return pd
 
     @staticmethod
