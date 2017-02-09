@@ -136,6 +136,7 @@ set(python_files
   director/viconvisualizer.py
   director/viewbehaviors.py
   director/viewcolors.py
+  director/viewerclient.py
   director/vieweventfilter.py
   director/visualization.py
   director/vtkAll.py
