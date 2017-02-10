@@ -198,9 +198,13 @@ app.setupGlobals(globals())
 view = app.createView()
 view.show()
 
-robotSystem = robotsystem.create(view)
+robotSystem = robotsystem.create(view, planningOnly=True)
+view.resetCamera()
 
 #robotSystem.ikPlanner.planningMode = 'pydrake'
+
+if robotSystem.ikPlanner.planningMode == 'pydrake':
+    robotSystem.ikPlanner.plannerPub._setupLocalServer()
 
 if robotSystem.ikPlanner.planningMode == 'matlabdrake':
     robotSystem.ikServer.connectStartupCompleted(onMatlabStartup)

@@ -48,13 +48,34 @@ class ComponentFactory(object):
 
     def __init__(self):
         self.componentGraph = ComponentGraph()
-        self.addComponents(self.componentGraph)
+        self.initFunctions = {}
+        self.componentFields = {}
+        self.defaultOptions = FieldContainer()
 
-    def addComponents(self, componentGraph):
-        pass
+    def register(self, factoryClass):
 
-    def initDefaultOptions(self, options):
-        pass
+        fact = factoryClass()
+        components, disabledComponents = fact.getComponents()
+
+        for name in sorted(components.keys()):
+            if name in self.componentGraph.getComponentNames():
+                raise Exception('Component %s from %s has already been registered.' % (name, factoryClass.__name__))
+
+            if not hasattr(fact, 'init'+name):
+                raise Exception('Missing init function for component %s' % name)
+
+        for name in disabledComponents:
+            if name not in components.keys():
+                raise Exception('Unknown component %s found in list of disabled components.' % name)
+
+        options = dict()
+        for name, deps in components.iteritems():
+            self.componentGraph.addComponent(name, deps)
+            self.initFunctions[name] = getattr(fact, 'init'+name)
+            isEnabled = name not in disabledComponents
+            options['use'+name] = isEnabled
+
+        self.defaultOptions._add_fields(**options)
 
     def getDisabledOptions(self, **kwargs):
         options = self.getDefaultOptions()
@@ -64,13 +85,7 @@ class ComponentFactory(object):
         return options
 
     def getDefaultOptions(self, **kwargs):
-
-        options = dict()
-        for name in self.componentGraph.getComponentNames():
-            options['use'+name] = True
-
-        options = FieldContainer(**options)
-        self.initDefaultOptions(options)
+        options = FieldContainer(**dict(self.defaultOptions))
         self.setDependentOptions(options, **kwargs)
         return options
 
@@ -124,39 +139,30 @@ class ComponentFactory(object):
         if isinstance(options, dict):
             options = self.setDependentOptions(self.getDefaultOptions(), **options)
         self._verifyOptions(options)
-
-        componentGraph = self.componentGraph
-
-        for name in componentGraph.getComponentNames():
-            if 'use'+name not in options.__dict__:
-                raise Exception('Missing use option: ' + 'use'+name)
-            if 'init'+name not in dir(self):
-                raise Exception('Missing init function: ' + 'init'+name)
-
-        initOrder = toposort_flatten(componentGraph._graph)
-
-        componentFields = OrderedDict()
         defaultFields = FieldContainer(options=options, **kwargs)
 
+        initOrder = toposort_flatten(self.componentGraph.getComponentGraph())
         for name in initOrder:
-
-            initFunction = getattr(self, 'init'+name)
             isEnabled = getattr(options, 'use'+name)
-
             if isEnabled:
-                dependencies = componentGraph.getComponentDependencies(name)
-                inputFields = self._joinFields([defaultFields] + [componentFields[dep] for dep in dependencies])
-                newFields = initFunction(inputFields)
+                self.initComponent(name, defaultFields)
 
-                if not newFields:
-                    newFields = FieldContainer()
-                componentFields[name] = newFields
-
-
-        #for k, v in componentFields.iteritems():
-        #    print k, 'exports fields:'
-        #    for name in v._fields:
-        #        print '  ', name
-
-        fields = self._joinFields([defaultFields] + componentFields.values())
+        fields = self._joinFields([defaultFields] + self.componentFields.values())
         return fields
+
+    def printComponentFields(self):
+        for k, v in self.componentFields.iteritems():
+            print k, 'exports fields:'
+            for name in v._fields:
+                print '  ', name
+
+    def initComponent(self, name, defaultFields):
+
+        initFunction = self.initFunctions[name]
+        dependencies = self.componentGraph.getComponentDependencies(name)
+        inputFields = self._joinFields([defaultFields] + [self.componentFields[dep] for dep in dependencies])
+        newFields = initFunction(inputFields)
+
+        if not newFields:
+            newFields = FieldContainer()
+        self.componentFields[name] = newFields

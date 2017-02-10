@@ -16,7 +16,8 @@ testMinimalOptions = True
 
 if testMinimalOptions:
 
-    factory = robotsystem.RobotSystemFactory()
+    factory = robotsystem.ComponentFactory()
+    factory.register(robotsystem.RobotSystemFactory)
 
     options = factory.getDisabledOptions()
     options.useDirectorConfig = True
