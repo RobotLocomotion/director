@@ -439,13 +439,13 @@ class TreeViewer(object):
         data, response = self.decodeCommsMsg(msg)
         if data is None:
             self.sendStatusMessage(msg.utime,
-                                   [responses])
+                                   response)
         else:
             tic = time.time()
-            responses = self.handleViewerRequest(data)
+            response = self.handleViewerRequest(data)
             tic = time.time()
             self.sendStatusMessage(msg.utime,
-                                   responses)
+                                   response)
 
     def handleViewerRequest(self, data):
         deletedPaths = set()
