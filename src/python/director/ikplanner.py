@@ -1623,12 +1623,25 @@ class RobotPoseGUIWrapper(object):
         cls.main.widget.raise_()
         cls.main.widget.activateWindow()
 
+
+    @classmethod
+    def getConfig(cls):
+        cls.init()
+        return cls.rpg.loadConfig(cls.main.getPoseConfigFile())
+
+    @classmethod
+    def getPoseNamesInGroup(cls, groupName):
+        config = cls.getConfig()
+        assert groupName in config
+        names = []
+        for pose in config[groupName]:
+            names.append(pose['name'])
+        return names
+
     @classmethod
     def getPose(cls, groupName, poseName, side=None):
 
-        cls.init()
-
-        config = cls.rpg.loadConfig(cls.main.getPoseConfigFile())
+        config = cls.getConfig()
         assert groupName in config
 
         poses = {}

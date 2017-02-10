@@ -1,3 +1,4 @@
+import director
 from director import robotsystem
 from director import robotposegui
 from director.consoleapp import ConsoleApp
@@ -10,31 +11,31 @@ app.setupGlobals(globals())
 
 view = app.createView()
 
-robotSystem = robotsystem.create(view)
+robotSystem = robotsystem.create(view, planningOnly=True)
+
+ikPlanner = robotSystem.ikPlanner
+jc = robotSystem.robotStateJointController
 
 
-testPlanning = True
-if testPlanning:
+if ikPlanner.planningMode == 'pydrake':
+    ikPlanner.plannerPub._setupLocalServer()
 
+elif ikPlanner.planningMode == 'matlabdrake':
     robotSystem.startIkServer() # launches matlab server
 
-    playbackPanel = playbackpanel.PlaybackPanel(
-                          robotSystem.planPlayback, robotSystem.playbackRobotModel,
-                          robotSystem.playbackJointController, robotSystem.robotStateModel,
-                          robotSystem.robotStateJointController, robotSystem.manipPlanner)
+groupName = 'General'
+poseName = 'arm up pregrasp'
+poseNames = ikplanner.RobotPoseGUIWrapper.getPoseNamesInGroup(groupName)
 
-    robotSystem.ikPlanner.addPostureGoalListener(robotSystem.robotStateJointController)
-    robotSystem.manipPlanner.connectPlanReceived(playbackPanel.setPlan)
-    playbackPanel.widget.show()
+if poseName not in poseNames:
+    poseName = poseNames[0]
 
-
-jc = robotSystem.robotStateJointController
-pose = robotSystem.ikPlanner.getMergedPostureFromDatabase(jc.q, 'General', 'arm up pregrasp')
+ikPlanner.addPostureGoalListener(jc)
+pose = ikPlanner.getMergedPostureFromDatabase(jc.q, groupName, poseName)
 jc.setPose('merged', pose)
-
 
 view.show()
 ikplanner.RobotPoseGUIWrapper.show()
-
+robotSystem.playbackPanel.widget.show()
 
 app.start()
