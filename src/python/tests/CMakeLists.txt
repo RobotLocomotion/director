@@ -25,22 +25,25 @@ set(python_tests_lcm
   testDrakeVisualizerInterface.py
 )
 
-set(python_tests_robot
+set(python_tests_robot_core
+  testEndEffectorIk.py
+  testLoadUrdf.py
+  testPyDrakeIk.py
+  testRobotPoseGui.py
+  testRobotSystem.py
+)
+
+set(python_tests_robot_extra
   testActionSequence.py
   testAffordanceItems.py
   testAtlasDriver.py
   testCameraView.py
   testContinuousWalking.py
   testDrawRobotLog.py
-  testEndEffectorIk.py
   testImageView.py
-  testLoadUrdf.py
   testOtdfParser.py
   testPlanConstraints.py
   testPlaneSegmentation.py
-  testPyDrakeIk.py
-  testRobotPoseGui.py
-  testRobotSystem.py
   testTableFit.py
   testTableFitStereo.py
   testTeleopPanel.py
@@ -74,12 +77,23 @@ endif()
 set(testTeleopPanel_extra_args_2 -v5)
 set(testContinuousWalking_extra_args_2 -v5)
 
-set(testEndEffectorIk_extra_args --director_config ${CMAKE_SOURCE_DIR}/../models/IRB140/director_config.json)
-set(testEndEffectorIk_extra_args_2 -v5)
+if (USE_DRC)
+  set(testEndEffectorIk_extra_args --director_config ${CMAKE_SOURCE_DIR}/../models/IRB140/director_config.json)
+  set(testEndEffectorIk_extra_args_2 -v5)
+endif()
+
 
 set(python_test_args
   --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary
 )
+
+
+# for openhumanoids there is a default config but for drake there
+# is not, so we'll set the default config here
+if (USE_DRAKE AND NOT USE_DRC)
+  list(APPEND python_test_args --iiwa-drake)
+endif()
+
 
 set(python_exe ${CMAKE_INSTALL_PREFIX}/bin/directorPython)
 
@@ -127,9 +141,15 @@ if(USE_LCM)
   endforeach()
 endif()
 
+if(USE_DRAKE)
+  foreach(name ${python_tests_robot_core})
+    add_python_test(${name} robot_core)
+  endforeach()
+endif()
+
 if(USE_DRC)
-  foreach(name ${python_tests_robot})
-    add_python_test(${name} robot)
+  foreach(name ${python_tests_robot_extra})
+    add_python_test(${name} robot_extra)
   endforeach()
 endif()
 

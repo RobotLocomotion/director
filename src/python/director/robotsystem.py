@@ -348,7 +348,7 @@ def create(view=None, globalsDict=None, options=None, planningOnly=False):
 
     if planningOnly:
         options = factory.getDisabledOptions()
-        factory.setDependentOptions(options, usePlannerPublisher=True)
+        factory.setDependentOptions(options, usePlannerPublisher=True, useTeleop=True)
 
     robotSystem = factory.construct(options, view=view)
 
