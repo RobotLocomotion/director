@@ -5,7 +5,6 @@ import argparse
 import json
 
 
-
 class DRCArgParser(object):
 
     def __init__(self):
@@ -80,7 +79,27 @@ class DRCArgParser(object):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/dual_arm_husky_description/director_config.json')
 
-    def addDirectorConfigShortcuts(self, directorConfig):
+
+    def _isPyDrakeAvailable(self):
+        try:
+            import pydrake
+        except ImportError:
+            return False
+        return True
+
+    def addDrakeConfigShortcuts(self, directorConfig):
+
+        import pydrake
+        drakePath = pydrake.getDrakePath()
+
+        directorConfig.add_argument(
+            '--iiwa-drake',
+            dest='directorConfigFile',
+            action='store_const',
+            const=os.path.join(drakePath, 'examples/kuka_iiwa_arm/director_config.json'),
+            help='Use KUKA IIWA from drake/examples')
+
+    def addOpenHumanoidsConfigShortcuts(self, directorConfig):
 
         directorConfig.add_argument('-v3', '--atlas_v3', dest='directorConfigFile',
                             action='store_const',
@@ -136,9 +155,12 @@ class DRCArgParser(object):
                                     help='JSON file specifying which urdfs to use')
 
         if director.getDRCBaseIsSet():
-            self.addDirectorConfigShortcuts(directorConfig)
+            self.addOpenHumanoidsConfigShortcuts(directorConfig)
             parser.set_defaults(directorConfigFile=self.getDefaultDirectorConfigFile(),
                                 config_file=self.getDefaultBotConfigFile())
+
+        if self._isPyDrakeAvailable():
+            self.addDrakeConfigShortcuts(directorConfig)
 
         parser.add_argument('data_files', type=str, nargs='*',
                             default=[], action='append', metavar='filename',
