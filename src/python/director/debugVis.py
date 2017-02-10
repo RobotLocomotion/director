@@ -131,9 +131,9 @@ class DebugData(object):
     def addCapsule(self, center, axis, length, radius, color=[1,1,1]):
         axis = np.asarray(axis) / np.linalg.norm(axis)
         center = np.array(center)
-        self.addCylinder(center=center, axis=axis, radius=radius, length=length)
-        self.addSphere(center=center-0.5*length*axis, radius=radius)
-        self.addSphere(center=center+0.5*length*axis, radius=radius)
+        self.addCylinder(center=center, axis=axis, radius=radius, length=length, color=color)
+        self.addSphere(center=center-0.5*length*axis, radius=radius, color=color)
+        self.addSphere(center=center+0.5*length*axis, radius=radius, color=color)
 
     def addTorus(self, radius, thickness, resolution=30):
 
@@ -174,7 +174,7 @@ class DebugData(object):
         transformFilter.SetTransform(transform)
         transformFilter.SetInputConnection(sphere.GetOutputPort())
         transformFilter.Update()
-        self.addPolyData(transformFilter.GetOutput())
+        self.addPolyData(transformFilter.GetOutput(), color)
 
     def getPolyData(self):
 
