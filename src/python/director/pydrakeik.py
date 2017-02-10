@@ -475,7 +475,7 @@ class PyDrakeIkServer(object):
         '''
         Given arrays x and y and an interpolation kind 'linear', 'cubic' or 'pchip',
         this function returns the result of scipy.interpolate.interp1d or
-        scipy.interpolate.pchip.
+        scipy.interpolate.PchipInterpolator.
 
         If the interpolation is cubic or pchip, this function will duplicate the
         values at the end points of x and y (and add/subtract a very small x delta)
@@ -498,7 +498,7 @@ class PyDrakeIkServer(object):
             y = np.vstack(([y[0]], y, [y[-1]]))
 
         if kind == 'pchip':
-            return scipy.interpolate.pchip(x, y, axis=0)
+            return scipy.interpolate.PchipInterpolator(x, y, axis=0)
         else:
             return scipy.interpolate.interp1d(x, y, axis=0, kind=kind)
 

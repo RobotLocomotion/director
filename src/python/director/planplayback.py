@@ -107,7 +107,7 @@ class PlanPlayback(object):
         if self.interpolationMethod in ['slinear', 'quadratic', 'cubic']:
             f = scipy.interpolate.interp1d(poseTimes, poses, axis=0, kind=self.interpolationMethod)
         elif self.interpolationMethod == 'pchip':
-            f = scipy.interpolate.pchip(poseTimes, poses, axis=0)
+            f = scipy.interpolate.PchipInterpolator(poseTimes, poses, axis=0)
         return f
 
 
@@ -223,7 +223,7 @@ class PlanPlayback(object):
             if self.interpolationMethod in ['slinear', 'quadratic', 'cubic']:
                 f = scipy.interpolate.interp1d(x, y, kind=self.interpolationMethod)
             elif self.interpolationMethod == 'pchip':
-                f = scipy.interpolate.pchip(x, y)
+                f = scipy.interpolate.PchipInterpolator(x, y)
 
             ax.plot(x, y, 'ko')
             seriesNames.append(jointName + ' points')
