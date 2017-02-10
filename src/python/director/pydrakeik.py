@@ -32,11 +32,12 @@ class PyDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
 
         self.counter = FPSCounter()
         self.counter.printToConsole = True
-
-        # disabled for now
-        #self._setupLocalServer()
+        self.ikServer = None
 
     def _setupLocalServer(self):
+
+        if self.ikServer is not None:
+            return
 
         initArgs = FieldContainer(
             urdfFile=self.ikPlanner.robotModel.getProperty('Filename'),
