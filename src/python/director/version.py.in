@@ -19,3 +19,6 @@ def branch():
 
 def commitHash():
     return '@DD_VERSION_COMMIT_HASH@'
+
+def gitDescribe():
+    return '@DD_VERSION_GIT_DESCRIBE@'
