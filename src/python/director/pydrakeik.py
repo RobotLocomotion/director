@@ -1,3 +1,8 @@
+# import pydrake first.  This is a workaround for the issue:
+# https://github.com/RobotLocomotion/director/issues/467
+import pydrake.solvers.ik as pydrakeik
+import pydrake
+
 import os
 import json
 from collections import OrderedDict
@@ -16,9 +21,6 @@ from director import vtkAll as vtk
 from director import transformUtils
 
 from director import lcmUtils
-
-import pydrake
-import pydrake.solvers.ik as pydrakeik
 
 try:
     from robotlocomotion import robot_plan_t

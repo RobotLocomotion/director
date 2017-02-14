@@ -1,3 +1,7 @@
+# import pydrakeik first.  This is a workaround for the issue:
+# https://github.com/RobotLocomotion/director/issues/467
+from director import pydrakeik
+
 import director
 from director import robotsystem
 from director import robotposegui
