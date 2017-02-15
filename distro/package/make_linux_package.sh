@@ -10,13 +10,14 @@ if [ ! -d "$superbuildInstallDir" ]; then
 fi
 
 versionString=$($superbuildInstallDir/bin/directorPython -c 'import director.version as ver; print ver.versionString()')
+commitHash=$($superbuildInstallDir/bin/directorPython -c 'import director.version as ver; print ver.commitHash()[:7]')
 
 osid=$( cat /etc/os-release | grep "^ID=" | sed s/ID=// )
 osversion=$( cat /etc/os-release | grep "VERSION_ID=" | sed s/VERSION_ID=// | sed 's/"\(.*\)"/\1/' )
 
 echo "OS ID and version set as: $osid-$osversion"
 
-packageName=director-$versionString-$osid-$osversion
+packageName=director-$versionString-$commitHash-$osid-$osversion
 
 ######
 
