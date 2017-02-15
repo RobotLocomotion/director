@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import time
 import json
+import tempfile
 import threading
 from collections import defaultdict, namedtuple, Iterable
 import numpy as np
@@ -205,12 +206,19 @@ class CoreVisualizer(object):
         if lcm is None:
             lcm = LCM()
         self.lcm = lcm
+        self.client_id_file = tempfile.NamedTemporaryFile()
         self.tree = LazyTree()
         self.queue = CommandQueue()
         self.publish_immediately = True
-        self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE",
+        self.lcm.subscribe(self._response_channel(),
                            self._handle_response)
         self.handler_thread = None
+
+    def _request_channel(self):
+        return "DIRECTOR_TREE_VIEWER_REQUEST_<{:s}>".format(self.client_id_file.name)
+
+    def _response_channel(self):
+        return "DIRECTOR_TREE_VIEWER_RESPONSE_<{:s}>".format(self.client_id_file.name)
 
     def _handler_loop(self):
         while True:
@@ -278,7 +286,7 @@ class CoreVisualizer(object):
         if not self.queue.isempty():
             data = self.serialize_queue()
             msg = to_lcm(data)
-            self.lcm.publish("DIRECTOR_TREE_VIEWER_REQUEST", msg.encode())
+            self.lcm.publish(self._request_channel(), msg.encode())
             self.queue.empty()
 
     def serialize_queue(self):
@@ -351,7 +359,6 @@ if __name__ == '__main__':
     # bug, the sphere is loaded and replaces the previous
     # geometry but it is not drawn with the correct color mode
     vis["test"].setgeometry(Sphere(0.5))
-
 
     for theta in np.linspace(0, 2 * np.pi, 100):
         vis.settransform(transformations.rotation_matrix(theta, [0, 0, 1]))

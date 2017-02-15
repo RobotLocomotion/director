@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import re
 import time
 import warnings
 import numpy as np
@@ -378,15 +379,26 @@ class TreeViewer(object):
         self.view = view
         self.itemToPathCache = {}
         self.pathToItemCache = {}
+        self.client_id_regex = re.compile(r'\<(.*)\>')
         self.enable()
         self.sendStatusMessage(
             0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
 
     def _addSubscriber(self):
         self.subscriber = lcmUtils.addSubscriber(
-            'DIRECTOR_TREE_VIEWER_REQUEST',
+            'DIRECTOR_TREE_VIEWER_REQUEST.*',
             lcmrl.viewer2_comms_t,
-            self.onViewerRequest)
+            self.onViewerRequest,
+            callbackNeedsChannel=True)
+        # Note: from discussion with @patmarion, there's a bug in the lcmUtils subscriber
+        # when dealing with regex channels:
+        #   > If you subscribe to MY_CHANNEL_*, and two messages arrive back to back
+        #   > (MY_CHANNEL_FOO, foo_data) and (MY_CHANNEL_BAR, bar_data), then the default
+        #   > behavior in the lcm subscriber is to only call your callback once (if notify
+        #   > all messages = false), and it calls callback(MY_CHANNEL_FOO, bar_data)
+        #
+        # However, this can be avoided by notifying for *all* messages, which is what we
+        # want anyway:
         self.subscriber.setNotifyAllMessagesEnabled(True)
 
     def _removeSubscriber(self):
@@ -408,7 +420,7 @@ class TreeViewer(object):
     def disable(self):
         self.setEnabled(False)
 
-    def sendStatusMessage(self, timestamp, response):
+    def sendStatusMessage(self, timestamp, response, client_id=""):
         msg = lcmrl.viewer2_comms_t()
         msg.format = "treeviewer_json"
         msg.format_version_major = 1
@@ -416,7 +428,11 @@ class TreeViewer(object):
         data = dict(timestamp=timestamp, **response.toJson())
         msg.data = json.dumps(data)
         msg.num_bytes = len(msg.data)
-        lcmUtils.publish('DIRECTOR_TREE_VIEWER_RESPONSE', msg)
+        if client_id:
+            channel = "DIRECTOR_TREE_VIEWER_RESPONSE_<{:s}>".format(client_id)
+        else:
+            channel = "DIRECTOR_TREE_VIEWER_RESPONSE"
+        lcmUtils.publish(channel, msg)
 
     def decodeCommsMsg(self, msg):
         if msg.format == "treeviewer_json":
@@ -434,18 +450,21 @@ class TreeViewer(object):
                                              "treeviewer_json": ["1.0"]
                                         }})
 
-    def onViewerRequest(self, msg):
-        tic = time.time()
+    def onViewerRequest(self, msg, channel="DIRECTOR_TREE_VIEWER_REQUEST"):
+        match = self.client_id_regex.search(channel)
+        if match:
+            client_id = match.group(1)  # MatchObject.group is 1-indexed
+        else:
+            warnings.warn("To reduce cross-talk, clients should append a unique client ID inside <> characters to their DIRECTOR_TREE_VIEWER_REQUEST channel name. For example: DIRECTOR_TREE_VIEWER_REQUEST_<foo>. The client should also subscribe to the equivalent response channel: DIRECTOR_TREE_VIEWER_RESPONSE_<foo>")
+            client_id = ""
         data, response = self.decodeCommsMsg(msg)
         if data is None:
             self.sendStatusMessage(msg.utime,
-                                   response)
+                                   response, client_id)
         else:
-            tic = time.time()
             response = self.handleViewerRequest(data)
-            tic = time.time()
             self.sendStatusMessage(msg.utime,
-                                   response)
+                                   response, client_id)
 
     def handleViewerRequest(self, data):
         deletedPaths = set()
