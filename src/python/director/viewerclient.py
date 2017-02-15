@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import time
 import json
+import os
 import tempfile
 import threading
 from collections import defaultdict, namedtuple, Iterable
@@ -9,6 +10,19 @@ import numpy as np
 from lcm import LCM
 from robotlocomotion import viewer2_comms_t
 from director.thirdparty import transformations
+
+
+class ClientIDFactory(object):
+    def __init__(self):
+        self.pid = os.getpid()
+        self.counter = 0
+
+    def new_client_id(self):
+        self.counter += 1
+        return "py_{:d}_{:d}".format(self.pid, self.counter)
+
+
+CLIENT_ID_FACTORY = ClientIDFactory()
 
 
 def to_lcm(data):
@@ -206,7 +220,7 @@ class CoreVisualizer(object):
         if lcm is None:
             lcm = LCM()
         self.lcm = lcm
-        self.client_id_file = tempfile.NamedTemporaryFile()
+        self.client_id = CLIENT_ID_FACTORY.new_client_id()
         self.tree = LazyTree()
         self.queue = CommandQueue()
         self.publish_immediately = True
@@ -215,10 +229,10 @@ class CoreVisualizer(object):
         self.handler_thread = None
 
     def _request_channel(self):
-        return "DIRECTOR_TREE_VIEWER_REQUEST_<{:s}>".format(self.client_id_file.name)
+        return "DIRECTOR_TREE_VIEWER_REQUEST_<{:s}>".format(self.client_id)
 
     def _response_channel(self):
-        return "DIRECTOR_TREE_VIEWER_RESPONSE_<{:s}>".format(self.client_id_file.name)
+        return "DIRECTOR_TREE_VIEWER_RESPONSE_<{:s}>".format(self.client_id)
 
     def _handler_loop(self):
         while True:
