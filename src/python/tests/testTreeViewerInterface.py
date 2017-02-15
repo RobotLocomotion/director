@@ -30,7 +30,7 @@ class Visualizer:
         for (path, geom) in geometries.items():
             self.setgeometry(path, geom)
         self.lcm = lcm.LCM()
-        self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE_<foo>", self.onResponse)
+        self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE", self.onResponse)
         self.listener = threading.Thread(target=self.listen)
         self.listener.daemon = True
         self.listener.start()
@@ -48,7 +48,7 @@ class Visualizer:
             "settransform": self.queue["settransform"]
         }
         msg = comms_msg(timestamp, data)
-        self.lcm.publish("DIRECTOR_TREE_VIEWER_REQUEST_<foo>", msg.encode())
+        self.lcm.publish("DIRECTOR_TREE_VIEWER_REQUEST", msg.encode())
         self.queue["setgeometry"] = []
         self.queue["delete"] = []
         self.queue["settransform"] = []
