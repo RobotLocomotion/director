@@ -12,7 +12,8 @@ if [ ! -d "$superbuildInstallDir" ]; then
 fi
 
 versionString=$($superbuildInstallDir/bin/directorPython -c 'import director.version as ver; print ver.versionString()')
-packageName=director-$versionString-mac
+commitHash=$($superbuildInstallDir/bin/directorPython -c 'import director.version as ver; print ver.commitHash()[:7]')
+packageName=director-$versionString-$commitHash-mac
 
 ######
 libDir=$bundleDir/Contents/MacOS/lib
