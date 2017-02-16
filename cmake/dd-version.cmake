@@ -12,10 +12,18 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# Get the latest abbreviated commit hash of the working branch
+# Get the commit hash of the working branch
 execute_process(
-  COMMAND git log -1 --format=%h
+  COMMAND git rev-parse HEAD
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE DD_VERSION_COMMIT_HASH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Get the `git describe` string
+execute_process(
+  COMMAND git describe --always
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE DD_VERSION_GIT_DESCRIBE
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
