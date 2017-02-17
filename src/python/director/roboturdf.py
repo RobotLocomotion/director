@@ -107,14 +107,6 @@ class RobotModelItem(om.ObjectModelItem):
         else:
             return None
 
-    def getFrameToWorld(self, frameId):
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        if self.model.getFrameToWorld(frameId, t):
-            return t
-        else:
-            return None
-
     def getHeadLink(self):
         headLink = drcargs.getDirectorConfig().get('headLink')
         if not headLink:
@@ -240,10 +232,10 @@ def loadRobotModel(name=None, view=None, parent='scene', urdfFile=None, color=No
 
     return obj, jointController
 
-# floating joint type can be one of 'FIXED','ROLLPITCHYAW','QUATERNION'
-def loadRobotModelFromFile(filename, floatingJointType='ROLLPITCHYAW'):
+
+def loadRobotModelFromFile(filename):
     model = PythonQt.dd.ddDrakeModel()
-    if not model.loadFromFile(filename, floatingJointType):
+    if not model.loadFromFile(filename):
         return None
     return model
 
