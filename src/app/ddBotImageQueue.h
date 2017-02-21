@@ -23,7 +23,10 @@
 #include <bot_frames/bot_frames.h>
 
 #include <image_utils/jpeg.h>
+
+#ifndef Q_MOC_RUN
 #include <pcl/filters/passthrough.h>
+#endif
 
 #include <vtkSmartPointer.h>
 #include <vtkPNGWriter.h>
