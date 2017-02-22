@@ -102,6 +102,32 @@ class Triad(BaseGeometry, namedtuple("Triad", [])):
             "type": "triad"
         }
 
+class PolyLine(BaseGeometry):
+    def __init__(self, points, radius=0.01, closed=False,
+                 start_head=False, end_head=False,
+                 head_radius=0.05, head_length=None):
+        self.points = points
+        self.radius = radius
+        self.closed = closed
+        self.start_head = start_head
+        self.end_head = end_head
+        self.head_radius = head_radius
+        self.head_length = head_length if head_length is not None else head_radius
+
+    def serialize(self):
+        data = {
+            "type": "line",
+            "points": self.points,
+            "radius": self.radius,
+            "closed": self.closed
+        }
+        if self.start_head or self.end_head:
+            data["start_head"] = self.start_head
+            data["end_head"] = self.end_head
+            data["head_radius"] = self.head_radius
+            data["head_length"] = self.head_length
+        return data
+
 
 class LazyTree(object):
     __slots__ = ["geometries", "transform", "children"]

@@ -148,6 +148,32 @@ class Geometry(object):
         return [polyData]
 
     @staticmethod
+    def createPolyLine(params):
+        d = DebugData()
+        points = [np.asarray(p) for p in params["points"]]
+        color = params.get("color", [1, 1, 1])[:3]
+        radius = params.get("radius", 0.01)
+        startHead = params.get("start_head", False)
+        endHead = params.get("end_head", False)
+        headRadius = params.get("head_radius", 0.05)
+        headLength = params.get("head_length", headRadius)
+        isClosed = params.get("closed", False)
+        if startHead:
+            normal = points[0] - points[1]
+            normal = normal / np.linalg.norm(normal)
+            points[0] = points[0] - 0.5 * headLength * normal
+            d.addCone(origin=points[0], normal=normal, radius=headRadius,
+                      height=headLength, color=color, fill=True)
+        if endHead:
+            normal = points[-1] - points[-2]
+            normal = normal / np.linalg.norm(normal)
+            points[-1] = points[-1] - 0.5 * headLength * normal
+            d.addCone(origin=points[-1], normal=normal, radius=headRadius,
+                      height=headLength, color=color, fill=True)
+        d.addPolyLine(points, isClosed, radius=radius, color=color)
+        return [d.getPolyData()]
+
+    @staticmethod
     def createPolyData(params):
         if params["type"] == "box":
             return Geometry.createBox(params)
@@ -169,6 +195,8 @@ class Geometry(object):
             return Geometry.createPlanarLidar(params)
         elif params["type"] == "triad":
             return Geometry.createTriad(params)
+        elif params["type"] == "line":
+            return Geometry.createPolyLine(params)
         else:
             raise Exception(
                 "Unsupported geometry type: {}".format(params["type"]))
