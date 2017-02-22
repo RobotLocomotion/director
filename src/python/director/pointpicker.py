@@ -25,6 +25,7 @@ class PointPicker(object):
         self.abortFunc = abortCallback
         self.annotationName = 'annotation'
         self.annotationFolder = 'segmentation'
+        self.eventFilter = None
         self.clear()
 
     def start(self):
@@ -46,7 +47,9 @@ class PointPicker(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
 
     def removeEventFilter(self):
-        self.view.vtkWidget().removeEventFilter(self.eventFilter)
+        if self.eventFilter:
+            self.view.vtkWidget().removeEventFilter(self.eventFilter)
+            self.eventFilter = None
 
     def onEvent(self, obj, event):
 
@@ -157,6 +160,7 @@ class ImagePointPicker(object):
         self.drawLines = drawLines
         self.annotationObj = None
         self.annotationFunc = callback
+        self.eventFilter = None
         self.numberOfPoints = numberOfPoints
         self.showCursor = False
         self.cursorObj = None
@@ -183,7 +187,9 @@ class ImagePointPicker(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
 
     def removeEventFilter(self):
-        self.view.vtkWidget().removeEventFilter(self.eventFilter)
+        if self.eventFilter:
+            self.view.vtkWidget().removeEventFilter(self.eventFilter)
+            self.eventFilter = None
 
     def connectDoubleClickEvent(self, func):
         return self.callbacks.connect(self.DOUBLE_CLICK_EVENT, func)
@@ -321,6 +327,7 @@ class PlacerWidget(object):
         self.handle = handle
         self.points = points
         self.moving = False
+        self.eventFilter = None
 
     def start(self):
         self.installEventFilter()
@@ -339,7 +346,9 @@ class PlacerWidget(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
 
     def removeEventFilter(self):
-        self.view.vtkWidget().removeEventFilter(self.eventFilter)
+        if self.eventFilter:
+            self.view.vtkWidget().removeEventFilter(self.eventFilter)
+            self.eventFilter = None
 
     def onEvent(self, obj, event):
 
@@ -411,6 +420,7 @@ class ObjectPicker(object):
         self.abortFunc = abortCallback
         self.hoverColor = hoverColor[0:3]
         self.hoverAlpha = hoverColor[3]
+        self.eventFilter = None
         self.pickedObj = None
         self.storedProps = {}
         self.clear()
@@ -434,7 +444,9 @@ class ObjectPicker(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
 
     def removeEventFilter(self):
-        self.view.vtkWidget().removeEventFilter(self.eventFilter)
+        if self.eventFilter:
+            self.view.vtkWidget().removeEventFilter(self.eventFilter)
+            self.eventFilter = None
 
     def onEvent(self, obj, event):
 

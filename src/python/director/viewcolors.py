@@ -6,7 +6,7 @@ class ViewBackgroundLightHandler(object):
         self.viewOptions = viewOptions
         self.action = action
         self.action.checkable = True
-        self.action.connect('triggered()', self.toggle)
+        self.action.connect('triggered()', self._onChecked)
 
         self.properties = { viewOptions : {'Gradient background':True, 'Background color':[0.0, 0.0, 0.0], 'Background color 2':[0.3, 0.3, 0.3]},
                             grid : {'Surface Mode':'Wireframe', 'Alpha':0.05, 'Color':[1.0, 1.0, 1.0], 'Color By':0}
@@ -33,7 +33,18 @@ class ViewBackgroundLightHandler(object):
         for obj, props in properties.iteritems():
             send(obj, props)
 
+    def setEnabled(self, enabled):
+        if self.isEnabled() != enabled:
+            self.action.checked = enabled
+            self._onChecked()
+
+    def isEnabled(self):
+        return bool(self.action.checked)
+
     def toggle(self):
+        self.setEnabled(not self.isEnabled())
+
+    def _onChecked(self):
         if self.action.checked:
             self.storeProperties()
             self.applyProperties(self.properties)
