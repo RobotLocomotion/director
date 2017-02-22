@@ -347,12 +347,14 @@ def getPackagePaths():
 
 def addPathsFromPackageMap(packageMap):
     for path in packageMap.map.values():
-        PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
+        if os.path.exists(path):
+            PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
 
 
 def _setupPackagePaths():
     for path in getPackagePaths():
-        PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
+        if os.path.exists(path):
+            PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
 
 
 _setupPackagePaths()

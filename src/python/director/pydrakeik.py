@@ -149,7 +149,8 @@ class RigidBodyTreeCompatNew(object):
     def makePackageMap(packagePaths):
         packageMap = pydrake.rbtree.PackageMap()
         for path in packagePaths:
-            packageMap.Add(os.path.basename(path), path)
+            if os.path.exists(path):
+                packageMap.Add(os.path.basename(path), path)
         return packageMap
 
     @staticmethod
