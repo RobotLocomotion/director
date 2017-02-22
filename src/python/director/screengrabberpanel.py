@@ -213,6 +213,7 @@ class ScreenGrabberPanel(object):
         msg += '           -vcodec libx264 \\\n'
         msg += '           -preset slow \\\n'
         msg += '           -crf 18 \\\n'
+        msg += '           -pix_fmt yuv420p \\\n'
         msg += '           output.mp4\n\n\n'
 
         app.showInfoMessage(msg, title='Recording Stopped')
