@@ -93,20 +93,22 @@ class DebugData(object):
             edges.Update()
             self.addPolyData(edges.GetOutput(), color)
 
-    def addArrow(self, start, end, headRadius=0.05, tubeRadius=0.01, color=[1,1,1], startHead=False, endHead=True):
+    def addArrow(self, start, end, headRadius=0.05, headLength=None, tubeRadius=0.01, color=[1,1,1], startHead=False, endHead=True):
+        if headLength is None:
+            headLength = headRadius
         normal = np.array(end) - np.array(start)
         normal = normal / np.linalg.norm(normal)
         if startHead:
-            start = np.array(start) + headRadius * normal
+            start = np.array(start) + 0.5 * headLength * normal
         if endHead:
-            end = np.array(end) - headRadius * normal
+            end = np.array(end) - 0.5 * headLength * normal
         self.addLine(start, end, radius=tubeRadius, color=color)
         if startHead:
             self.addCone(origin=start, normal=-normal, radius=headRadius,
-                         height=headRadius, color=color, fill=True)
+                         height=headLength, color=color, fill=True)
         if endHead:
             self.addCone(origin=end, normal=normal, radius=headRadius,
-                         height=headRadius, color=color, fill=True)
+                         height=headLength, color=color, fill=True)
 
     def addSphere(self, center, radius=0.05, color=[1,1,1], resolution=24):
 
