@@ -58,6 +58,12 @@ class DebugData(object):
             tube.Update()
             self.addPolyData(tube.GetOutput(), color)
 
+    def addPolyLine(self, points, isClosed=False, radius=0.0, color=[1,1,1]):
+        for (p1, p2) in zip(points[:-1], points[1:]):
+            self.addLine(p1, p2, radius=radius, color=color)
+        if isClosed:
+            self.addLine(points[-1], points[0], radius=radius, color=color)
+
     def addFrame(self, frame, scale, tubeRadius=0.0):
 
         origin = np.array([0.0, 0.0, 0.0])
