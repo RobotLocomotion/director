@@ -75,6 +75,24 @@ class AssimpScene(object):
                 obj = vis.showPolyData(pd, '%s (mesh %d)' % (node.name, i), parent=folder, view=view)
                 obj.actor.SetTexture(self.getTextureForMaterial(mesh.material))
                 obj.actor.SetUserTransform(t)
+                self.setMaterialProperties(obj, mesh)
+
+    def setMaterialProperties(self, obj, mesh):
+        material = mesh.material
+        props = {k[0]:v for k, v in material.properties.iteritems()}
+
+        obj.setProperty('Alpha', props['opacity'])
+        obj.setProperty('Color', props['diffuse'])
+
+        vtkprop = obj.actor.GetProperty()
+        vtkprop.SetAmbientColor(props['ambient'])
+        vtkprop.SetSpecularColor(props['specular'])
+
+        #phongSize = props['shininess']
+        #phong = 1.0
+
+        #vtkprop.SetSpecular(phong)
+        #vtkprop.SetSpecularPower(phongSize*0.7)
 
 
 def addMaterialMetaData(polyData, material):
@@ -201,8 +219,7 @@ if __name__ == '__main__':
     scene = loadAssimpSceneFromFile(sys.argv[1])
 
     from director import mainwindowapp
-    import director.visualization as vis
 
-    app = mainwindowapp.MainWindowAppFactory().construct()
+    app = mainwindowapp.construct(globals())
     scene.addToView(app.view)
     app.app.start()
