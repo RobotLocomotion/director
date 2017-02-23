@@ -772,7 +772,7 @@ int vtkOBJPolyDataProcessor::RequestData(
       }
       std::string strLine(pLine);
       vtkDebugMacro("strLine = " << strLine);
-      int idxNewLine = strLine.find_last_of('\n');
+      int idxNewLine = strLine.find_first_of("\r\n");
       std::string mtl_name = strLine.substr(0,idxNewLine);
       vtkDebugMacro("'Use Material' command, usemtl with name: " << mtl_name);
 
