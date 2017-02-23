@@ -86,6 +86,36 @@ def readVrml(filename):
     return meshes, colors
 
 
+def readObjMtl(filename):
+    '''
+    Returns list of vtkPolyData objects and a list of vtkActor objects.
+    '''
+
+    def getMtlFilename(filename, maxLines=1000):
+        with open(filename) as f:
+            for i, l in enumerate(f):
+                if l.startswith('mtllib'):
+                    tokens = l.split()
+                    if len(tokens) < 2:
+                        raise Exception('Error parsing mtllib line in file: %s\n%s' % (filename, l))
+                    return os.path.join(os.path.dirname(filename), tokens[1])
+
+    mtlFilename = getMtlFilename(filename)
+
+    l = vtk.vtkOBJImporter()
+    l.SetFileName(filename)
+    if mtlFilename:
+        l.SetFileNameMTL(mtlFilename)
+    l.SetTexturePath(os.path.dirname(filename))
+    l.Read()
+    w = l.GetRenderWindow()
+    ren = w.GetRenderers().GetItemAsObject(0)
+    actors = ren.GetActors()
+    actors = [actors.GetItemAsObject(i) for i in xrange(actors.GetNumberOfItems())]
+    meshes = [a.GetMapper().GetInput() for a in actors]
+    return meshes, actors
+
+
 def writePolyData(polyData, filename):
 
     ext = os.path.splitext(filename)[1].lower()
