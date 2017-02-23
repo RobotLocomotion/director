@@ -41,3 +41,5 @@ if __name__ == '__main__':
     vis["colored_hairline"].setgeometry(GeometryData(PolyLine([[0, -1, 0], [0, -1, 1]], radius=0), color=[0, 0.2, 0.8, 0.5]))
 
     vis["sharp_arrow"].setgeometry(PolyLine([[-1, 0, 0.5], [-0.5, 0, 0.5]], end_head=True, head_length=0.2))
+
+    vis_process.terminate()
