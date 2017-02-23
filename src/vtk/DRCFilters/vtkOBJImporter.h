@@ -23,7 +23,7 @@
 #ifndef vtkOBJImporter_h
 #define vtkOBJImporter_h
 
-#include "vtkIOImportModule.h" // For export macro
+#include <vtkDRCFiltersModule.h>
 #include <string> // for string
 #include "vtkSmartPointer.h" // for ivars
 #include "vtkImporter.h"
@@ -56,13 +56,13 @@ class vtkOBJPolyDataProcessor;
         map_Kd flare.jpg
 
    **/
-class VTKIOIMPORT_EXPORT vtkOBJImporter : public vtkImporter
+class VTKDRCFILTERS_EXPORT vtkOBJImporter : public vtkImporter
 {
 public:
   static vtkOBJImporter *New();
 
   vtkTypeMacro(vtkOBJImporter,vtkImporter);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent) ;
 
   //@{
   /**
@@ -83,17 +83,17 @@ public:
 
 protected:
   vtkOBJImporter();
-  ~vtkOBJImporter() VTK_OVERRIDE;
+  ~vtkOBJImporter() ;
 
-  int  ImportBegin() VTK_OVERRIDE /*override*/;
-  void ImportEnd () VTK_OVERRIDE /*override*/;
-  void ReadData() VTK_OVERRIDE /* override */;
+  int  ImportBegin()  /*override*/;
+  void ImportEnd ()  /*override*/;
+  void ReadData()  /* override */;
 
   vtkSmartPointer<vtkOBJPolyDataProcessor>   Impl;
 
 private:
-  vtkOBJImporter(const vtkOBJImporter&) VTK_DELETE_FUNCTION;
-  void operator=(const vtkOBJImporter&) VTK_DELETE_FUNCTION;
+  vtkOBJImporter(const vtkOBJImporter&) ;
+  void operator=(const vtkOBJImporter&) ;
 };
 
 

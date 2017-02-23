@@ -201,7 +201,7 @@ std::vector<vtkOBJImportedMaterial*> vtkOBJPolyDataProcessor::ParseOBJandMTL(
         path_and_file[0]   = this->GetTexturePath();
         path_and_file[1]   = std::string(current_mtl->texture_filename);
         std::string joined =  vtksys::SystemTools::JoinPath(path_and_file);
-        bool bFileExistsInPath    = vtksys::SystemTools::FileExists( joined );
+        bool bFileExistsInPath    = vtksys::SystemTools::FileExists( joined.c_str() );
         if(! (bFileExistsNoPath || bFileExistsInPath ) )
         {
           vtkGenericWarningMacro(
@@ -255,7 +255,7 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
     vtkPolyData* objPoly = reader->GetOutput(port_idx);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputData(objPoly);
+    mapper->SetInput(objPoly);
 
     vtkDebugWithObjectMacro(reader, "Grabbed objPoly " << objPoly
                             << ", port index " << port_idx << "\n"
