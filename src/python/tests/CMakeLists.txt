@@ -61,6 +61,7 @@ set(python_tests_standalone
 if(NOT USE_DRC)
   list(APPEND python_tests_lcm testTreeViewerInterface.py)
   list(APPEND python_tests_lcm testTreeViewerClient.py)
+  list(APPEND python_tests_lcm testTreeViewerPolyLine.py)
 endif()
 
 

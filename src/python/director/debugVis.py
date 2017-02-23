@@ -58,6 +58,12 @@ class DebugData(object):
             tube.Update()
             self.addPolyData(tube.GetOutput(), color)
 
+    def addPolyLine(self, points, isClosed=False, radius=0.0, color=[1,1,1]):
+        for (p1, p2) in zip(points[:-1], points[1:]):
+            self.addLine(p1, p2, radius=radius, color=color)
+        if isClosed:
+            self.addLine(points[-1], points[0], radius=radius, color=color)
+
     def addFrame(self, frame, scale, tubeRadius=0.0):
 
         origin = np.array([0.0, 0.0, 0.0])
@@ -87,20 +93,22 @@ class DebugData(object):
             edges.Update()
             self.addPolyData(edges.GetOutput(), color)
 
-    def addArrow(self, start, end, headRadius=0.05, tubeRadius=0.01, color=[1,1,1], startHead=False, endHead=True):
+    def addArrow(self, start, end, headRadius=0.05, headLength=None, tubeRadius=0.01, color=[1,1,1], startHead=False, endHead=True):
+        if headLength is None:
+            headLength = headRadius
         normal = np.array(end) - np.array(start)
         normal = normal / np.linalg.norm(normal)
         if startHead:
-            start = np.array(start) + headRadius * normal
+            start = np.array(start) + 0.5 * headLength * normal
         if endHead:
-            end = np.array(end) - headRadius * normal
+            end = np.array(end) - 0.5 * headLength * normal
         self.addLine(start, end, radius=tubeRadius, color=color)
         if startHead:
             self.addCone(origin=start, normal=-normal, radius=headRadius,
-                         height=headRadius, color=color, fill=True)
+                         height=headLength, color=color, fill=True)
         if endHead:
             self.addCone(origin=end, normal=normal, radius=headRadius,
-                         height=headRadius, color=color, fill=True)
+                         height=headLength, color=color, fill=True)
 
     def addSphere(self, center, radius=0.05, color=[1,1,1], resolution=24):
 
