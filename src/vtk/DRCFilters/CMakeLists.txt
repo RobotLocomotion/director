@@ -13,13 +13,16 @@ set(sources
   vtkGridSource.cxx
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
-
   vtkInteractorStyleTerrain2.cxx
-
   vtkDepthImageProcessingPass.cxx
   vtkEDLShading.cxx
+  vtkOBJImporter.cxx
   )
 
+# extra source files to compile but do not python wrap
+set(EXTRA_SRCS
+  vtkOBJImporterInternals.cxx
+  )
 
 #####
 
@@ -38,8 +41,6 @@ set(GLSL_SRCS
 # Create custom commands to encode each glsl file into a C string literal
 # in a header file
 # -----------------------------------------------------------------------------
-set(EXTRA_SRCS)
-
 if(NOT EXISTS "${VTK_ENCODESTRING_EXE}")
   message(SEND_ERROR "The required vtkEncodeString executable was not found.\nThis may indicate an error in your VTK install or configuration.")
 endif()
