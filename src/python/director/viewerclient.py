@@ -5,7 +5,7 @@ import json
 import os
 import tempfile
 import threading
-from collections import defaultdict, namedtuple, Iterable
+from collections import defaultdict, Iterable
 import numpy as np
 from lcm import LCM
 from robotlocomotion import viewer2_comms_t
@@ -45,7 +45,6 @@ def serialize_transform(tform):
 
 class GeometryData(object):
     __slots__ = ["geometry", "color", "transform"]
-
     def __init__(self, geometry, color=(1., 1., 1., 1.), transform=np.eye(4)):
         self.geometry = geometry
         self.color = color
@@ -63,7 +62,11 @@ class BaseGeometry(object):
         raise NotImplementedError()
 
 
-class Box(BaseGeometry, namedtuple("Box", ["lengths"])):
+class Box(BaseGeometry):
+    __slots__ = ["lengths"]
+    def __init__(self, lengths=[1,1,1]):
+        self.lengths = lengths
+
     def serialize(self):
         return {
             "type": "box",
@@ -71,7 +74,11 @@ class Box(BaseGeometry, namedtuple("Box", ["lengths"])):
         }
 
 
-class Sphere(BaseGeometry, namedtuple("Sphere", ["radius"])):
+class Sphere(BaseGeometry):
+    __slots__ = ["radius"]
+    def __init__(self, radius=1):
+        self.radius = radius
+
     def serialize(self):
         return {
             "type": "sphere",
@@ -79,7 +86,11 @@ class Sphere(BaseGeometry, namedtuple("Sphere", ["radius"])):
         }
 
 
-class Ellipsoid(BaseGeometry, namedtuple("Ellipsoid", ["radii"])):
+class Ellipsoid(BaseGeometry):
+    __slots__ = ["radii"]
+    def __init__(self, radii=[1,1,1]):
+        self.radii = radii
+
     def serialize(self):
         return {
             "type": "ellipsoid",
@@ -87,7 +98,12 @@ class Ellipsoid(BaseGeometry, namedtuple("Ellipsoid", ["radii"])):
         }
 
 
-class Cylinder(BaseGeometry, namedtuple("Cylinder", ["length", "radius"])):
+class Cylinder(BaseGeometry):
+    __slots__ = ["length", "radius"]
+    def __init__(self, length=1, radius=1):
+        self.length = length
+        self.radius = radius
+
     def serialize(self):
         return {
             "type": "cylinder",
