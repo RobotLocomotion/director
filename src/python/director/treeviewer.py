@@ -143,9 +143,10 @@ class Geometry(object):
 
     @staticmethod
     def createTriad(params):
-        polyData = vis.createAxesPolyData(params.get("scale", 1.0),
-                                          params.get("tube", False))
-        return [polyData]
+        d = DebugData()
+        d.addFrame(vtk.vtkTransform(), scale=params.get("scale", 1.0),
+                   tubeRadius=0.002 if params.get("tube", False) else 0.0)
+        return [d.getPolyData()]
 
     @staticmethod
     def createPolyLine(params):
@@ -542,7 +543,7 @@ class TreeViewer(object):
     def setDefaultColorBy(item):
         availableColorModes = set(
             item.getPropertyAttribute('Color By', 'enumNames'))
-        for colorBy in ["rgb", "intensity", "Axes", "RGB255"]:
+        for colorBy in ["rgb", "intensity", "RGB255"]:
             if colorBy in availableColorModes:
                 item.setProperty("Color By", colorBy)
                 break

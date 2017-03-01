@@ -96,10 +96,17 @@ class Cylinder(BaseGeometry, namedtuple("Cylinder", ["length", "radius"])):
         }
 
 
-class Triad(BaseGeometry, namedtuple("Triad", [])):
+class Triad(BaseGeometry):
+    __slots__ = ["tube", "scale"]
+    def __init__(self, scale=1.0, tube=False):
+        self.scale = scale
+        self.tube = tube
+
     def serialize(self):
         return {
-            "type": "triad"
+            "type": "triad",
+            "scale": self.scale,
+            "tube": self.tube
         }
 
 class PolyLine(BaseGeometry):
