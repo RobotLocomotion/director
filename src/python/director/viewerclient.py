@@ -314,7 +314,8 @@ class CoreVisualizer(object):
             self.tree = LazyTree()
         else:
             t = self.tree.getdescendant(path[:-1])
-            del t.children[path[-1]]
+            if path[-1] in t.children:
+                del t.children[path[-1]]
         self.queue.delete.add(path)
         self._maybe_publish()
 
