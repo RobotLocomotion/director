@@ -54,11 +54,11 @@ def computeCentroid(polyData):
 
 
 def appendPolyData(polyDataList):
-    assert len(polyDataList)
     append = vtk.vtkAppendPolyData()
-    for polyData in polyDataList:
-        append.AddInput(polyData)
-    append.Update()
+    if polyDataList:
+        for polyData in polyDataList:
+            append.AddInput(polyData)
+        append.Update()
     return shallowCopy(append.GetOutput())
 
 

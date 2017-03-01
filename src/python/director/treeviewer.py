@@ -27,7 +27,7 @@ from PythonQt import QtGui
 
 USE_TEXTURE_MESHES = True
 USE_SHADOWS = False
-
+DEFAULT_COLOR = [1, 1, 1, 1]
 
 class ViewerStatus:
     OK = 0
@@ -56,21 +56,21 @@ class Geometry(object):
     @staticmethod
     def createBox(params):
         d = DebugData()
-        color = params.get("color", [1, 1, 1])[:3]
+        color = params.get("color", DEFAULT_COLOR)[:3]
         d.addCube(dimensions=params["lengths"], center=(0, 0, 0), color=color)
         return [d.getPolyData()]
 
     @staticmethod
     def createSphere(params):
         d = DebugData()
-        color = params.get("color", [1, 1, 1])[:3]
+        color = params.get("color", DEFAULT_COLOR)[:3]
         d.addSphere(center=(0, 0, 0), radius=params["radius"], color=color)
         return [d.getPolyData()]
 
     @staticmethod
     def createCylinder(params):
         d = DebugData()
-        color = params.get("color", [1, 1, 1])[:3]
+        color = params.get("color", DEFAULT_COLOR)[:3]
         d.addCylinder(center=(0, 0, 0),
                       axis=(0, 0, 1),
                       radius=params["radius"],
@@ -83,7 +83,7 @@ class Geometry(object):
         d = DebugData()
         radius = params["radius"]
         length = params["length"]
-        color = params.get("color", [1, 1, 1])[:3]
+        color = params.get("color", DEFAULT_COLOR)[:3]
         d.addCylinder(center=(0, 0, 0),
                       axis=(0, 0, 1),
                       radius=radius,
@@ -96,7 +96,7 @@ class Geometry(object):
     @staticmethod
     def createEllipsoid(params):
         d = DebugData()
-        color = params.get("color", [1, 1, 1])[:3]
+        color = params.get("color", DEFAULT_COLOR)[:3]
         radii = params["radii"]
         d.addEllipsoid(center=(0, 0, 0), radii=radii, color=color)
         return [d.getPolyData()]
@@ -143,15 +143,16 @@ class Geometry(object):
 
     @staticmethod
     def createTriad(params):
-        polyData = vis.createAxesPolyData(params.get("scale", 1.0),
-                                          params.get("tube", False))
-        return [polyData]
+        d = DebugData()
+        d.addFrame(vtk.vtkTransform(), scale=params.get("scale", 1.0),
+                   tubeRadius=0.002 if params.get("tube", False) else 0.0)
+        return [d.getPolyData()]
 
     @staticmethod
     def createPolyLine(params):
         d = DebugData()
         points = [np.asarray(p) for p in params["points"]]
-        color = params.get("color", [1, 1, 1])[:3]
+        color = params.get("color", DEFAULT_COLOR)[:3]
         radius = params.get("radius", 0.01)
         startHead = params.get("start_head", False)
         endHead = params.get("end_head", False)
@@ -358,10 +359,13 @@ class Geometry(object):
             polyDatas.extend(Geometry.createPolyDataForGeometry(geomData))
 
         self.polyData = filterUtils.appendPolyData(polyDatas)
-        self.color = geomDatas[0].get("color", [1, 1, 1, 0.5])
+        if geomDatas:
+            self.color = geomDatas[0].get("color", DEFAULT_COLOR)
+        else:
+            self.color = DEFAULT_COLOR
 
-    def createPolyDataItem(self):
-        polyDataItem = vis.PolyDataItem("geometry", self.polyData, view=None)
+    def createPolyDataItem(self, name="geometry"):
+        polyDataItem = vis.PolyDataItem(name, self.polyData, view=None)
         polyDataItem.setProperty("Point Size", 2)
         self.updatePolyDataItemProperties(polyDataItem)
         return polyDataItem
@@ -539,7 +543,7 @@ class TreeViewer(object):
     def setDefaultColorBy(item):
         availableColorModes = set(
             item.getPropertyAttribute('Color By', 'enumNames'))
-        for colorBy in ["rgb", "intensity", "Axes", "RGB255"]:
+        for colorBy in ["rgb", "intensity", "RGB255"]:
             if colorBy in availableColorModes:
                 item.setProperty("Color By", colorBy)
                 break
@@ -554,9 +558,10 @@ class TreeViewer(object):
                 item.transform.PostMultiply()
             geomTransform.Concatenate(item.transform)
 
-        item = folder.findChild("geometry")
+        geometryName = folder.getProperty("Name")
+        item = folder.findChild(geometryName)
         if item is None:
-            item = geometry.createPolyDataItem()
+            item = geometry.createPolyDataItem(name=geometryName)
             item.addToView(self.view)
             om.addToObjectModel(item, parentObj=folder)
         else:

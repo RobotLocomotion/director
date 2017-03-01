@@ -5,7 +5,7 @@ import json
 import os
 import tempfile
 import threading
-from collections import defaultdict, namedtuple, Iterable
+from collections import defaultdict, Iterable
 import numpy as np
 from lcm import LCM
 from robotlocomotion import viewer2_comms_t
@@ -45,7 +45,6 @@ def serialize_transform(tform):
 
 class GeometryData(object):
     __slots__ = ["geometry", "color", "transform"]
-
     def __init__(self, geometry, color=(1., 1., 1., 1.), transform=np.eye(4)):
         self.geometry = geometry
         self.color = color
@@ -63,7 +62,11 @@ class BaseGeometry(object):
         raise NotImplementedError()
 
 
-class Box(BaseGeometry, namedtuple("Box", ["lengths"])):
+class Box(BaseGeometry):
+    __slots__ = ["lengths"]
+    def __init__(self, lengths=[1,1,1]):
+        self.lengths = lengths
+
     def serialize(self):
         return {
             "type": "box",
@@ -71,7 +74,11 @@ class Box(BaseGeometry, namedtuple("Box", ["lengths"])):
         }
 
 
-class Sphere(BaseGeometry, namedtuple("Sphere", ["radius"])):
+class Sphere(BaseGeometry):
+    __slots__ = ["radius"]
+    def __init__(self, radius=1):
+        self.radius = radius
+
     def serialize(self):
         return {
             "type": "sphere",
@@ -79,7 +86,11 @@ class Sphere(BaseGeometry, namedtuple("Sphere", ["radius"])):
         }
 
 
-class Ellipsoid(BaseGeometry, namedtuple("Ellipsoid", ["radii"])):
+class Ellipsoid(BaseGeometry):
+    __slots__ = ["radii"]
+    def __init__(self, radii=[1,1,1]):
+        self.radii = radii
+
     def serialize(self):
         return {
             "type": "ellipsoid",
@@ -87,7 +98,12 @@ class Ellipsoid(BaseGeometry, namedtuple("Ellipsoid", ["radii"])):
         }
 
 
-class Cylinder(BaseGeometry, namedtuple("Cylinder", ["length", "radius"])):
+class Cylinder(BaseGeometry):
+    __slots__ = ["length", "radius"]
+    def __init__(self, length=1, radius=1):
+        self.length = length
+        self.radius = radius
+
     def serialize(self):
         return {
             "type": "cylinder",
@@ -96,10 +112,17 @@ class Cylinder(BaseGeometry, namedtuple("Cylinder", ["length", "radius"])):
         }
 
 
-class Triad(BaseGeometry, namedtuple("Triad", [])):
+class Triad(BaseGeometry):
+    __slots__ = ["tube", "scale"]
+    def __init__(self, scale=1.0, tube=False):
+        self.scale = scale
+        self.tube = tube
+
     def serialize(self):
         return {
-            "type": "triad"
+            "type": "triad",
+            "scale": self.scale,
+            "tube": self.tube
         }
 
 class PolyLine(BaseGeometry):
@@ -314,7 +337,8 @@ class CoreVisualizer(object):
             self.tree = LazyTree()
         else:
             t = self.tree.getdescendant(path[:-1])
-            del t.children[path[-1]]
+            if path[-1] in t.children:
+                del t.children[path[-1]]
         self.queue.delete.add(path)
         self._maybe_publish()
 
@@ -336,12 +360,11 @@ class CoreVisualizer(object):
         for path in self.queue.delete:
             delete.append({"path": path})
         for path in self.queue.setgeometry:
-            geoms = self.tree.getdescendant(path).geometries
-            if geoms:
-                setgeometry.append({
-                    "path": path,
-                    "geometries": [geom.serialize() for geom in geoms]
-                })
+            geoms = self.tree.getdescendant(path).geometries or []
+            setgeometry.append({
+                "path": path,
+                "geometries": [geom.serialize() for geom in geoms]
+            })
         for path in self.queue.settransform:
             settransform.append({
                 "path": path,
