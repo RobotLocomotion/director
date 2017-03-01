@@ -364,8 +364,8 @@ class Geometry(object):
         else:
             self.color = DEFAULT_COLOR
 
-    def createPolyDataItem(self):
-        polyDataItem = vis.PolyDataItem("geometry", self.polyData, view=None)
+    def createPolyDataItem(self, name="geometry"):
+        polyDataItem = vis.PolyDataItem(name, self.polyData, view=None)
         polyDataItem.setProperty("Point Size", 2)
         self.updatePolyDataItemProperties(polyDataItem)
         return polyDataItem
@@ -558,9 +558,10 @@ class TreeViewer(object):
                 item.transform.PostMultiply()
             geomTransform.Concatenate(item.transform)
 
-        item = folder.findChild("geometry")
+        geometryName = folder.getProperty("Name")
+        item = folder.findChild(geometryName)
         if item is None:
-            item = geometry.createPolyDataItem()
+            item = geometry.createPolyDataItem(name=geometryName)
             item.addToView(self.view)
             om.addToObjectModel(item, parentObj=folder)
         else:
