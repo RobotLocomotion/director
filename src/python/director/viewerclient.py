@@ -337,12 +337,11 @@ class CoreVisualizer(object):
         for path in self.queue.delete:
             delete.append({"path": path})
         for path in self.queue.setgeometry:
-            geoms = self.tree.getdescendant(path).geometries
-            if geoms:
-                setgeometry.append({
-                    "path": path,
-                    "geometries": [geom.serialize() for geom in geoms]
-                })
+            geoms = self.tree.getdescendant(path).geometries or []
+            setgeometry.append({
+                "path": path,
+                "geometries": [geom.serialize() for geom in geoms]
+            })
         for path in self.queue.settransform:
             settransform.append({
                 "path": path,
