@@ -34,4 +34,3 @@ updateSysPath('/usr/local/opt/vtk5/lib/python2.7/site-packages')
 # system versions (homebrew)
 for relDir in ['../../dist-packages', '../../site-packages']:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), relDir)))
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), relDir)))
