@@ -90,7 +90,9 @@ def placeHandModel(displayPoint, view, side='left'):
         handFrame.frameSync.addFrame(handFrame, ignoreIncoming=True)
         return
 
-    pickedPoint, prop, _, normal = vis.pickPoint(displayPoint, view, pickType='cells', tolerance=0.0, returnNormal=True)
+    pickedPointFields = vis.pickPoint(displayPoint, view, pickType='cells', tolerance=0.0)
+    pickedPoint = pickedPointFields.pickedPoint
+    prop = pickedPointFields.pickedProp
 
     obj = vis.getObjectByProp(prop)
     if not obj:
