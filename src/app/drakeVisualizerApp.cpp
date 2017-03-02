@@ -9,9 +9,8 @@ int main(int argc, char **argv)
   pythonManager->setSysArgv(QApplication::instance()->arguments());
   PythonQt::self()->addVariable(PythonQt::self()->importModule("sys"), "executable", QCoreApplication::applicationFilePath());
 
-
+  PythonQt::self()->importModule("director");
   pythonManager->executeString("import director.drakevisualizerapp; director.drakevisualizerapp.main(globals())");
-
 
   // delete pythonManager;
   // Allow a leak to avoid a segfault in the PythonQt cleanup destructor.
