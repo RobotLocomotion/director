@@ -42,8 +42,10 @@ class LinkWidget(object):
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
 
     def getSelection(self, displayPoint):
-
-        pickedPoint, pickedProp, pickedDataset, normal = vis.pickPoint(displayPoint, self.view, pickType='cells', tolerance=0.0, returnNormal=True)
+        pickData = vis.pickPoint(displayPoint, self.view, pickType='cells', tolerance=0.0)
+        pickedPoint = pickData.pickedPoint
+        pickedDataset = pickData.pickedDataset
+        normal = pickData.pickedNormal
 
         if not pickedDataset:
             return None

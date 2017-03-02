@@ -142,12 +142,16 @@ class MeasurementPanel(uipanel.UiPanel):
 
 
         tolerance = self.ui.toleranceSpinBox.value
-        worldPoint, prop, dataset, normal = vis.pickPoint(
+        pickPointFields = vis.pickPoint(
             displayPoint,
             self.view,
             pickType=pickType,
-            tolerance=tolerance,
-            returnNormal=True)
+            tolerance=tolerance)
+        worldPoint = pickPointFields.pickedPoint
+        prop = pickPointFields.pickedProp
+        dataset = pickPointFields.pickedDataset
+        normal = pickPointFields.pickedNormal
+
 
         if not prop:
             worldPoint = np.zeros(3)

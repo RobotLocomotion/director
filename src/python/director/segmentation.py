@@ -3305,7 +3305,8 @@ class PointPicker(TimerCallback):
             self.finish()
             return
 
-        self.hoverPos = pickPoint(self.lastMovePos, getSegmentationView(), obj='pointcloud snapshot')
+        pickedPointFields = pickPoint(self.lastMovePos, getSegmentationView(), obj='pointcloud snapshot')
+        self.hoverPos = pickedPointFields.pickedPoint
         self.draw()
 
 
@@ -4553,7 +4554,8 @@ def orthoZ():
 
 def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
 
-    pickedPoint = pickPoint(displayPoint, getSegmentationView(), obj='pointcloud snapshot')
+    pickedPointFields = pickPoint(displayPoint, getSegmentationView(), obj='pointcloud snapshot')
+    pickedPoint = pickedPointFields.pickedPoint
     if pickedPoint is None:
         return
 
