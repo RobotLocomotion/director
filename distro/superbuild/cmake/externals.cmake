@@ -453,10 +453,8 @@ if(USE_APRILTAGS)
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
-      ${lcm_depends}
+      ${lcm_depends} apriltags
     )
-
-  set(apriltags_depends apriltags)
 
 endif()
 
