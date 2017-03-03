@@ -10,7 +10,6 @@ option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
 option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
-set(USE_EIGEN ${USE_PCL})
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
@@ -69,7 +68,7 @@ set(python_args
 ###############################################################################
 # eigen
 
-if (USE_EIGEN AND NOT USE_SYSTEM_EIGEN)
+if (NOT USE_SYSTEM_EIGEN)
 
 ExternalProject_Add(
   eigen
