@@ -362,6 +362,7 @@ if(USE_PCL AND NOT USE_SYSTEM_PCL)
       -DBUILD_tools:BOOL=OFF
       -DBUILD_apps:BOOL=OFF
       -DBUILD_visualization:BOOL=OFF
+      -DCMAKE_CXX_FLAGS:STRING=-std=c++11
 
     DEPENDS
       ${vtk_depends}
@@ -453,10 +454,8 @@ if(USE_APRILTAGS)
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
-      ${lcm_depends}
+      ${lcm_depends} apriltags
     )
-
-  set(apriltags_depends apriltags)
 
 endif()
 
