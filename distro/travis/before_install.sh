@@ -28,7 +28,7 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 	sudo apt-get update -qq
   sudo apt-get install -y build-essential cmake libqt4-dev libvtk5-dev libvtk5-qt4-dev \
     libvtk-java python-dev python-vtk python-numpy python-yaml python-lxml xvfb \
-    doxygen graphviz python-sphinx python-coverage libeigen3-dev
+    doxygen graphviz python-sphinx python-coverage
 
   sudo pip install sphinx-rtd-theme
 
@@ -48,7 +48,6 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 
   brew install doxygen graphviz
   brew install glib # for lcm
-  brew install eigen
   brew ls --versions python || brew install python
   brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
 
