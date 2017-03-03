@@ -37,7 +37,6 @@ class DRCArgParser(object):
             return [item for sublist in l for item in sublist]
 
         # now flatten some list of lists
-        self._args.scripts = flatten(self._args.scripts)
         self._args.data_files = flatten(self._args.data_files)
 
 
