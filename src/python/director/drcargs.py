@@ -37,7 +37,6 @@ class DRCArgParser(object):
             return [item for sublist in l for item in sublist]
 
         # now flatten some list of lists
-        self._args.scripts = flatten(self._args.scripts)
         self._args.data_files = flatten(self._args.data_files)
 
 
@@ -161,10 +160,6 @@ class DRCArgParser(object):
 
         if self._isPyDrakeAvailable():
             self.addDrakeConfigShortcuts(directorConfig)
-
-        parser.add_argument('data_files', type=str, nargs='*',
-                            default=[], action='append', metavar='filename',
-                            help='data files to load at startup')
 
         parser.add_argument('--data', type=str, nargs='+', dest='data_files',
                             default=[], action='append', metavar='filename',

@@ -1070,5 +1070,5 @@ if useKinect:
 if useFeetlessRobot:
     ikPlanner.robotNoFeet = True
 
-for filename in drcargs.args().scripts:
-    execfile(filename)
+for scriptArgs in drcargs.args().scripts:
+    execfile(scriptArgs[0])

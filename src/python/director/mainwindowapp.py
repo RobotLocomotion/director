@@ -316,15 +316,16 @@ class MainWindowAppFactory(object):
 
     def initScriptLoader(self, fields):
         def loadScripts():
-            for filename in fields.commandLineArgs.scripts:
-                filename = os.path.abspath(filename)
+            for scriptArgs in fields.commandLineArgs.scripts:
+                filename = scriptArgs[0]
                 globalsDict = fields.globalsDict
                 prevFile = globalsDict.get('__file__')
                 globalsDict['__file__'] = filename
+                globalsDict['_argv'] = scriptArgs
                 try:
                     execfile(filename, fields.globalsDict)
                 finally:
-                    prevFile = globalsDict['__file__'] = prevFile
+                    globalsDict['__file__'] = prevFile
         fields.app.registerStartupCallback(loadScripts)
 
 
