@@ -362,6 +362,7 @@ if(USE_PCL AND NOT USE_SYSTEM_PCL)
       -DBUILD_tools:BOOL=OFF
       -DBUILD_apps:BOOL=OFF
       -DBUILD_visualization:BOOL=OFF
+      -DCMAKE_CXX_FLAGS:STRING=-std=c++11
 
     DEPENDS
       ${vtk_depends}
