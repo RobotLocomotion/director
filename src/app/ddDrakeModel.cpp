@@ -13,6 +13,8 @@
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkCellData.h>
+#include <vtkIdTypeArray.h>
 #include <vtkRenderer.h>
 #include <vtkOBJReader.h>
 #include <vtkSTLReader.h>
@@ -514,6 +516,21 @@ public:
       inputStr.replace(inputStr.indexOf(subStr), subStr.size(), replacement);
   }
 
+
+  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName)
+  {
+    auto rb = this->FindBody(linkName);
+    std::vector<ddMeshVisual::Ptr> visuals;
+
+    if (this->meshMap.find(rb) != this->meshMap.end())
+    {
+      visuals = this->meshMap.at(rb);
+    }
+    return visuals;
+  }
+
+
+
   QString replaceExtension(const QString& inputStr, const QString& newExtension)
   {
     return inputStr.left(inputStr.size() - QFileInfo(inputStr).suffix().size()) + newExtension;
@@ -730,15 +747,40 @@ public:
     return linkToWorld;
   }
 
+  vtkSmartPointer<vtkTransform> getFrameToWorld(int frameId)
+  {
+    vtkSmartPointer<vtkTransform> frameToWorld = makeTransform(relativeTransform(*cache, 0, frameId));
+    return frameToWorld;
+  }
+
 };
 
-URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QString& rootDir="")
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QString& rootDir="", const QString& floatingBaseType = "ROLLPITCHYAW")
 {
   URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
 
+  // parse the floatingBaseType
+  drake::multibody::joints::FloatingBaseType drakeFloatingBaseType;
+
+  if (floatingBaseType == QString("ROLLPITCHYAW"))
+  {
+    drakeFloatingBaseType = drake::multibody::joints::kRollPitchYaw;
+  } else if (floatingBaseType == QString("FIXED"))
+  {
+    drakeFloatingBaseType = drake::multibody::joints::kFixed;
+  } else if (floatingBaseType == QString("QUATERNION"))
+  {
+    drakeFloatingBaseType  = drake::multibody::joints::kQuaternion;
+  }
+  else
+  {
+    std::cerr << "floating base type must be one of [ROLLPITCHYAW, FIXED, QUATERNION]" << std::endl;
+    return URDFRigidBodyTreeVTK::Ptr();
+  }
+
   drake::parsers::urdf::AddModelInstanceFromUrdfStringSearchingInRosPackages(
       xmlString.toUtf8().constData(), PackageSearchPaths,
-      rootDir.toLatin1().constData(), drake::multibody::joints::kRollPitchYaw,
+      rootDir.toLatin1().constData(), drakeFloatingBaseType,
       nullptr /* weld to frame */, model.get());
 
   model->computeDofMap();
@@ -746,7 +788,7 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QS
   return model;
 }
 
-URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const QString &urdfFilename)
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const QString &urdfFilename, const QString& floatingBaseType = "ROLLPITCHYAW")
 {
   QFile f(urdfFilename);
 
@@ -761,7 +803,7 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const QString &urdfFilename)
   f.close();
 
   QString rootDir = QFileInfo(urdfFilename).dir().absolutePath();
-  return loadVTKModelFromXML(xmlString, rootDir);
+  return loadVTKModelFromXML(xmlString, rootDir, floatingBaseType);
 }
 
 
@@ -988,6 +1030,32 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   return ret;
 }
 
+
+
+// make sure we call setJointPositions before we get here
+QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot)
+{
+  std::vector<int> v_indices;
+  MatrixXd linkJacobian = this->Internal->Model->geometricJacobian(*this->Internal->Model->cache, base_body_or_frame_ind, end_effector_body_or_frame_ind,expressed_in_body_or_frame_ind, in_terms_of_qdot, &v_indices);
+
+  int num_velocities = this->Internal->Model->get_num_velocities();
+  MatrixXd linkJacobianFull = MatrixXd::Zero(6, num_velocities);
+  for (int i=0; i < v_indices.size(); i++)
+  {
+    linkJacobianFull.col(v_indices[i]) = linkJacobian.col(i);
+  }
+
+  QVector<double> linkJacobianVec(6*num_velocities);
+  for (int i = 0; i < 6; i++)
+  {
+    for (int j = 0; j < num_velocities; j++){
+      linkJacobianVec[num_velocities*i + j] = linkJacobianFull(i,j);
+    }
+  }
+
+  return linkJacobianVec;
+}
+
 //-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
 {
@@ -1035,6 +1103,23 @@ bool ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transfo
 }
 
 //-----------------------------------------------------------------------------
+bool ddDrakeModel::getFrameToWorld(int frameId, vtkTransform* transform)
+{
+  if (!transform || !this->Internal->Model)
+  {
+    return false;
+  }
+
+  vtkSmartPointer<vtkTransform> frameToWorld = this->Internal->Model->getFrameToWorld(frameId);
+  if (frameToWorld)
+  {
+    transform->SetMatrix(frameToWorld->GetMatrix());
+    return true;
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
 QList<QString> ddDrakeModel::getLinkNames()
 {
   if (!this->Internal->Model)
@@ -1048,6 +1133,23 @@ QList<QString> ddDrakeModel::getLinkNames()
 int ddDrakeModel::findLinkID(const QString& linkName) const
 {
   return this->Internal->Model->FindBodyIndex(linkName.toAscii().data(), -1);
+}
+
+int ddDrakeModel::findFrameID(const QString& frameName) const
+{
+  return this->Internal->Model->findFrame(frameName.toAscii().data())->get_frame_index();
+}
+
+//-----------------------------------------------------------------------------
+int ddDrakeModel::findJointID(const QString& jointName) const
+{
+  return this->Internal->Model->FindIndexOfChildBodyOfJoint(jointName.toAscii().data(), -1);
+}
+
+QString ddDrakeModel::findNameOfChildBodyOfJoint(const QString &jointName) const
+{
+  std::string body_name = this->Internal->Model->FindChildBodyOfJoint(jointName.toAscii().data())->get_name();
+  return body_name.c_str();
 }
 
 //-----------------------------------------------------------------------------
@@ -1089,11 +1191,20 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
   return QString();
 }
 
+QString ddDrakeModel::getBodyOrFrameName(int bodyOrFrameId)
+{
+  std::string linkName = this->Internal->Model->getBodyOrFrameName(bodyOrFrameId);
+  QString linkNameQString = QString::fromStdString(linkName);
+  return linkNameQString;
+}
+
 
 //-----------------------------------------------------------------------------
-bool ddDrakeModel::loadFromFile(const QString& filename)
+bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floatingBaseType)
 {
-  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
+
+  // std::cout << "loadFromFile: floating base type << " << floatingBaseType.toAscii().data() << std::endl;
+  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data(), floatingBaseType);
   if (!model)
   {
     return false;
@@ -1144,6 +1255,88 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
   }
 
   polyData->DeepCopy(appendFilter->GetOutput());
+}
+
+void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
+{
+  if (!polyData)
+  {
+    return;
+  }
+
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (const auto & rb: this->Internal->Model->bodies)
+  {
+    std::string linkNameString = rb->get_name();
+    QString linkName = QString::fromStdString(linkNameString);
+    vtkSmartPointer<vtkPolyData> tempPolyData = vtkSmartPointer<vtkPolyData>::New();
+    this->getLinkModelMesh(linkName, tempPolyData);
+    AddInputData(appendFilter, tempPolyData);
+  }
+
+  appendFilter->Update();
+  polyData->DeepCopy(appendFilter->GetOutput());  
+}
+
+void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData)
+{
+  if (!polyData)
+  {
+    return;
+  }
+
+  std::string linkNameString = linkName.toAscii().data();
+  if (this->Internal->Model->FindBody(linkNameString) == nullptr)
+  {
+    std::cout << "couldn't find link " << linkNameString << " in ddDrakeModel::getLinkModelMesh, returning" << std::endl;
+    return;
+  }
+
+  int linkId = this->findLinkID(linkName.toAscii().data());
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->linkMeshVisuals(linkName.toAscii().data());
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    AddInputData(appendFilter, transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
+  }
+
+  if (visuals.size())
+  {
+    appendFilter->Update();
+  }
+
+  polyData->DeepCopy(appendFilter->GetOutput());
+
+  // make sure we compute the cell normals, currently this is not computing point normals
+  // would need to implement GetCellNormals(), so just recompute the normals for now
+  // bool hasCellNormals = GetCellNormals(polyData);
+
+  bool hasCellNormals = false;
+  if (!hasCellNormals and visuals.size()){
+    // Generate normals
+    std::cout << "trying to generate cell normals" << std::endl;
+    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+    SetInputData(normalGenerator, polyData);
+    std::cout << "visuals size is " << visuals.size() << std::endl;
+    std::cout << "number of cells is " << polyData->GetNumberOfCells() << std::endl;
+    normalGenerator->ComputePointNormalsOff();
+    normalGenerator->ComputeCellNormalsOn();
+    normalGenerator->Update();
+    std::cout << "test break" << std::endl;
+    polyData->DeepCopy(normalGenerator->GetOutput());
+  }
+
+  int numCells = polyData->GetNumberOfCells();
+  vtkSmartPointer<vtkIdTypeArray> linkIdArray = vtkSmartPointer<vtkIdTypeArray>::New(); //fill with linkId repeated appropriate number of time
+  // set "name" of the array to be "linkId", function is setName
+  linkIdArray->SetName("linkId");
+  for (int i = 0; i < numCells; i++){
+    linkIdArray->InsertNextValue(linkId);
+  }
+  polyData->GetCellData()->AddArray(linkIdArray);
+
 }
 
 //-----------------------------------------------------------------------------
