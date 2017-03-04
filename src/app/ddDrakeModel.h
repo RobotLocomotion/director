@@ -84,6 +84,10 @@ public:
   static void addPackageSearchPath(const QString& searchPath);
   static QString findPackageDirectory(const QString& packageName);
 
+  #ifdef DRAKE_OH_FORK
+  void doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients = false, bool compute_JdotV = true);
+  #endif
+
 signals:
 
   void modelChanged();
