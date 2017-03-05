@@ -525,6 +525,18 @@ public:
       inputStr.replace(inputStr.indexOf(subStr), subStr.size(), replacement);
   }
 
+  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName){
+
+    std::shared_ptr<RigidBody> rb = this->findLink(linkName);
+    std::vector<ddMeshVisual::Ptr> visuals;
+
+    if (this->meshMap.find(rb) != this->meshMap.end()){
+      visuals = this->meshMap.at(rb);
+    }
+
+    return visuals;
+  }
+
   QString replaceExtension(const QString& inputStr, const QString& newExtension)
   {
     return inputStr.left(inputStr.size() - QFileInfo(inputStr).suffix().size()) + newExtension;
@@ -536,7 +548,7 @@ public:
   }
 
 
-  std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
+  QString locateMeshFile(const QString& meshFilename, const QString& rootDir)
   {
     bool hasPackage = meshFilename.startsWith("package://");
     QString fname = meshFilename;
@@ -1229,24 +1241,6 @@ QString ddDrakeModel::getBodyOrFrameName(int body_or_frame_id)
   std::string linkName = this->Internal->Model->getBodyOrFrameName(body_or_frame_id);
   QString linkNameQString = QString::fromStdString(linkName);
   return linkNameQString;
-}
-
-
-//-----------------------------------------------------------------------------
-bool ddDrakeModel::loadFromFile(const QString& filename)
-{
-  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
-  if (!model)
-  {
-    return false;
-  }
-
-  this->Internal->FileName = filename;
-  this->Internal->Model = model;
-
-  this->Internal->Model->initializeKinematicsCache();
-  this->setJointPositions(QVector<double>(model->num_positions, 0.0));
-  return true;
 }
 
 //-----------------------------------------------------------------------------
