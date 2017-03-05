@@ -1010,7 +1010,7 @@ QVector<double> ddDrakeModel::getCenterOfMass() const
   return ret;
 }
 
-
+//-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) const
 {
   QVector<double> ret;
@@ -1048,7 +1048,8 @@ QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int 
   QVector<double> linkJacobianVec(6*num_velocities);
   for (int i = 0; i < 6; i++)
   {
-    for (int j = 0; j < num_velocities; j++){
+    for (int j = 0; j < num_velocities; j++)
+    {
       linkJacobianVec[num_velocities*i + j] = linkJacobianFull(i,j);
     }
   }
@@ -1213,7 +1214,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floating
   this->Internal->FileName = filename;
   this->Internal->Model = model;
 
-  this->Internal->Model->initializeKinematicsCache();
+  this->Internal->Model->cache = std::make_shared<KinematicsCache<double> >(this->Internal->Model->CreateKinematicsCache());
   this->setJointPositions(QVector<double>(model->get_num_positions(), 0.0));
   return true;
 }
@@ -1230,7 +1231,7 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
 
-  this->Internal->Model->initializeKinematicsCache();
+  this->Internal->Model->cache = std::make_shared<KinematicsCache<double> >(this->Internal->Model->CreateKinematicsCache());
   this->setJointPositions(QVector<double>(model->get_num_positions(), 0.0));
   return true;
 }
@@ -1316,7 +1317,8 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
   // bool hasCellNormals = GetCellNormals(polyData);
 
   bool hasCellNormals = false;
-  if (!hasCellNormals and visuals.size()){
+  if (!hasCellNormals and visuals.size())
+  {
     // Generate normals
     std::cout << "trying to generate cell normals" << std::endl;
     vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
@@ -1334,7 +1336,8 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
   vtkSmartPointer<vtkIdTypeArray> linkIdArray = vtkSmartPointer<vtkIdTypeArray>::New(); //fill with linkId repeated appropriate number of time
   // set "name" of the array to be "linkId", function is setName
   linkIdArray->SetName("linkId");
-  for (int i = 0; i < numCells; i++){
+  for (int i = 0; i < numCells; i++)
+  {
     linkIdArray->InsertNextValue(linkId);
   }
   polyData->GetCellData()->AddArray(linkIdArray);

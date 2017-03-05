@@ -1340,7 +1340,8 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
   vtkSmartPointer<vtkIdTypeArray> linkIdArray = vtkSmartPointer<vtkIdTypeArray>::New(); //fill with linkId repeated appropriate number of time
   // set "name" of the array to be "linkId", function is setName
   linkIdArray->SetName("linkId");
-  for (int i = 0; i < numCells; i++){
+  for (int i = 0; i < numCells; i++)
+  {
     linkIdArray->InsertNextValue(linkId);
   }
   polyData->GetCellData()->AddArray(linkIdArray);
