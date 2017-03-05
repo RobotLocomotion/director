@@ -516,7 +516,6 @@ public:
       inputStr.replace(inputStr.indexOf(subStr), subStr.size(), replacement);
   }
 
-
   std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName)
   {
     auto rb = this->FindBody(linkName);
@@ -529,11 +528,15 @@ public:
     return visuals;
   }
 
-
-
   QString replaceExtension(const QString& inputStr, const QString& newExtension)
   {
     return inputStr.left(inputStr.size() - QFileInfo(inputStr).suffix().size()) + newExtension;
+  }
+
+  // initializes the kinematics cache with the current model
+  void initializeKinematicsCache()
+  {
+    this->cache = std::make_shared<KinematicsCache<double> >(this->bodies);
   }
 
   QString locateMeshFile(const QString& meshFilename, const QString& rootDir)
@@ -943,9 +946,6 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
   }
 
   this->Internal->JointPositions = jointPositions;
-
-  model->cache = std::make_shared<KinematicsCache<double> >(
-      model->CreateKinematicsCache());
   model->cache->initialize(q);
   model->doKinematics(*model->cache);
   model->updateModel();
@@ -1010,7 +1010,7 @@ QVector<double> ddDrakeModel::getCenterOfMass() const
   return ret;
 }
 
-//-----------------------------------------------------------------------------
+
 QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) const
 {
   QVector<double> ret;
@@ -1030,9 +1030,9 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   return ret;
 }
 
-
-
-// make sure we call setJointPositions before we get here
+//-----------------------------------------------------------------------------
+// make sure we call setJointPositions before we get here, otherwise the KinematicsCache
+// won't be up to date
 QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot)
 {
   std::vector<int> v_indices;
@@ -1213,6 +1213,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floating
   this->Internal->FileName = filename;
   this->Internal->Model = model;
 
+  this->Internal->Model->initializeKinematicsCache();
   this->setJointPositions(QVector<double>(model->get_num_positions(), 0.0));
   return true;
 }
@@ -1229,6 +1230,7 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
 
+  this->Internal->Model->initializeKinematicsCache();
   this->setJointPositions(QVector<double>(model->get_num_positions(), 0.0));
   return true;
 }

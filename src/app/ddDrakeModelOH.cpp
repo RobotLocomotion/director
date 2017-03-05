@@ -38,19 +38,14 @@
 #include <unordered_set>
 #include <string>
 #include <sstream>
+#include <iostream>
+#include <fstream>
 #include <math.h>
 
 #include <QFileInfo>
 #include <QTextStream>
 #include <QMap>
 #include <QDir>
-
-#include <iostream>
-#include <fstream>
-#include <string>
-
-
-
 
 using std::map;
 using std::vector;
@@ -525,15 +520,15 @@ public:
       inputStr.replace(inputStr.indexOf(subStr), subStr.size(), replacement);
   }
 
-  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName){
-
+  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName)
+  {
     std::shared_ptr<RigidBody> rb = this->findLink(linkName);
     std::vector<ddMeshVisual::Ptr> visuals;
 
-    if (this->meshMap.find(rb) != this->meshMap.end()){
+    if (this->meshMap.find(rb) != this->meshMap.end())
+    {
       visuals = this->meshMap.at(rb);
     }
-
     return visuals;
   }
 
@@ -543,10 +538,10 @@ public:
   }
 
   // initializes the kinematics cache with the current model
-  void initializeKinematicsCache(){
+  void initializeKinematicsCache()
+  {
     this->cache = std::make_shared<KinematicsCache<double> >(this->bodies);
   }
-
 
   QString locateMeshFile(const QString& meshFilename, const QString& rootDir)
   {
@@ -767,9 +762,7 @@ public:
 
   vtkSmartPointer<vtkTransform> getFrameToWorld(int frameId)
   {
-
     vtkSmartPointer<vtkTransform> frameToWorld = makeTransform(relativeTransform(*cache, 0, frameId));
-
     return frameToWorld;
   }
 
@@ -797,7 +790,6 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QS
     std::cerr << "floating base type must be one of [ROLLPITCHYAW, FIXED, QUATERNION]" << std::endl;
     return model;
   }
-
 
   model->addRobotFromURDFString(xmlString.toUtf8().constData(), PackageSearchPaths, rootDir.toLatin1().constData(), drakeFloatingBaseType);
   model->computeDofMap();
@@ -960,8 +952,6 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
   }
 
   this->Internal->JointPositions = jointPositions;
-
-  // model->cache = std::make_shared<KinematicsCache<double> >(model->bodies);
   model->cache->initialize(q);
   model->doKinematics(*model->cache);
   model->updateModel();
@@ -1045,32 +1035,6 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   }
   return ret;
 }
-
-// this is all wrong now . . . need ot do the whole kinematics cache thing
-void ddDrakeModel::doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients,
-  bool compute_JdotV){
-
-  Eigen::VectorXd v_eigen(q.size());
-  Eigen::VectorXd q_eigen(v.size());
-
-  for (int i=0; i < q.size(); i++){
-   q_eigen[i] = q[i];
-  }
-
-  for (int i=0; i < q.size(); i++){
-   v_eigen[i] = v[i];
-  }
-
-  // Need to do things through a kinematics cache object now
-  // just calling doKinematics on the model isn't enough
-  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
-
-  // we have already initialized it with initializeKinematicsCache, so we don't need to do it again
-  // model->cache = std::make_shared<KinematicsCache<double> >(model->bodies);
-  model->cache->initialize(q_eigen,v_eigen);
-  model->doKinematics(*model->cache);
-}
-
 
 // make sure we call do kinematics before we get here
 QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot){
@@ -1304,13 +1268,15 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
 
 void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
 {
-  if (!polyData){
+  if (!polyData)
+  {
     return;
   }
 
   vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
-  for (const auto & rb: this->Internal->Model->bodies){
+  for (const auto & rb: this->Internal->Model->bodies)
+  {
     std::string linkNameString = rb->linkname;
     QString linkName = QString::fromStdString(linkNameString);
     vtkSmartPointer<vtkPolyData> tempPolyData = vtkSmartPointer<vtkPolyData>::New();
@@ -1323,12 +1289,14 @@ void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
 }
 
 void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData){
-  if (!polyData){
+  if (!polyData)
+  {
     return;
   }
 
   std::string linkNameString = linkName.toAscii().data();
-  if (this->Internal->Model->findLink(linkNameString, -1) == nullptr){
+  if (this->Internal->Model->findLink(linkNameString, -1) == nullptr)
+  {
     std::cout << "couldn't find link " << linkNameString << " in ddDrakeModel::getLinkModelMesh, returning" << std::endl;
     return;
   }
@@ -1352,9 +1320,9 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
   // make sure we compute the cell normals, currently this is not computing point normals
   // would need to implement GetCellNormals(), so just recompute the normals for now
   // bool hasCellNormals = GetCellNormals(polyData);
-
   bool hasCellNormals = false;
-  if (!hasCellNormals and visuals.size()){
+  if (!hasCellNormals and visuals.size())
+  {
     // Generate normals
     std::cout << "trying to generate cell normals" << std::endl;
     vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
@@ -1376,7 +1344,6 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
     linkIdArray->InsertNextValue(linkId);
   }
   polyData->GetCellData()->AddArray(linkIdArray);
-
 }
 
 //-----------------------------------------------------------------------------

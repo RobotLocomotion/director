@@ -57,7 +57,6 @@ public:
   int findJointID(const QString& jointName) const;
   int findFrameID(const QString& frameName) const;
   QString findNameOfChildBodyOfJoint(const QString& jointName) const;
-
   void getModelMesh(vtkPolyData* polyData);
   void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);
   void getLinkModelMesh(const QString& linkName, vtkPolyData* polyData);
@@ -83,10 +82,6 @@ public:
 
   static void addPackageSearchPath(const QString& searchPath);
   static QString findPackageDirectory(const QString& packageName);
-
-  #ifdef DRAKE_OH_FORK
-  void doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients = false, bool compute_JdotV = true);
-  #endif
 
 signals:
 
