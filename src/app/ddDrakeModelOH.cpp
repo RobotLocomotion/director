@@ -1035,6 +1035,7 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   return ret;
 }
 
+//-----------------------------------------------------------------------------
 // make sure we call do kinematics before we get here
 QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot){
 
@@ -1143,6 +1144,7 @@ int ddDrakeModel::findLinkID(const QString& linkName) const
   return this->Internal->Model->findLinkId(linkName.toAscii().data(), -1);
 }
 
+//-----------------------------------------------------------------------------
 int ddDrakeModel::findFrameID(const QString& frameName) const
 {
   return this->Internal->Model->findFrame(frameName.toAscii().data())->frame_index;
@@ -1200,6 +1202,7 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
   return QString();
 }
 
+//-----------------------------------------------------------------------------
 QString ddDrakeModel::getBodyOrFrameName(int body_or_frame_id)
 {
   std::string linkName = this->Internal->Model->getBodyOrFrameName(body_or_frame_id);
@@ -1219,7 +1222,6 @@ bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floating
 
   this->Internal->FileName = filename;
   this->Internal->Model = model;
-
   this->Internal->Model->initializeKinematicsCache();
   this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
@@ -1236,7 +1238,6 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
 
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
-
   this->Internal->Model->initializeKinematicsCache();
   this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
@@ -1266,6 +1267,7 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
   polyData->DeepCopy(appendFilter->GetOutput());
 }
 
+//-----------------------------------------------------------------------------
 void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
 {
   if (!polyData)
@@ -1288,6 +1290,7 @@ void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
   polyData->DeepCopy(appendFilter->GetOutput());
 }
 
+//-----------------------------------------------------------------------------
 void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData){
   if (!polyData)
   {

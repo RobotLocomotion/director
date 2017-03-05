@@ -1132,6 +1132,7 @@ int ddDrakeModel::findLinkID(const QString& linkName) const
   return this->Internal->Model->FindBodyIndex(linkName.toAscii().data(), -1);
 }
 
+//-----------------------------------------------------------------------------
 int ddDrakeModel::findFrameID(const QString& frameName) const
 {
   return this->Internal->Model->findFrame(frameName.toAscii().data())->get_frame_index();
@@ -1143,6 +1144,7 @@ int ddDrakeModel::findJointID(const QString& jointName) const
   return this->Internal->Model->FindIndexOfChildBodyOfJoint(jointName.toAscii().data(), -1);
 }
 
+//-----------------------------------------------------------------------------
 QString ddDrakeModel::findNameOfChildBodyOfJoint(const QString &jointName) const
 {
   std::string body_name = this->Internal->Model->FindChildBodyOfJoint(jointName.toAscii().data())->get_name();
@@ -1188,6 +1190,7 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
   return QString();
 }
 
+//-----------------------------------------------------------------------------
 QString ddDrakeModel::getBodyOrFrameName(int bodyOrFrameId)
 {
   std::string linkName = this->Internal->Model->getBodyOrFrameName(bodyOrFrameId);
@@ -1209,7 +1212,6 @@ bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floating
 
   this->Internal->FileName = filename;
   this->Internal->Model = model;
-
   this->Internal->Model->cache = std::make_shared<KinematicsCache<double> >(this->Internal->Model->CreateKinematicsCache());
   this->setJointPositions(QVector<double>(model->get_num_positions(), 0.0));
   return true;
@@ -1226,7 +1228,6 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
 
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
-
   this->Internal->Model->cache = std::make_shared<KinematicsCache<double> >(this->Internal->Model->CreateKinematicsCache());
   this->setJointPositions(QVector<double>(model->get_num_positions(), 0.0));
   return true;
@@ -1256,6 +1257,7 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
   polyData->DeepCopy(appendFilter->GetOutput());
 }
 
+//-----------------------------------------------------------------------------
 void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
 {
   if (!polyData)
