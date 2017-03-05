@@ -533,12 +533,6 @@ public:
     return inputStr.left(inputStr.size() - QFileInfo(inputStr).suffix().size()) + newExtension;
   }
 
-  // initializes the kinematics cache with the current model
-  void initializeKinematicsCache()
-  {
-    this->cache = std::make_shared<KinematicsCache<double> >(this->bodies);
-  }
-
   QString locateMeshFile(const QString& meshFilename, const QString& rootDir)
   {
     bool hasPackage = meshFilename.startsWith("package://");
