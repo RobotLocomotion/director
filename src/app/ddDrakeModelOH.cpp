@@ -763,7 +763,6 @@ public:
     vtkSmartPointer<vtkTransform> frameToWorld = makeTransform(relativeTransform(*cache, 0, frameId));
     return frameToWorld;
   }
-
 };
 
 URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QString& rootDir="",
@@ -776,10 +775,12 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QS
   if (floatingBaseType == QString("ROLLPITCHYAW"))
   {
     drakeFloatingBaseType = DrakeJoint::ROLLPITCHYAW;
-  } else if (floatingBaseType == QString("FIXED"))
+  }
+  else if (floatingBaseType == QString("FIXED"))
   {
     drakeFloatingBaseType = DrakeJoint::FIXED;
-  } else if (floatingBaseType == QString("QUATERNION"))
+  }
+  else if (floatingBaseType == QString("QUATERNION"))
   {
     drakeFloatingBaseType  = DrakeJoint::QUATERNION;
   }
@@ -1052,7 +1053,8 @@ QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int 
 
 
   QVector<double> linkJacobianVec(6*num_velocities);
-  for (int i = 0; i < 6; i++){
+  for (int i = 0; i < 6; i++)
+  {
     for (int j = 0; j < num_velocities; j++){
       linkJacobianVec[num_velocities*i + j] = linkJacobianFull(i,j);
     }

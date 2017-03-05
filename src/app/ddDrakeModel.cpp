@@ -762,10 +762,12 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QS
   if (floatingBaseType == QString("ROLLPITCHYAW"))
   {
     drakeFloatingBaseType = drake::multibody::joints::kRollPitchYaw;
-  } else if (floatingBaseType == QString("FIXED"))
+  }
+  else if (floatingBaseType == QString("FIXED"))
   {
     drakeFloatingBaseType = drake::multibody::joints::kFixed;
-  } else if (floatingBaseType == QString("QUATERNION"))
+  }
+  else if (floatingBaseType == QString("QUATERNION"))
   {
     drakeFloatingBaseType  = drake::multibody::joints::kQuaternion;
   }
