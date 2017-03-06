@@ -5,13 +5,13 @@ import director.vtkAll as vtk
 from director import transformUtils
 from director import callbacks
 from director import frameupdater
+from director.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui
-
+import numpy as np
 import os
 import colorsys
 import weakref
 import itertools
-import numpy as np
 
 
 class PolyDataItem(om.ObjectModelItem):
@@ -1062,14 +1062,31 @@ def pickProp(displayPoint, view):
 
     for tolerance in (0.0, 0.005, 0.01):
         pickType = 'render' if tolerance == 0.0 else 'cells'
-        pickedPoint, pickedProp, pickedDataset = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickData = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickedPoint = pickData.pickedPoint
+        pickedProp = pickData.pickedProp
+        pickedDataset = pickData.pickedDataset
         if pickedProp is not None:
             return pickedPoint, pickedProp, pickedDataset
 
     return None, None, None
 
 
-def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, returnNormal=False):
+def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01):
+    """
+
+    :param displayPoint:
+    :param view:
+    :param obj:
+    :param pickType:
+    :param tolerance:
+    :return: FieldContainer with fields
+        pickedPoint
+        pickedProp
+        pickedDataset
+        pickedNormal - is None if no normal can be comp
+        pickedCellId - is None unless pickType="cells"
+    """
 
     assert pickType in ('points', 'cells', 'render')
 
@@ -1102,29 +1119,36 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
     pickedPoint = np.array(picker.GetPickPosition())
     pickedDataset = pickedProp.GetMapper().GetInput() if isinstance(pickedProp, vtk.vtkActor) else None
 
-    pickedNormal = np.zeros(3)
 
-    if returnNormal:
-        if pickType == 'cells':
-          pickedNormal = np.array(picker.GetPickNormal())
-        elif pickType == 'points' and pickedDataset:
-          pointId = picker.GetPointId()
-          normals = pickedDataset.GetPointData().GetNormals()
-          if normals:
-              pickedNormal = np.array(normals.GetTuple3(pointId))
+    if pickType == "cells":
+        pickedCellId = picker.GetCellId()
+    else:
+        pickedCellId = None
+
+    # populate pickedNormal if possible
+    pickedNormal = None
+    if pickType == 'cells':
+      pickedNormal = np.array(picker.GetPickNormal())
+    elif pickType == 'points' and pickedDataset:
+      pointId = picker.GetPointId()
+      normals = pickedDataset.GetPointData().GetNormals()
+      if normals:
+          pickedNormal = np.array(normals.GetTuple3(pointId))
 
     #if pickedDataset and pickType == 'cells':
     #    print 'point id:', pickedDataset.GetCell(picker.GetCellId()).GetPointIds().GetId(picker.GetSubId())
     #if pickType == 'points':
     #    print 'point id:', picker.GetPointId()
 
-    if obj:
-        if returnNormal:
-            return (pickedPoint, pickedNormal) if pickedProp else (None, None)
-        else:
-            return pickedPoint if pickedProp else None
-    else:
-        return (pickedPoint, pickedProp, pickedDataset, pickedNormal) if returnNormal else (pickedPoint, pickedProp, pickedDataset)
+
+    fields = FieldContainer(
+        pickedPoint=pickedPoint,
+        pickedProp=pickedProp,
+        pickedDataset=pickedDataset,
+        pickedNormal=pickedNormal,
+        pickedCellId=pickedCellId
+    )
+    return fields
 
 
 def mapMousePosition(widget, mouseEvent):

@@ -30,7 +30,7 @@ public:
   ddDrakeModel(QObject* parent=0);
   virtual ~ddDrakeModel();
 
-  bool loadFromFile(const QString& filename);
+  bool loadFromFile(const QString& filename, const QString& floatingBaseType = "ROLLPITCHYAW");
   bool loadFromXML(const QString& xmlString);
   const QString& filename() const;
 
@@ -48,15 +48,20 @@ public:
   QVector<double> getCenterOfMass() const;
   QVector<double> getJointLimits(const QString& jointName) const;
   QVector<double> getBodyContactPoints(const QString& bodyName) const;
-
+  QVector<double> geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot = false);
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
+  bool getFrameToWorld(int frameId, vtkTransform* transform);
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
   int findLinkID(const QString& linkName) const;
-
+  int findJointID(const QString& jointName) const;
+  int findFrameID(const QString& frameName) const;
+  QString findNameOfChildBodyOfJoint(const QString& jointName) const;
   void getModelMesh(vtkPolyData* polyData);
-
+  void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);
+  void getLinkModelMesh(const QString& linkName, vtkPolyData* polyData);
   QString getLinkNameForMesh(vtkPolyData* polyData);
+  QString getBodyOrFrameName(int body_or_frame_id);
 
   void setAlpha(double alpha);
   double alpha() const;

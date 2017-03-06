@@ -1,6 +1,8 @@
 import os
 import vtkAll as vtk
 from shallowCopy import shallowCopy
+import shelve
+import os.path
 
 def readPolyData(filename, computeNormals=False):
 
@@ -165,7 +167,6 @@ def writeImage(image, filename):
     writer.SetInput(image)
     writer.Write()
 
-
 def _computeNormals(polyData):
     normals = vtk.vtkPolyDataNormals()
     normals.SetFeatureAngle(45)
@@ -178,3 +179,16 @@ def _triangulate(polyData):
     normals.SetInput(polyData)
     normals.Update()
     return shallowCopy(normals.GetOutput())
+
+def saveDataToFile(filename, dataDict, overwrite=False):
+    if overwrite is False and os.path.isfile(filename):
+        raise ValueError("file already exists, overwrite option was False")
+
+    myShelf = shelve.open(filename,'n')
+    myShelf['dataDict'] = dataDict
+    myShelf.close()
+
+def readDataFromFile(filename):
+    myShelf = shelve.open(filename)
+    dataDict = myShelf['dataDict']
+    return dataDict
