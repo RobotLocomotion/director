@@ -2962,9 +2962,9 @@ def computeSignedAngleBetweenVectors(v1, v2, perpendicularVector):
     Computes the signed angle between two vectors in 3d, given a perpendicular vector
     to determine sign.  Result returned is radians.
     '''
-    v1 = np.array(v1)
-    v2 = np.array(v2)
-    perpendicularVector = np.array(perpendicularVector)
+    v1 = np.array(v1, dtype=float)
+    v2 = np.array(v2, dtype=float)
+    perpendicularVector = np.array(perpendicularVector, dtype=float)
     v1 /= np.linalg.norm(v1)
     v2 /= np.linalg.norm(v2)
     perpendicularVector /= np.linalg.norm(perpendicularVector)
