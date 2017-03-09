@@ -82,6 +82,7 @@ set(python_files
   director/objectmodel.py
   director/opendatahandler.py
   director/openscope.py
+  director/optitrackvisualizer.py
   director/otdfmodel.py
   director/outputconsole.py
   director/packagepath.py
