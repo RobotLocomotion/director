@@ -227,7 +227,8 @@ class Geometry(object):
     def scaleGeometry(polyDataList, scale):
         if len(scale) == 1:
             scale_x = scale_y = scale_z = scale
-        elif len(scale) == 3:
+        else:
+            assert len(scale) == 3
             scale_x, scale_y, scale_z = scale
 
         if scale_x != 1.0 or scale_y != 1.0 or scale_z != 1.0:
