@@ -23,8 +23,10 @@ Protocol
 
 Communication with the viewer happens over two LCM channels: 
 
-:DIRECTOR_TREE_VIEWER_REQUEST: for communication from the client to the viewer
-:DIRECTOR_TREE_VIEWER_RESPONSE: for communication from the viewer back to the client
+:DIRECTOR_TREE_VIEWER_REQUEST_<client_id>: for communication from the client to the viewer
+:DIRECTOR_TREE_VIEWER_RESPONSE_<client_id>: for communication from the viewer back to the client
+
+The ``client_id`` can consist of any characters except ``<`` and ``>``, and it should be unique for each client. Note that the ID needs to be enclosed within literal ``<`` and ``>`` characters. 
 
 Two-way communication is not mandatory: a simple client may just publish on ``_REQUEST`` and ignore all responses. But handling responses from the viewer enables better synchronization of the client and viewer state, as discussed in responses_. 
 
@@ -61,7 +63,7 @@ Each geometry description, in turn, is a dictionary with the key ``type`` that i
 
 Fields for all geometry types:
 
-:type: (required) a keyword indicating the kind of geometry. Currently supports: ``box``, ``sphere``, ``cylinder``, ``capsule``, ``ellipsoid``, ``mesh_file``, ``mesh_data``, ``pointcloud``, ``planar_lidar``, ``triad``
+:type: (required) a keyword indicating the kind of geometry. Currently supports: ``box``, ``sphere``, ``cylinder``, ``capsule``, ``ellipsoid``, ``mesh_file``, ``mesh_data``, ``pointcloud``, ``planar_lidar``, ``triad``, ``line``
 :color: (optional) the geometry's color, in RGBA order, as a list of 4 floating point values between 0 and 1. Defaults to [1, 1, 1, 1]
 :transform: (optional) a transform to apply to this geometry, in the same format as used in `settransform`. Defaults to identity. 
 
@@ -131,6 +133,20 @@ The ``planar_lidar`` type is simply a shortcut for generating a pointcloud witho
 :ranges: a list of distance measurements
 :angle_start: the angle about the Z axis (in rad) corresponding to ``ranges[0]``
 :angle_step: the angular spacing between adjacent range measurements (in rad) about the Z axis
+
+------
+
+Line Fields:
+
+The ``line`` type generates a line through a sequence of two or more points. 
+
+:points: the point coordinates as a list of 2 or more triplets in XYZ order.
+:radius: (optional) the radius of the line. A radius of 0 creates a hairline. A radius > 0 creates a tube. Defaults to 0.01
+:closed: (optional) a boolean indicating whether to add a segment from the last point back to the first. Defaults to False.
+:start_head: (optional) a boolean indicating whether to draw an arrowhead at the beginning of the first line segment. Defaults to False.
+:end_head: (optional) a boolean indicating whether to draw an arrowhead at the end of the last line segment. Defaults to False.
+:head_radius: (optional) radius of the arrowheads. Defaults to 0.05.
+:head_length: (optional) length of the arrowheads. Defaults to ``head_radius``
 
 .. _settransform:
 
