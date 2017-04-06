@@ -41,7 +41,7 @@ fi
 
 cd $scriptDir
 echo 'running fixup_elf script'
-python fixup_elf.py $superbuildInstallDir $superbuildInstallDir/lib $patchelfExe
+python fixup_elf.py $superbuildInstallDir $patchelfExe
 
 cp -r $superbuildInstallDir $packageName
 tar -czf $packageName.tar.gz $packageName
