@@ -347,7 +347,7 @@ if(USE_PCL AND NOT USE_SYSTEM_PCL)
   ExternalProject_Add(
     pcl
     GIT_REPOSITORY http://github.com/pointcloudlibrary/pcl.git
-    GIT_TAG pcl-1.7.2
+    GIT_TAG pcl-1.8.0
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${eigen_args}
@@ -388,7 +388,7 @@ ExternalProject_Add(PointCloudLibraryPlugin
     ${boost_args}
     ${flann_args}
     ${vtk_args}
-    -DPCL_REQUIRED_VERSION:STRING=1.7.1
+    -DPCL_REQUIRED_VERSION:STRING=1.8.0
   DEPENDS
     ${pcl_depends}
     ${vtk_depends}
