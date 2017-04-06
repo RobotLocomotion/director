@@ -30,8 +30,8 @@ USE_SHADOWS = False
 
 class Geometry(object):
 
+    MeshCache = {}
     TextureCache = {}
-    MeshToTexture = {}
 
     PackageMap = None
 
@@ -201,6 +201,9 @@ class Geometry(object):
         filename = Geometry.resolvePackageFilename(geom.string_data)
         basename, ext = os.path.splitext(filename)
 
+        if filename in Geometry.MeshCache:
+            return list(Geometry.MeshCache[filename])
+
         preferredExtensions = ['.vtm', '.vtp', '.obj']
 
         for x in preferredExtensions:
@@ -221,6 +224,8 @@ class Geometry(object):
             for polyData in polyDataList:
                 Geometry.loadTextureForMesh(polyData, filename)
 
+
+        Geometry.MeshCache[filename] = list(polyDataList)
 
         return polyDataList
 
