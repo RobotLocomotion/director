@@ -1,6 +1,5 @@
 macro(setup_qt4)
-  find_package(Qt4 REQUIRED QtCore QtGui QtOpenGL QtScript)
-  include(${QT_USE_FILE})
+  find_package(Qt5 REQUIRED Core Gui Widgets OpenGL)
 endmacro()
 
 

@@ -52,7 +52,7 @@ using std::string;
 using std::istringstream;
 using namespace Eigen;
 
-#if VTK_MAJOR_VERSION == 6
+#if VTK_MAJOR_VERSION >= 6
  #define SetInputData(filter, obj) filter->SetInputData(obj);
  #define AddInputData(filter, obj) filter->AddInputData(obj);
 #else
@@ -327,7 +327,7 @@ vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyD
   }
 
   vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
-  texture->SetInput(image);
+  SetInputData(texture, image);
   texture->EdgeClampOn();
   texture->RepeatOn();
   TextureMap[textureFileName] = texture;
@@ -735,7 +735,7 @@ public:
 
     if (!linkMap.contains(linkName))
     {
-      printf("getLinkToWorld: cannot find link name: %s\n", linkName.toAscii().data());
+      printf("getLinkToWorld: cannot find link name: %s\n", linkName.toLocal8Bit().data());
       return NULL;
     }
 
@@ -896,10 +896,10 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
   {
     const QString& dofName = jointNames[i];
 
-    std::map<std::string, int>::const_iterator itr = model->dofMap.find(dofName.toAscii().data());
+    std::map<std::string, int>::const_iterator itr = model->dofMap.find(dofName.toLocal8Bit().data());
     if (itr == model->dofMap.end())
     {
-      std::unordered_set<std::string>::const_iterator itr_fixed = model->fixedDOFs.find(dofName.toAscii().data());
+      std::unordered_set<std::string>::const_iterator itr_fixed = model->fixedDOFs.find(dofName.toLocal8Bit().data());
       if (itr_fixed == model->fixedDOFs.end())
       {
         printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
@@ -976,10 +976,10 @@ QVector<double> ddDrakeModel::getJointPositions(const QList<QString>& jointNames
   {
     const QString& dofName = jointNames[i];
 
-    std::map<std::string, int>::const_iterator itr = model->dofMap.find(dofName.toAscii().data());
+    std::map<std::string, int>::const_iterator itr = model->dofMap.find(dofName.toLocal8Bit().data());
     if (itr == model->dofMap.end())
     {
-      std::unordered_set<std::string>::const_iterator itr_fixed = model->fixedDOFs.find(dofName.toAscii().data());
+      std::unordered_set<std::string>::const_iterator itr_fixed = model->fixedDOFs.find(dofName.toLocal8Bit().data());
       if (itr_fixed == model->fixedDOFs.end())
       {
         printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
@@ -1067,7 +1067,7 @@ QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
     return limits;
   }
 
-  std::map<std::string, int>::const_iterator itr = model->dofMap.find(jointName.toAscii().data());
+  std::map<std::string, int>::const_iterator itr = model->dofMap.find(jointName.toLocal8Bit().data());
   if (itr == model->dofMap.end())
   {
     printf("Could not find URDF model dof with name: %s\n", qPrintable(jointName));
@@ -1129,7 +1129,7 @@ QList<QString> ddDrakeModel::getLinkNames()
 //-----------------------------------------------------------------------------
 int ddDrakeModel::findLinkID(const QString& linkName) const
 {
-  return this->Internal->Model->FindBodyIndex(linkName.toAscii().data(), -1);
+  return this->Internal->Model->FindBodyIndex(linkName.toLocal8Bit().data(), -1);
 }
 
 //-----------------------------------------------------------------------------
@@ -1202,9 +1202,8 @@ QString ddDrakeModel::getBodyOrFrameName(int bodyOrFrameId)
 //-----------------------------------------------------------------------------
 bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floatingBaseType)
 {
-
   // std::cout << "loadFromFile: floating base type << " << floatingBaseType.toAscii().data() << std::endl;
-  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data(), floatingBaseType);
+  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toLocal8Bit()().data(), floatingBaseType);
   if (!model)
   {
     return false;
@@ -1220,7 +1219,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floating
 //-----------------------------------------------------------------------------
 bool ddDrakeModel::loadFromXML(const QString& xmlString)
 {
-  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromXML(xmlString.toAscii().data());
+  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromXML(xmlString.toLocal8Bit().data());
   if (!model)
   {
     return false;
@@ -1454,7 +1453,7 @@ QColor ddDrakeModel::getLinkColor(const QString& linkName) const
   std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
   for (size_t i = 0; i < visuals.size(); ++i)
   {
-    if (visuals[i]->Name == linkName.toAscii().data())
+    if (visuals[i]->Name == linkName.toLocal8Bit().data())
     {
       double* rgb = visuals[i]->Actor->GetProperty()->GetColor();
       double alpha = visuals[i]->Actor->GetProperty()->GetOpacity();
@@ -1476,7 +1475,7 @@ void ddDrakeModel::setLinkColor(const QString& linkName, const QColor& color)
   std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
   for (size_t i = 0; i < visuals.size(); ++i)
   {
-    if (visuals[i]->Name == linkName.toAscii().data())
+    if (visuals[i]->Name == linkName.toLocal8Bit().data())
     {
       visuals[i]->Actor->GetProperty()->SetColor(red, green, blue);
       visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
@@ -1538,17 +1537,17 @@ bool ddDrakeModel::visible() const
 //-----------------------------------------------------------------------------
 void ddDrakeModel::addPackageSearchPath(const QString& searchPath)
 {
-  std::string packageName = QDir(searchPath).dirName().toAscii().data();
+  std::string packageName = QDir(searchPath).dirName().toLocal8Bit().data();
   if (!PackageSearchPaths.Contains(packageName))
   {
-    PackageSearchPaths.Add(packageName, searchPath.toAscii().data());
+    PackageSearchPaths.Add(packageName, searchPath.toLocal8Bit().data());
   }
 }
 
 //-----------------------------------------------------------------------------
 QString ddDrakeModel::findPackageDirectory(const QString& packageName)
 {
-  const std::string package_name = packageName.toAscii().data();
+  const std::string package_name = packageName.toLocal8Bit().data();
   if (PackageSearchPaths.Contains(package_name)) {
     return QString::fromStdString(PackageSearchPaths.GetPath(package_name));
   } else {

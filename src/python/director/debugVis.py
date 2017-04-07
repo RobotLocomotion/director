@@ -37,7 +37,7 @@ class DebugData(object):
                 extraArray[:] = labelValue
                 addNumpyToVtk(polyData, extraArray, labelName)
 
-        self.append.AddInput(polyData)
+        self.append.AddInputData(polyData)
 
 
     def addLine(self, p1, p2, radius=0.0, color=[1,1,1]):

@@ -2,11 +2,11 @@
 
 #include "ddOpenGL.h"
 
-#include <QGLWidget>
+#include <QOpenGLWidget>
 #include <QVBoxLayout>
 
 
-class MyGLWidget : public QGLWidget
+class MyGLWidget : public QOpenGLWidget
 {
 
   void initializeGL()

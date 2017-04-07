@@ -9,7 +9,7 @@ find_package(PythonInterp 2.7 REQUIRED)
 find_package(PythonQt REQUIRED)
 find_package(CTKPythonConsole REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(VTK REQUIRED)
+find_package(VTK 7.1 REQUIRED)
 find_package(QtPropertyBrowser REQUIRED)
 
 include(${VTK_USE_FILE})
@@ -27,7 +27,7 @@ set(wrap_files
   wrapped_methods.txt
   )
 
-qt4_wrap_cpp(moc_srcs
+qt5_wrap_cpp(moc_srcs
   ${decorator_file}
   ddLumberSelection.h
   ddGLWidgetView.h
@@ -47,13 +47,13 @@ qt4_wrap_cpp(moc_srcs
   ddViewMenu.h
   )
 
-qt4_wrap_ui(ui_srcs
+qt5_wrap_ui(ui_srcs
   ddMainWindow.ui
   ddLumberSelection.ui
   ddTaskSelection.ui
   )
 
-qt4_add_resources(resource_srcs
+qt5_add_resources(resource_srcs
   uiresources.qrc
   images/resources.qrc
   )
@@ -86,8 +86,17 @@ set(srcs
 
 
 set(VTK_LIBRARIES
-  QVTK
-  vtkPythonCore
+  vtkWrappingPythonCore
+  vtkGUISupportQt
+  vtkInteractionWidgets
+  vtkRenderingAnnotation
+  vtkRenderingGL2PSOpenGL2
+  vtkRenderingVolumeOpenGL2
+  vtkRenderingFreeType
+  vtkInteractionStyle
+  vtkIOXML
+  vtkIOImage
+  vtkIOGeometry
   )
 
 set(deps
@@ -111,13 +120,13 @@ if (USE_DRAKE)
   find_package(Drake REQUIRED)
   find_package(Eigen REQUIRED)
 
-  include_directories(
+  include_directories(SYSTEM
     ${EIGEN_INCLUDE_DIRS}
     ${DRAKE_INCLUDE_DIRS}
   )
 
   set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
+  qt5_wrap_cpp(moc_srcs
     ddDrakeModel.h
     ddDrakeWrapper.h
   )
@@ -155,7 +164,7 @@ if (USE_LCM)
   include_directories(${LCM_INCLUDE_DIRS})
 
   set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
+  qt5_wrap_cpp(moc_srcs
     ddLCMSubscriber.h
     ddLCMThread.h
   )
@@ -184,7 +193,7 @@ if (USE_DRC)
   include_directories(${PCL_INCLUDE_DIRS})
 
   set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
+  qt5_wrap_cpp(moc_srcs
     ddBotImageQueue.h
     ddKinectLCM.h
     ddPointCloudLCM.h
