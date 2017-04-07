@@ -18,12 +18,6 @@ make_vtk_homebrew_bottle()
   $scriptDir/copy_files.sh vtk5*.tar.gz
 }
 
-install_vtk_homebrew_bottle()
-{
-  brew tap patmarion/director
-  brew install vtk5
-}
-
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 	sudo apt-get update -qq
   sudo apt-get install -y build-essential cmake libqt4-dev libvtk5-dev libvtk5-qt4-dev \
@@ -40,12 +34,13 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 
   brew tap homebrew/python
   brew tap homebrew/science
+  brew tap patmarion/director
+  brew tap-pin patmarion/director
+
   brew update > brew_update_log.txt
   #brew upgrade
 
-  # use a fixed revision of homebrew qt4
-  brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/1c4bb08cc9cff85d0ae921886263064ef8bd3b30/Formula/qt.rb
-
+  brew install qt vtk5
   brew install doxygen graphviz
   brew install glib # for lcm
   brew ls --versions python || brew install python
@@ -53,6 +48,6 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 
   pip install pyyaml lxml Sphinx sphinx-rtd-theme coverage
 
-  install_vtk_homebrew_bottle
+  #install_vtk_homebrew_bottle
   #make_vtk_homebrew_bottle
 fi
