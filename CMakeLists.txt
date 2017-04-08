@@ -27,6 +27,8 @@ include(cmake/dd-macros.cmake)
 include(cmake/dd-testing.cmake)
 include(cmake/dd-version.cmake)
 
+use_cpp11()
+
 # dependency options
 option(USE_PORTMIDI "Build director with portmidi dependency." OFF)
 option(USE_LCM "Build director with lcm dependency." OFF)

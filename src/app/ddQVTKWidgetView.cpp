@@ -20,12 +20,13 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkInteractorStyleRubberBand3D.h>
 #include <vtkRenderWindowInteractor.h>
+#include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkAxesActor.h>
 #include <vtkEventQtSlotConnect.h>
 #include <vtkCaptionActor2D.h>
 #include <vtkTextProperty.h>
 
-#include <QVTKWidget.h>
+#include <QVTKWidget2.h>
 #include <QVBoxLayout>
 #include <QTimer>
 
@@ -69,7 +70,7 @@ public:
     this->RenderTimer.setInterval(1000/timerFramesPerSeconds);
   }
 
-  QVTKWidget* VTKWidget;
+  QVTKWidget2* VTKWidget;
 
   vtkSmartPointer<vtkRenderer> Renderer;
   vtkSmartPointer<vtkRenderer> RendererBase;
@@ -98,18 +99,18 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
 
   QVBoxLayout* layout = new QVBoxLayout(this);
   layout->setMargin(0);
-  this->Internal->VTKWidget = new QVTKWidget;
+  this->Internal->VTKWidget = new QVTKWidget2;
   layout->addWidget(this->Internal->VTKWidget);
 
   this->Internal->VTKWidget->SetUseTDx(true);
 
-  this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  this->Internal->RenderWindow = this->Internal->VTKWidget->GetRenderWindow();//vtkSmartPointer<vtkRenderWindow>::New();
   this->Internal->RenderWindow->SetMultiSamples(8);
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
   this->Internal->RenderWindow->StereoRenderOff();
   this->Internal->RenderWindow->StereoUpdate();
-  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
+  //this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 
   this->Internal->LightKit = vtkSmartPointer<vtkLightKit>::New();
   this->Internal->LightKit->SetKeyLightWarmth(0.5);
@@ -192,7 +193,7 @@ vtkLightKit* ddQVTKWidgetView::lightKit() const
 }
 
 //-----------------------------------------------------------------------------
-QVTKWidget* ddQVTKWidgetView::vtkWidget() const
+QVTKWidget2* ddQVTKWidgetView::vtkWidget() const
 {
   return this->Internal->VTKWidget;
 }

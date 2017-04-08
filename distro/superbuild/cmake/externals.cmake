@@ -37,10 +37,13 @@ set(default_cmake_args
   )
 
 # Find required external dependencies
-find_package(Qt4 4.8 REQUIRED)
+find_package(Qt5 REQUIRED Core Gui Widgets OpenGL)
 
 set(qt_args
-  -DQT_QMAKE_EXECUTABLE:PATH=${QT_QMAKE_EXECUTABLE}
+  -DQt5_DIR:PATH=${Qt5_DIR}
+  -DQt5Core_DIR:PATH=${Qt5Core_DIR}
+  -DQt5Gui_DIR:PATH=${Qt5Gui_DIR}
+  -DQt5Widgets_DIR:PATH=${Qt5Widgets_DIR}
   )
 
 if(APPLE)
@@ -226,7 +229,7 @@ endif()
 # PythonQt
 ExternalProject_Add(PythonQt
   GIT_REPOSITORY https://github.com/commontk/PythonQt.git
-  GIT_TAG patched-6
+  GIT_TAG patched-7
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -239,8 +242,10 @@ ExternalProject_Add(PythonQt
 ###############################################################################
 # ctkPythonConsole
 ExternalProject_Add(ctkPythonConsole
-  GIT_REPOSITORY https://github.com/patmarion/ctkPythonConsole
-  GIT_TAG 15988c5
+#  GIT_REPOSITORY https://github.com/patmarion/ctkPythonConsole
+#  GIT_TAG 15988c5
+  GIT_REPOSITORY https://github.com/mwoehlke-kitware/ctkPythonConsole
+  GIT_TAG qt5
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -252,8 +257,10 @@ ExternalProject_Add(ctkPythonConsole
 ###############################################################################
 # QtPropertyBrowser
 ExternalProject_Add(QtPropertyBrowser
-  GIT_REPOSITORY https://github.com/patmarion/QtPropertyBrowser
-  GIT_TAG baf10af
+#  GIT_REPOSITORY https://github.com/patmarion/QtPropertyBrowser
+#  GIT_TAG baf10af
+  GIT_REPOSITORY https://github.com/intbots/QtPropertyBrowser
+  GIT_TAG master
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -287,16 +294,19 @@ if(NOT USE_SYSTEM_VTK)
   set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/vtk-5.10)
   set(vtk_depends vtk)
 else()
-  set(vtk_homebrew_dir /usr/local/opt/vtk5/lib/vtk-5.10)
-  if (APPLE AND IS_DIRECTORY ${vtk_homebrew_dir})
-    set(vtk_args -DVTK_DIR:PATH=${vtk_homebrew_dir})
-  endif()
+
+#  set(vtk_homebrew_dir /usr/local/opt/vtk5/lib/vtk-5.10)
+#  if (APPLE AND IS_DIRECTORY ${vtk_homebrew_dir})
+#    set(vtk_args -DVTK_DIR:PATH=${vtk_homebrew_dir})
+#  endif()
 
   # Verifies that the system has VTK5.
   find_package(VTK REQUIRED HINTS ${vtk_homebrew_dir})
-  if (NOT ${VTK_VERSION_MAJOR} EQUAL 5)
-    message(FATAL_ERROR "System does not have VTK5. It has version ${VTK_VERSION}.")
+  if (NOT ${VTK_VERSION_MAJOR} EQUAL 7)
+    message(FATAL_ERROR "System does not have VTK 7. It has version ${VTK_VERSION}.")
   endif()
+
+  set(vtk_args -DVTK_DIR:PATH=${VTK_DIR})
 endif()
 
 

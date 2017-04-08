@@ -1,9 +1,5 @@
 setup_qt4()
 
-if(USE_DRC OR USE_DRAKE)
-  use_cpp11()
-endif()
-
 find_package(PythonLibs 2.7 REQUIRED)
 find_package(PythonInterp 2.7 REQUIRED)
 find_package(PythonQt REQUIRED)
@@ -20,6 +16,7 @@ include_directories(${QTPROPERTYBROWSER_INCLUDE_DIRS})
 include_directories(${CTK_PYTHONCONSOLE_INCLUDE_DIRS})
 include_directories(${PYTHONQT_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(${Qt5Core_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
@@ -88,16 +85,21 @@ set(srcs
 set(VTK_LIBRARIES
   vtkWrappingPythonCore
   vtkGUISupportQt
+  vtkGUISupportQtOpenGL
   vtkInteractionWidgets
   vtkRenderingAnnotation
-  vtkRenderingGL2PSOpenGL2
-  vtkRenderingVolumeOpenGL2
   vtkRenderingFreeType
+  vtkRenderingOpenGL
   vtkInteractionStyle
   vtkIOXML
   vtkIOImage
   vtkIOGeometry
   )
+
+message("QT_LIBRARIES: ${QT_LIBRARIES}")
+message("VTK_LIBRARIES: ${VTK_LIBRARIES}")
+
+#  qt5_use_modules(RenderWindowNoUiFile Core Gui)
 
 set(deps
   ${QT_LIBRARIES}

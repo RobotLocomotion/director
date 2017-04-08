@@ -63,10 +63,9 @@ endforeach(file)
 set(VTK_LIBRARIES
   vtkInteractionWidgets
   vtkInteractionStyle
-  vtkRenderingVolumeOpenGL2
-  vtkRenderingOpenGL2
   vtkRenderingFreeType
   vtkRenderingCore
+  vtkRenderingOpenGL
   vtkFiltersExtraction
   vtkFiltersCore
   vtkCommonCore
@@ -117,7 +116,6 @@ if (USE_DRC_MAPS)
   include_directories(SYSTEM ${PCL_INCLUDE_DIRS})
   include_directories(SYSTEM ${MAPS_INCLUDE_DIRS})
   list(APPEND deps ${MAPS_LIBRARIES} ${PCL_LIBRARIES})
-  use_cpp11()
 endif()
 
 if (USE_DRC_PLANE_SEG)
@@ -133,7 +131,6 @@ if (USE_DRC_PLANE_SEG)
   include_directories(SYSTEM ${PLANE_SEG_INCLUDE_DIRS})
   include_directories(SYSTEM ${PCL_INCLUDE_DIRS})
   list(APPEND deps ${PLANE_SEG_LIBRARIES} ${PCL_LIBRARIES})
-  use_cpp11()
 endif()
 
 if(USE_LCMGL)
