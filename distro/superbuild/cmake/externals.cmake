@@ -275,7 +275,8 @@ option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." $
 if(NOT USE_SYSTEM_VTK)
   ExternalProject_Add(vtk
     GIT_REPOSITORY git://vtk.org/VTK.git
-    GIT_TAG v5.10.1
+#    GIT_TAG v5.10.1
+    GIT_TAG v7.1.1
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
@@ -283,15 +284,19 @@ if(NOT USE_SYSTEM_VTK)
       -DBUILD_SHARED_LIBS:BOOL=ON
       -DBUILD_TESTING:BOOL=OFF
       -DBUILD_EXAMPLES:BOOL=OFF
-      -DVTK_USE_GUISUPPORT:BOOL=ON
-      -DVTK_USE_QT:BOOL=ON
+      -DVTK_RENDERING_BACKEND:STRING=OpenGL
+      -DVTK_QT_VERSION:STRING=5
+      -DVTK_Group_Qt:BOOL=ON
+
+#      -DVTK_USE_GUISUPPORT:BOOL=ON
+#      -DVTK_USE_QT:BOOL=ON
       -DVTK_WRAP_PYTHON:BOOL=ON
-      -DVTK_WRAP_TCL:BOOL=OFF
-      -DVTK_USE_TK:BOOL=OFF
-      -DCMAKE_CXX_FLAGS:STRING=-DGLX_GLXEXT_LEGACY # fixes compile error on ubuntu 16.04
+#      -DVTK_WRAP_TCL:BOOL=OFF
+#      -DVTK_USE_TK:BOOL=OFF
+#      -DCMAKE_CXX_FLAGS:STRING=-DGLX_GLXEXT_LEGACY # fixes compile error on ubuntu 16.04
     )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/vtk-5.10)
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
   set(vtk_depends vtk)
 else()
 
