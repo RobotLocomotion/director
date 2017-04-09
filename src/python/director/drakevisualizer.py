@@ -174,7 +174,7 @@ class Geometry(object):
             return
 
         texture = vtk.vtkTexture()
-        texture.SetInput(image)
+        texture.SetInputData(image)
         texture.EdgeClampOn()
         texture.RepeatOn()
 

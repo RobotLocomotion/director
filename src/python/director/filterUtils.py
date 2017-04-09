@@ -19,13 +19,13 @@ def thresholdCells(polyData, arrayName, thresholdRange):
     assert(polyData.GetCellData().GetArray(arrayName))
     f = vtk.vtkThreshold()
     # f.SetAttributeModeToUseCellData()
-    f.SetInput(polyData)
+    f.SetInputData(polyData)
     f.ThresholdBetween(thresholdRange[0], thresholdRange[1])
     f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_CELLS, arrayName)
     f.Update()
 
     g = vtk.vtkGeometryFilter()
-    g.SetInput(f.GetOutput())
+    g.SetInputConnection(f.GetOutputPort())
     g.Update()
     return shallowCopy(g.GetOutput())
 
@@ -138,7 +138,7 @@ def flipImage(image, flipAxis=1):
     assert flipAxis in (0, 1)
     f = vtk.vtkImageFlip()
     f.SetFilteredAxis(flipAxis)
-    f.SetInput(image)
+    f.SetInputData(image)
     f.Update()
     return shallowCopy(f.GetOutput())
 

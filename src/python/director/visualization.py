@@ -430,7 +430,7 @@ def createAxesPolyData(scale, useTube):
 
     if useTube:
         tube = vtk.vtkTubeFilter()
-        tube.SetInput(axes.GetOutput())
+        tube.SetInputConnection(axes.GetOutputPort())
         tube.SetRadius(0.002)
         tube.SetNumberOfSides(12)
         tube.Update()
