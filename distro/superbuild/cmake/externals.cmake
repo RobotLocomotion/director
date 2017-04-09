@@ -228,8 +228,9 @@ endif()
 ###############################################################################
 # PythonQt
 ExternalProject_Add(PythonQt
-  GIT_REPOSITORY https://github.com/commontk/PythonQt.git
-  GIT_TAG patched-7
+  GIT_REPOSITORY https://github.com/patmarion/PythonQt.git
+  #GIT_TAG patched-7
+  GIT_TAG fix-compile-error-on-qt5.8
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
