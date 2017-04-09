@@ -71,7 +71,7 @@ def appendPolyData(polyDataList):
     append = vtk.vtkAppendPolyData()
     if polyDataList:
         for polyData in polyDataList:
-            append.AddInput(polyData)
+            append.AddInputData(polyData)
         append.Update()
     return shallowCopy(append.GetOutput())
 
