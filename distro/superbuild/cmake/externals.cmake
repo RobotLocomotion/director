@@ -265,6 +265,7 @@ ExternalProject_Add(QtPropertyBrowser
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
+    -DCMAKE_MACOSX_RPATH:BOOL=ON
   )
 
 
@@ -289,6 +290,7 @@ if(NOT USE_SYSTEM_VTK)
       -DVTK_QT_VERSION:STRING=5
       -DVTK_Group_Qt:BOOL=ON
 
+      -DCMAKE_MACOSX_RPATH:BOOL=ON
 #      -DVTK_USE_GUISUPPORT:BOOL=ON
 #      -DVTK_USE_QT:BOOL=ON
       -DVTK_WRAP_PYTHON:BOOL=ON

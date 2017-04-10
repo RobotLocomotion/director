@@ -89,7 +89,7 @@ set(VTK_LIBRARIES
   vtkInteractionWidgets
   vtkRenderingAnnotation
   vtkRenderingFreeType
-  vtkRenderingOpenGL
+  vtkRendering${VTK_RENDERING_BACKEND}
   vtkInteractionStyle
   vtkIOXML
   vtkIOImage
@@ -98,6 +98,7 @@ set(VTK_LIBRARIES
 
 message("QT_LIBRARIES: ${QT_LIBRARIES}")
 message("VTK_LIBRARIES: ${VTK_LIBRARIES}")
+message("VTK_RENDERING_BACKEND: ${VTK_RENDERING_BACKEND}")
 
 #  qt5_use_modules(RenderWindowNoUiFile Core Gui)
 

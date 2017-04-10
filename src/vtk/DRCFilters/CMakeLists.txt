@@ -65,7 +65,7 @@ set(VTK_LIBRARIES
   vtkInteractionStyle
   vtkRenderingFreeType
   vtkRenderingCore
-  vtkRenderingOpenGL
+  vtkRendering${VTK_RENDERING_BACKEND}
   vtkFiltersExtraction
   vtkFiltersCore
   vtkCommonCore
