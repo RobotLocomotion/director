@@ -90,7 +90,10 @@ def readVrml(filename):
 
 def readObjMtl(filename):
     '''
-    Returns list of vtkPolyData objects and a list of vtkActor objects.
+    Read an obj file and return a list of vtkPolyData objects.
+    If the obj file has an associated material file, this function returns
+    (polyDataList, actors).  If there is not a material file, this function
+    returns (polyDataList, None).
     '''
 
     def getMtlFilename(filename, maxLines=1000):
@@ -115,7 +118,11 @@ def readObjMtl(filename):
     actors = ren.GetActors()
     actors = [actors.GetItemAsObject(i) for i in xrange(actors.GetNumberOfItems())]
     meshes = [a.GetMapper().GetInput() for a in actors]
-    return meshes, actors
+
+    if mtlFilename:
+        return (meshes, actors)
+    else:
+        return (meshes, None)
 
 
 def writePolyData(polyData, filename):
