@@ -26,9 +26,6 @@ lcmrl = lcmbot
 
 from PythonQt import QtGui
 
-USE_TEXTURE_MESHES = True
-USE_SHADOWS = False
-
 class Geometry(object):
 
     MeshCache = {}
@@ -110,7 +107,7 @@ class Geometry(object):
         return pd
 
     @staticmethod
-    def scaleGeometry(meshDataList, geom):
+    def scaleGeometry(polyDataList, geom):
         if len(geom.float_data) == 1:
             scale_x = scale_y = scale_z = geom.float_data[0]
         elif len(geom.float_data) == 3:
@@ -123,30 +120,24 @@ class Geometry(object):
         if scale_x != 1.0 or scale_y != 1.0 or scale_z != 1.0:
             t = vtk.vtkTransform()
             t.Scale(scale_x, scale_y, scale_z)
-            for meshData in meshDataList:
-                meshData.polyData = filterUtils.transformPolyData(meshData.polyData, t)
+            polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
 
-        return meshDataList
+        return polyDataList
 
 
     @staticmethod
-    def transformGeometry(meshDataList, geom):
+    def transformGeometry(polyDataList, geom):
         t = transformUtils.transformFromPose(geom.position, geom.quaternion)
-        for meshData in meshDataList:
-            meshData.polyData = filterUtils.transformPolyData(meshData.polyData, t)
-        return meshDataList
+        return [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
 
     @staticmethod
-    def computeNormals(meshDataList):
+    def computeNormals(polyDataList):
 
         def addNormals(polyData):
             hasNormals = polyData.GetPointData().GetNormals() is not None
             return polyData if hasNormals else filterUtils.computeNormals(polyData)
 
-        for meshData in meshDataList:
-            meshData.polyData = addNormals(meshData.polyData)
-
-        return meshDataList
+        return [addNormals(polyData) for polyData in polyDataList]
 
     @staticmethod
     def getTextureFileName(polyData):
@@ -200,23 +191,7 @@ class Geometry(object):
         return Geometry.PackageMap.resolveFilename(filename) or filename
 
     @staticmethod
-    def DeriveMeshVisList(geom, meshFileName, polyDataList):
-        meshDataList = []
-        for polyData in polyDataList:
-            if USE_TEXTURE_MESHES and meshFileName != "":
-                Geometry.loadTextureForMesh(polyData, meshFileName)
-            texture = Geometry.TextureCache.get(Geometry.getTextureFileName(polyData))
-            if texture:
-               color = QtGui.QColor(255, 255, 255)
-            else:
-               color = QtGui.QColor(geom.color[0]*255, geom.color[1]*255, geom.color[2]*255)
-            alpha = geom.color[3]
-            meshData = FieldContainer(polyData=polyData, color=color, alpha=alpha, texture=texture)
-            meshDataList.append(meshData)
-        return meshDataList
-
-    @staticmethod
-    def loadPolyDataMeshes(geom):
+    def createPolyDataFromFiles(geom):
 
         filename = Geometry.resolvePackageFilename(geom.string_data)
         basename, ext = os.path.splitext(filename)
@@ -235,75 +210,85 @@ class Geometry(object):
             print 'warning, cannot find file:', filename
             return []
 
-        meshDataList = []
+        visInfo = None
 
         if filename.endswith('vtm'):
             polyDataList = ioUtils.readMultiBlock(filename)
-            meshDataList = Geometry.DeriveMeshVisList(geom, filename, polyDataList)
         else:
             if filename.endswith('obj'):
-                objData = ioUtils.readObjMtl(geom.string_data)
-                for polyData, actor in zip(objData.meshes, objData.actors):
-                    if objData.hasMtl:
-                        color = actor.GetProperty().GetColor()
-                        alpha = actor.GetProperty().GetOpacity()
-                        texture = actor.GetTexture()
-                    else:
-                        color = QtGui.QColor(geom.color[0]*255, geom.color[1]*255, geom.color[2]*255)
-                        alpha = geom.color[3]
-                        texture = Geometry.TextureCache.get(Geometry.getTextureFileName(polyData))
-                    meshData = FieldContainer(polyData=polyData, color=color, alpha=alpha, texture=texture)
-                    meshDataList.append(meshData)
+                polyDataList, actors = ioUtils.readObjMtl(geom.string_data)
+                if actors:
+                    visInfo = Geometry.makeVisInfoFromActors(actors)
             else:
                 polyDataList = [ioUtils.readPolyData(filename)]
-                meshDataList = Geometry.DeriveMeshVisList(geom, filename, polyDataList)
 
-        Geometry.MeshCache[filename] = meshDataList
-        return meshDataList
+        for polyData in polyDataList:
+            Geometry.loadTextureForMesh(polyData, filename)
+
+        result = (polyDataList, visInfo)
+        Geometry.MeshCache[filename] = result
+        return result
 
     @staticmethod
-    def createPolyDataForGeometry(geom):
-        meshDataList = []
+    def makeVisInfoFromMessage(polyDataList, geom):
+
+        def make(polyData):
+            texture = Geometry.TextureCache.get(Geometry.getTextureFileName(polyData))
+            color = [1.0, 1.0, 1.0] if texture else geom.color[:3]
+            alpha = geom.color[3]
+            return FieldContainer(color=color, alpha=alpha, texture=texture)
+
+        return [make(polyData) for polyData in polyDataList]
+
+    @staticmethod
+    def makeVisInfoFromActors(actors):
+
+        def make(actor):
+            color = actor.GetProperty().GetColor()
+            alpha = actor.GetProperty().GetOpacity()
+            texture = actor.GetTexture()
+            return FieldContainer(color=color, alpha=alpha, texture=texture)
+
+        return [make(actor) for actor in actors]
+
+    @staticmethod
+    def createGeometry(name, geom):
+
+        visInfo = None
 
         if geom.type != lcmrl.viewer_geometry_data_t.MESH:
             polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
-            meshDataList = Geometry.DeriveMeshVisList(geom, "", polyDataList)
+        elif not geom.string_data:
+            polyDataList = [Geometry.createPolyDataFromMeshMessage(geom)]
         else:
-            if not geom.string_data:
-                polyDataList = [Geometry.createPolyDataFromMeshMessage(geom)]
-                meshDataList = Geometry.DeriveMeshVisList(geom, "", polyDataList)
-            else:
-                meshDataList = Geometry.loadPolyDataMeshes(geom)
-                meshDataList = Geometry.scaleGeometry(meshDataList, geom)
+            polyDataList, visInfo = Geometry.createPolyDataFromFiles(geom)
+            polyDataList = Geometry.scaleGeometry(polyDataList, geom)
 
-        meshDataList = Geometry.transformGeometry(meshDataList, geom)
-        meshDataList = Geometry.computeNormals(meshDataList)
+        if not visInfo:
+            visInfo = Geometry.makeVisInfoFromMessage(polyDataList, geom)
 
-        return meshDataList
+        assert len(polyDataList) == len(visInfo)
 
-    @staticmethod
-    def createGeometry(name, geom, parentTransform):
-        meshDataList = Geometry.createPolyDataForGeometry(geom)
-        return [Geometry(name, meshData) for meshData in meshDataList]
+        polyDataList = Geometry.transformGeometry(polyDataList, geom)
+        polyDataList = Geometry.computeNormals(polyDataList)
 
-    def __init__(self, name, meshData):
-        self.polyDataItem = vis.PolyDataItem(name, meshData.polyData, view=None)
-        self.polyDataItem.setProperty('Color', meshData.color)
-        self.polyDataItem.setProperty('Alpha', meshData.alpha)
-        self.polyDataItem.actor.SetTexture(meshData.texture)
+        return [Geometry(name, polyData, visInfo) for polyData, visInfo in zip(polyDataList, visInfo)]
 
-        if USE_SHADOWS:
-            self.polyDataItem.shadowOn()
+
+    def __init__(self, name, polyData, visInfo):
+        self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
+        self.polyDataItem.setProperty('Color', visInfo.color)
+        self.polyDataItem.setProperty('Alpha', visInfo.alpha)
+        self.polyDataItem.actor.SetTexture(visInfo.texture)
 
 
 class Link(object):
 
     def __init__(self, link):
         self.transform = vtk.vtkTransform()
-
         self.geometry = []
         for g in link.geom:
-            self.geometry.extend(Geometry.createGeometry(link.name + ' geometry data', g, self.transform))
+            self.geometry.extend(Geometry.createGeometry(link.name + ' geometry data', g))
 
     def setTransform(self, pos, quat):
         self.transform = transformUtils.transformFromPose(pos, quat)
@@ -459,10 +444,8 @@ class DrakeVisualizer(object):
                 polyData = vtk.vtkPolyData()
 
                 name = linkName + ' geometry data'
-                geom = type('', (), {})
-                geom.color = [1.0,0.0,0.0,1.0]
-                meshData = FieldContainer(polyData=polyData, color=[1.0,0.0,0.0], alpha=1.0, texture=Geometry.TextureCache.get(Geometry.getTextureFileName(polyData)))
-                g = Geometry(name, meshData)
+                visInfo = FieldContainer(color=[1.0,0.0,0.0], alpha=1.0, texture=None)
+                g = Geometry(name, polyData, visInfo)
                 link.geometry.append(g)
 
                 linkFolder = self.getLinkFolder(robotNum, linkName)
