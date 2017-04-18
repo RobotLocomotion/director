@@ -79,6 +79,7 @@ ExternalProject_Add(
   URL_MD5 a0e0a32d62028218b1c1848ad7121476
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
+    ${qt_args}
 )
 
 ExternalProject_Add_Step(eigen make_pkgconfig_dir
