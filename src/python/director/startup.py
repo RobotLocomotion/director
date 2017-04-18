@@ -61,6 +61,8 @@ from director import lcmoctomap
 from director import lcmcollections
 from director import atlasdriver
 from director import atlasdriverpanel
+from director import valkyriedriver
+from director import valkyriedriverpanel
 from director import multisensepanel
 from director import navigationpanel
 from director import handcontrolpanel
@@ -146,6 +148,7 @@ useHands = True
 usePlanning = True
 useHumanoidDRCDemos = True
 useAtlasDriver = True
+useValkyrieDriver = True
 useLCMGL = True
 useOctomap = True
 useCollections = True
@@ -215,6 +218,10 @@ if useAtlasDriver:
 else:
     app.removeToolbarMacro('ActionAtlasDriverPanel')
 
+
+if useValkyrieDriver:
+    valkyrieDriver = valkyriedriver.init()
+    valkyriedriverpanel.init(valkyrieDriver)
 
 if usePerception:
     segmentationpanel.init()

@@ -133,6 +133,8 @@ set(python_files
   director/uipanel.py
   director/utime.py
   director/uuidutil.py
+  director/valkyriedriver.py
+  director/valkyriedriverpanel.py
   director/valvedemo.py
   director/version.py.in
   director/viconvisualizer.py

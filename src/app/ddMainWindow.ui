@@ -241,6 +241,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="ActionAtlasDriverPanel"/>
+   <addaction name="ActionValkyrieDriverPanel"/>
    <addaction name="ActionNavigationPanel"/>
    <addaction name="ActionMappingPanel"/>
    <addaction name="ActionMultisensePanel"/>
@@ -458,6 +459,21 @@
    </property>
    <property name="toolTip">
     <string>Atlas Driver</string>
+   </property>
+  </action>
+  <action name="ActionValkyrieDriverPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/nasa_logo.png</normaloff>:/images/nasa_logo.png</iconset>
+   </property>
+   <property name="text">
+    <string>Valkyrie Driver</string>
+   </property>
+   <property name="toolTip">
+    <string>Valkyrie Driver</string>
    </property>
   </action>
   <action name="ActionHandControlPanel">
