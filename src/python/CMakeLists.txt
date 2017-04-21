@@ -7,6 +7,7 @@ set(python_files
   director/affordancemanager.py
   director/affordancepanel.py
   director/affordanceurdf.py
+  director/affordanceviewbehaviors.py
   director/applogic.py
   director/appsettings.py
   director/assimp2vtk.py

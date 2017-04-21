@@ -15,15 +15,22 @@ def thresholdPoints(polyData, arrayName, thresholdRange):
     f.Update()
     return shallowCopy(f.GetOutput())
 
-def thresholdCells(polyData, arrayName, thresholdRange):
-    assert(polyData.GetCellData().GetArray(arrayName))
+def thresholdCells(polyData, arrayName, thresholdRange, arrayType='cells'):
+
+    assert arrayType in ('points', 'cells')
+
     f = vtk.vtkThreshold()
-    # f.SetAttributeModeToUseCellData()
     f.SetInput(polyData)
     f.ThresholdBetween(thresholdRange[0], thresholdRange[1])
-    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_CELLS, arrayName)
-    f.Update()
 
+    if arrayType == 'cells':
+        assert(polyData.GetCellData().GetArray(arrayName))
+        f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_CELLS, arrayName)
+    else:
+        assert(polyData.GetPointData().GetArray(arrayName))
+        f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
+
+    f.Update()
     g = vtk.vtkGeometryFilter()
     g.SetInput(f.GetOutput())
     g.Update()
