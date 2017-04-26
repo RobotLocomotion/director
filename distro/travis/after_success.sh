@@ -8,13 +8,10 @@ scriptDir=$(cd $(dirname $0) && pwd)
 make_docs()
 {
   cd $TRAVIS_BUILD_DIR/build/src/director-build
-  python -c "import sphinx_rtd_theme"
-  
   make python-coverage
   make docs-doxygen 2>&1 > log.txt || cat log.txt
   make docs-sphinx-generate 2>&1 > log.txt || cat log.txt
   make docs-sphinx-build 2>&1 > log.txt || cat log.txt
-
 
   cd $TRAVIS_BUILD_DIR/docs
   mv $TRAVIS_BUILD_DIR/docs/sphinx/_build/html sphinx_docs
@@ -64,9 +61,7 @@ run_master_commands()
 
 }
 
-run_master_commands
-
-# build docs and packages only on master, not for pull requests
-# if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-#   run_master_commands
-# fi
+build docs and packages only on master, not for pull requests
+if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+  run_master_commands
+fi
