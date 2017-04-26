@@ -61,7 +61,9 @@ run_master_commands()
 
 }
 
+run_master_commands
+
 # build docs and packages only on master, not for pull requests
-if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-  run_master_commands
-fi
+# if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+#   run_master_commands
+# fi
