@@ -22,9 +22,7 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 	sudo apt-get update -qq
   sudo apt-get install -y build-essential cmake libqt4-dev libvtk5-dev libvtk5-qt4-dev \
     libvtk-java python-dev python-vtk python-numpy python-yaml python-lxml xvfb \
-    doxygen graphviz python-sphinx python-coverage
-
-  sudo pip install sphinx-rtd-theme
+    doxygen graphviz python-sphinx python-coverage python-sphinx-rtd-theme
 
   # start Xvfb for DISPLAY=:99.0
   /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile \
