@@ -24,7 +24,7 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
     libvtk-java python-dev python-vtk python-numpy python-yaml python-lxml xvfb \
     doxygen graphviz python-sphinx python-coverage
 
-  sudo pip install sphinx_rtd_theme
+  sudo pip install --upgrade sphinx_rtd_theme breathe
 
   python -c "import sphinx_rtd_theme"
 
