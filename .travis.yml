@@ -8,19 +8,19 @@ virtualenv:
 
 matrix:
   include:
-    - os: osx
-      osx_image: xcode7.3
-      env: USE_LCM=ON USE_LIBBOT=OFF USE_LCMGL=OFF MAKE_PACKAGE=ON
+    # - os: osx
+    #   osx_image: xcode7.3
+    #   env: USE_LCM=ON USE_LIBBOT=OFF USE_LCMGL=OFF MAKE_PACKAGE=ON
     - os: linux
       env: USE_LCM=ON USE_LIBBOT=OFF USE_LCMGL=OFF MAKE_PACKAGE=ON MAKE_DOCS=ON
-    - os: linux
-      env: USE_LCM=OFF USE_LIBBOT=OFF USE_LCMGL=OFF
-    - os: linux
-      env: USE_LCM=ON USE_LIBBOT=ON USE_LCMGL=ON
-    - os: linux
-      services:
-        - docker
-      env: USE_DOCKER=ON
+    # - os: linux
+    #   env: USE_LCM=OFF USE_LIBBOT=OFF USE_LCMGL=OFF
+    # - os: linux
+    #   env: USE_LCM=ON USE_LIBBOT=ON USE_LCMGL=ON
+    # - os: linux
+    #   services:
+    #     - docker
+    #   env: USE_DOCKER=ON
 
 
 notifications:
