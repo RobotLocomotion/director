@@ -139,6 +139,9 @@ protected slots:
   void onImagesMessage(const QByteArray& data, const QString& channel);
   void onImageMessage(const QByteArray& data, const QString& channel);
 
+  void openLCMFile(const QString& filename);
+  bool readNextImagesMessage();
+
 protected:
 
   CameraData* getCameraData(const QString& cameraName);
@@ -163,6 +166,8 @@ protected:
   QMap<QString, bot_core::images_t> mImagesMessageMap;
   QMap<QString, ddLCMSubscriber*> mSubscribers;
   QMap<QString, CameraData*> mCameraData;
+
+  lcm::LogFile* logFile;
 };
 
 #endif
