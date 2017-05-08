@@ -133,14 +133,14 @@ public:
 
   QStringList getBotFrameNames() const;
   QStringList getCameraNames() const;
+  
+  void openLCMFile(const QString& filename);
+  bool readNextImagesMessage();
 
 protected slots:
 
   void onImagesMessage(const QByteArray& data, const QString& channel);
   void onImageMessage(const QByteArray& data, const QString& channel);
-
-  void openLCMFile(const QString& filename);
-  bool readNextImagesMessage();
 
 protected:
 
