@@ -1,9 +1,18 @@
-#include <PythonQt.h>
+// Qt includes
 #include <QApplication>
+#include <QSurfaceFormat>
+
+// director includes
+#include <PythonQt.h>
 #include "ddPythonManager.h"
+
+// VTK includes
+#include <QVTKOpenGLWidget.h>
 
 int main(int argc, char **argv)
 {
+  // Set the default surface format for the OpenGL view
+  QSurfaceFormat::setDefaultFormat(QVTKOpenGLWidget::defaultFormat());
   QApplication app(argc, argv);
   ddPythonManager* pythonManager = new ddPythonManager;
   pythonManager->setSysArgv(QApplication::instance()->arguments());

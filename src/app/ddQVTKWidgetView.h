@@ -10,7 +10,7 @@ class vtkOrientationMarkerWidget;
 class vtkRenderer;
 class vtkRenderWindow;
 class vtkLightKit;
-class QVTKWidget2;
+class QVTKOpenGLWidget;
 
 class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
 {
@@ -29,7 +29,7 @@ public:
 
   QList<double> lastTDxMotion() const;
 
-  QVTKWidget2* vtkWidget() const;
+  QVTKOpenGLWidget* vtkWidget() const;
   vtkOrientationMarkerWidget* orientationMarkerWidget() const;
 
   void installImageInteractor();

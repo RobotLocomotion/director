@@ -8,6 +8,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
+#include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkInteractorStyle.h>
 #include <vtkLight.h>
 #include <vtkLightKit.h>
@@ -26,7 +27,7 @@
 #include <vtkCaptionActor2D.h>
 #include <vtkTextProperty.h>
 
-#include <QVTKWidget2.h>
+#include <QVTKOpenGLWidget.h>
 #include <QVBoxLayout>
 #include <QTimer>
 
@@ -44,7 +45,7 @@ public:
       {
       this->Interaction = ZOOMING;
       this->FindPokedRenderer(
-        this->Interactor->GetEventPosition()[0], 
+        this->Interactor->GetEventPosition()[0],
         this->Interactor->GetEventPosition()[1]);
       this->InvokeEvent(vtkCommand::StartInteractionEvent);
       }
@@ -70,11 +71,11 @@ public:
     this->RenderTimer.setInterval(1000/timerFramesPerSeconds);
   }
 
-  QVTKWidget2* VTKWidget;
+  QVTKOpenGLWidget* VTKWidget;
 
   vtkSmartPointer<vtkRenderer> Renderer;
   vtkSmartPointer<vtkRenderer> RendererBase;
-  vtkSmartPointer<vtkRenderWindow> RenderWindow;
+  vtkSmartPointer<vtkGenericOpenGLRenderWindow> RenderWindow;
   vtkSmartPointer<vtkLightKit> LightKit;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
@@ -99,12 +100,14 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
 
   QVBoxLayout* layout = new QVBoxLayout(this);
   layout->setMargin(0);
-  this->Internal->VTKWidget = new QVTKWidget2;
+  this->Internal->VTKWidget = new QVTKOpenGLWidget;
   layout->addWidget(this->Internal->VTKWidget);
 
-  this->Internal->VTKWidget->SetUseTDx(true);
+  //this->Internal->VTKWidget->SetUseTDx(true);
 
-  this->Internal->RenderWindow = this->Internal->VTKWidget->GetRenderWindow();//vtkSmartPointer<vtkRenderWindow>::New();
+  //this->Internal->RenderWindow = this->Internal->VTKWidget->GetRenderWindow();//vtkSmartPointer<vtkRenderWindow>::New();
+  this->Internal->RenderWindow = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
   this->Internal->RenderWindow->SetMultiSamples(8);
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
@@ -193,7 +196,7 @@ vtkLightKit* ddQVTKWidgetView::lightKit() const
 }
 
 //-----------------------------------------------------------------------------
-QVTKWidget2* ddQVTKWidgetView::vtkWidget() const
+QVTKOpenGLWidget* ddQVTKWidgetView::vtkWidget() const
 {
   return this->Internal->VTKWidget;
 }
