@@ -10,7 +10,12 @@ class vtkOrientationMarkerWidget;
 class vtkRenderer;
 class vtkRenderWindow;
 class vtkLightKit;
-class QVTKOpenGLWidget;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  class QVTKOpenGLWidget;
+#else
+  class QVTKWidget;
+  typedef QVTKWidget QVTKOpenGLWidget;
+#endif
 
 class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
 {

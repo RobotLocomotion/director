@@ -1,35 +1,39 @@
 #include "ddQVTKWidgetView.h"
 #include "ddFPSCounter.h"
 
-#include "vtkTDxInteractorStyleCallback.h"
 #include "vtkSimpleActorInteractor.h"
+#include "vtkTDxInteractorStyleCallback.h"
 
+#include <vtkActor.h>
+#include <vtkAxesActor.h>
 #include <vtkBoundingBox.h>
-#include <vtkSmartPointer.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
+#include <vtkCaptionActor2D.h>
+#include <vtkConeSource.h>
+#include <vtkEventQtSlotConnect.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkInteractorStyle.h>
-#include <vtkLight.h>
-#include <vtkLightKit.h>
-#include <vtkLightCollection.h>
-#include <vtkObjectFactory.h>
-#include <vtkActor.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkConeSource.h>
-#include <vtkOrientationMarkerWidget.h>
-#include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkInteractorStyleRubberBand3D.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkLight.h>
+#include <vtkLightCollection.h>
+#include <vtkLightKit.h>
+#include <vtkObjectFactory.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
-#include <vtkGenericOpenGLRenderWindow.h>
-#include <vtkAxesActor.h>
-#include <vtkEventQtSlotConnect.h>
-#include <vtkCaptionActor2D.h>
+#include <vtkRenderer.h>
+#include <vtkSmartPointer.h>
 #include <vtkTextProperty.h>
 
-#include <QVTKOpenGLWidget.h>
-#include <QVBoxLayout>
 #include <QTimer>
+#include <QVBoxLayout>
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  #include <QVTKOpenGLWidget.h>
+#else
+  #include <QVTKWidget.h>
+#endif
 
 //-----------------------------------------------------------------------------
 class vtkCustomRubberBandStyle : public vtkInteractorStyleRubberBand3D
@@ -75,7 +79,7 @@ public:
 
   vtkSmartPointer<vtkRenderer> Renderer;
   vtkSmartPointer<vtkRenderer> RendererBase;
-  vtkSmartPointer<vtkGenericOpenGLRenderWindow> RenderWindow;
+  vtkSmartPointer<vtkRenderWindow> RenderWindow;
   vtkSmartPointer<vtkLightKit> LightKit;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
@@ -103,24 +107,29 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->VTKWidget = new QVTKOpenGLWidget;
   layout->addWidget(this->Internal->VTKWidget);
 
-  //this->Internal->VTKWidget->SetUseTDx(true);
-
-  //this->Internal->RenderWindow = this->Internal->VTKWidget->GetRenderWindow();//vtkSmartPointer<vtkRenderWindow>::New();
-  this->Internal->RenderWindow = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  this->Internal->RenderWindow =
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+#else
+  this->Internal->VTKWidget->SetUseTDx(true);
+  this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
+#endif
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
   this->Internal->RenderWindow->SetMultiSamples(8);
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
   this->Internal->RenderWindow->StereoRenderOff();
   this->Internal->RenderWindow->StereoUpdate();
-  //this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 
   this->Internal->LightKit = vtkSmartPointer<vtkLightKit>::New();
   this->Internal->LightKit->SetKeyLightWarmth(0.5);
   this->Internal->LightKit->SetFillLightWarmth(0.5);
 
-  this->Internal->TDxInteractor = vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
-  vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor()->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
+  this->Internal->TDxInteractor =
+    vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
+  vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor(
+    )->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
 
   //this->Internal->RenderWindow->SetNumberOfLayers(2);
 
