@@ -1,5 +1,5 @@
 macro(ddqt)
-  set(DD_QT_VERSION "4" CACHE STRING "Expected Qt version")
+  set(DD_QT_VERSION "5" CACHE STRING "Expected Qt version")
   
   set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
   
