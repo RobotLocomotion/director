@@ -28,6 +28,7 @@ include(cmake/dd-testing.cmake)
 include(cmake/dd-version.cmake)
 
 use_cpp11()
+ddqt()
 
 # dependency options
 option(USE_PORTMIDI "Build director with portmidi dependency." OFF)

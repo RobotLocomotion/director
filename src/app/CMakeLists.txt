@@ -1,4 +1,8 @@
-setup_qt4()
+if (${DD_QT_VERSION} VERSION_GREATER "4")
+  setup_qt5()
+else
+  setup_qt4()
+endif()
 
 find_package(PythonLibs 2.7 REQUIRED)
 find_package(PythonInterp 2.7 REQUIRED)
@@ -20,6 +24,14 @@ find_package(VTK 7.1 COMPONENTS
 find_package(QtPropertyBrowser REQUIRED)
 
 include(${VTK_USE_FILE})
+
+if(NOT (${VTK_QT_VERSION} VERSION_EQUAL ${DD_QT_VERSION}))
+  message(FATAL_ERROR "VTK is compiled with a different version of Qt than"
+                      " the one requested."
+                      "Expected Qt version Qt${DD_QT_VERSION}."
+                      "VTK compiled with Qt${VTK_QT_VERSION}.")
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/src/common)
@@ -35,7 +47,7 @@ set(wrap_files
   wrapped_methods.txt
   )
 
-qt5_wrap_cpp(moc_srcs
+set(MOC_SRCS
   ${decorator_file}
   ddLumberSelection.h
   ddGLWidgetView.h
@@ -55,17 +67,26 @@ qt5_wrap_cpp(moc_srcs
   ddViewMenu.h
   )
 
-qt5_wrap_ui(ui_srcs
+set(UI_SRCS
   ddMainWindow.ui
   ddLumberSelection.ui
   ddTaskSelection.ui
   )
 
-qt5_add_resources(resource_srcs
+set(RESOURCE_SRCS
   uiresources.qrc
   images/resources.qrc
   )
 
+if(${DD_QT_VERSION} VERSION_GREATER "4")
+  qt5_wrap_cpp(moc_srcs ${MOC_SRCS})
+  qt5_wrap_ui(ui_srcs ${UI_SRCS})
+  qt5_add_resources(resource_srcs ${RESOURCE_SRCS})
+else()
+  qt4_wrap_cpp(moc_srcs ${MOC_SRCS})
+  qt4_wrap_ui(ui_srcs ${UI_SRCS})
+  qt4_add_resources(resource_srcs ${RESOURCE_SRCS})
+endif()
 
 set(srcs
   ${moc_srcs}
@@ -125,10 +146,17 @@ if (USE_DRAKE)
   )
 
   set(moc_srcs)
-  qt5_wrap_cpp(moc_srcs
-    ddDrakeModel.h
-    ddDrakeWrapper.h
-  )
+  if(${DD_QT_VERSION} VERSION_GREATER "4")
+    qt5_wrap_cpp(moc_srcs
+      ddDrakeModel.h
+      ddDrakeWrapper.h
+    )
+  else()
+    qt4_wrap_cpp(moc_srcs
+      ddDrakeModel.h
+      ddDrakeWrapper.h
+    )
+  endif()
 
   list(APPEND srcs
     ${moc_srcs}
@@ -163,10 +191,17 @@ if (USE_LCM)
   include_directories(${LCM_INCLUDE_DIRS})
 
   set(moc_srcs)
-  qt5_wrap_cpp(moc_srcs
-    ddLCMSubscriber.h
-    ddLCMThread.h
-  )
+  if(${DD_QT_VERSION} VERSION_GREATER "4")
+    qt5_wrap_cpp(moc_srcs
+      ddLCMSubscriber.h
+      ddLCMThread.h
+    )
+  else()
+    qt4_wrap_cpp(moc_srcs
+      ddLCMSubscriber.h
+      ddLCMThread.h
+    )
+  endif()
 
   list(APPEND srcs
     ${moc_srcs}
@@ -192,11 +227,19 @@ if (USE_DRC)
   include_directories(${PCL_INCLUDE_DIRS})
 
   set(moc_srcs)
-  qt5_wrap_cpp(moc_srcs
-    ddBotImageQueue.h
-    ddKinectLCM.h
-    ddPointCloudLCM.h
-  )
+  if(${DD_QT_VERSION} VERSION_GREATER "4")
+    qt5_wrap_cpp(moc_srcs
+      ddBotImageQueue.h
+      ddKinectLCM.h
+      ddPointCloudLCM.h
+    )
+  else()
+    qt4_wrap_cpp(moc_srcs
+      ddBotImageQueue.h
+      ddKinectLCM.h
+      ddPointCloudLCM.h
+    )
+  endif()
 
   list(APPEND srcs
     ${moc_srcs}
