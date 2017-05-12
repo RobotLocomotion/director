@@ -1,5 +1,6 @@
 if (${DD_QT_VERSION} VERSION_GREATER "4")
   setup_qt5()
+  include_directories(${Qt5Core_INCLUDE_DIRS})
 else
   setup_qt4()
 endif()
@@ -26,10 +27,10 @@ find_package(QtPropertyBrowser REQUIRED)
 include(${VTK_USE_FILE})
 
 if(NOT (${VTK_QT_VERSION} VERSION_EQUAL ${DD_QT_VERSION}))
-  message(FATAL_ERROR "VTK is compiled with a different version of Qt than"
-                      " the one requested."
-                      "Expected Qt version Qt${DD_QT_VERSION}."
-                      "VTK compiled with Qt${VTK_QT_VERSION}.")
+  message(FATAL_ERROR "VTK is compiled with a different version of Qt than "
+                      "the one requested.\n"
+                      "Expected Qt version Qt${DD_QT_VERSION} but "
+                      "VTK is compiled with Qt${VTK_QT_VERSION}.")
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -39,7 +40,6 @@ include_directories(${QTPROPERTYBROWSER_INCLUDE_DIRS})
 include_directories(${CTK_PYTHONCONSOLE_INCLUDE_DIRS})
 include_directories(${PYTHONQT_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
-include_directories(${Qt5Core_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
