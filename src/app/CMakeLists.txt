@@ -13,7 +13,6 @@ find_package(OpenGL REQUIRED)
 find_package(VTK 7.1 COMPONENTS
   vtkWrappingPythonCore
   vtkGUISupportQt
-  vtkGUISupportQtOpenGL
   vtkInteractionWidgets
   vtkRenderingAnnotation
   vtkRenderingFreeType
