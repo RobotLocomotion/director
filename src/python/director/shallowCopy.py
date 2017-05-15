@@ -1,5 +1,5 @@
-def deepCopy(dataOb):
-    newData = dataObject.NewInstance()
+def deepCopy(dataObj):
+    newData = dataObj.NewInstance()
     newData.DeepCopy(dataObj)
     return newData
 
