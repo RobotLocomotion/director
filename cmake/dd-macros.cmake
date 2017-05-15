@@ -1,8 +1,8 @@
 macro(ddqt)
   set(DD_QT_VERSION "5" CACHE STRING "Expected Qt version")
-  
+
   set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
-  
+
   if(NOT (DD_QT_VERSION VERSION_EQUAL "4" OR DD_QT_VERSION VERSION_EQUAL "5"))
     message(FATAL_ERROR "Expected value for DD_QT_VERSION is either '4' or '5'")
   endif()
@@ -16,7 +16,7 @@ endmacro()
 
 macro(setup_qt5)
   find_package(Qt5 REQUIRED Core Gui Widgets OpenGL)
-endmacro
+endmacro()
 
 
 macro(use_cpp11)

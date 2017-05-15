@@ -1,7 +1,7 @@
 if (${DD_QT_VERSION} VERSION_GREATER "4")
   setup_qt5()
   include_directories(${Qt5Core_INCLUDE_DIRS})
-else
+else()
   setup_qt4()
 endif()
 
