@@ -242,9 +242,18 @@ endif()
 
 ###############################################################################
 # PythonQt
+set(PythonQt_REPO)
+set(PythonQt_TAG)
+if(${DD_QT_VERSION} VERSION_GREATER "4")
+  set(PythonQt_REPO https://github.com/patmarion/PythonQt.git)
+  set(PythonQt_TAG fix-compile-error-on-qt5.8)
+else()
+  set(PythonQt_REPO https://github.com/commontk/PythonQt.git)
+  set(PythonQt_TAG patched-6)
+endif()
 ExternalProject_Add(PythonQt
-  GIT_REPOSITORY https://github.com/sankhesh/PythonQt.git
-  GIT_TAG patched-7-qt4.8
+  GIT_REPOSITORY ${PythonQt_REPO}
+  GIT_TAG ${PythonQt_TAG}
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
