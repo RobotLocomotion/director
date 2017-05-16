@@ -9,7 +9,7 @@ macro(ddqt)
 endmacro()
 
 macro(setup_qt4)
-  find_package(Qt4 REQUIRED QtCore QtGui QtScript)
+  find_package(Qt4 REQUIRED QtCore QtGui QtOpenGL QtScript)
   include (${QT_USE_FILE})
 endmacro()
 
