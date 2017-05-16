@@ -1,6 +1,5 @@
 // Qt includes
 #include <QApplication>
-#include <QSurfaceFormat>
 
 // director includes
 #include <PythonQt.h>
@@ -8,6 +7,7 @@
 
 // VTK includes
 #if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  #include <QSurfaceFormat>
   #include <QVTKOpenGLWidget.h>
 #endif
 
