@@ -8,7 +8,7 @@
   #include <QOpenGLWidget>
 #else
   #include <QGLWidget>
-  typedef QGLWidget QOpenGLWidget
+  typedef QGLWidget QOpenGLWidget;
 #endif
 
 class MyGLWidget : public QOpenGLWidget
