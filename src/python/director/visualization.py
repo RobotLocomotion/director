@@ -48,6 +48,9 @@ class PolyDataItem(om.ObjectModelItem):
         self.addProperty('Point Size', self.actor.GetProperty().GetPointSize(),
                          attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
 
+        self.addProperty('Line Width', self.actor.GetProperty().GetLineWidth(),
+                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+
         self.addProperty('Surface Mode', 0,
                          attributes=om.PropertyAttributes(enumNames=['Surface', 'Wireframe', 'Surface with edges', 'Points'], hidden=True))
 
@@ -141,6 +144,8 @@ class PolyDataItem(om.ObjectModelItem):
 
         if propertyName == 'Point Size':
             self.actor.GetProperty().SetPointSize(self.getProperty(propertyName))
+        elif propertyName == 'Line Width':
+            self.actor.GetProperty().SetLineWidth(self.getProperty(propertyName))
         elif propertyName == 'Alpha':
             self.actor.GetProperty().SetOpacity(self.getProperty(propertyName))
             if self.shadowActor:
@@ -185,6 +190,12 @@ class PolyDataItem(om.ObjectModelItem):
     def _updateSurfaceProperty(self):
         enableSurfaceMode = self.polyData.GetNumberOfPolys() or self.polyData.GetNumberOfStrips()
         self.properties.setPropertyAttribute('Surface Mode', 'hidden', not enableSurfaceMode)
+
+        enableLineWidth = enableSurfaceMode or self.polyData.GetNumberOfLines()
+        self.properties.setPropertyAttribute('Line Width', 'hidden', not enableLineWidth)
+
+        enablePointSize = enableSurfaceMode or not enableLineWidth
+        self.properties.setPropertyAttribute('Point Size', 'hidden', not enablePointSize)
 
     def _updateColorBy(self, retainColorMap=False):
 

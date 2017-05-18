@@ -7,6 +7,7 @@ set(python_files
   director/affordancemanager.py
   director/affordancepanel.py
   director/affordanceurdf.py
+  director/affordanceviewbehaviors.py
   director/applogic.py
   director/appsettings.py
   director/assimp2vtk.py
@@ -96,6 +97,7 @@ set(python_files
   director/propertyanimation.py
   director/propertyset.py
   director/pydrakeik.py
+  director/qtutils.py
   director/raycastdriver.py
   director/robotlinkselector.py
   director/robotstate.py
