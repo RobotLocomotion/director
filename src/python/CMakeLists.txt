@@ -93,6 +93,7 @@ set(python_files
   director/playbackpanel.py
   director/pointcloudlcm.py
   director/pointpicker.py
+  director/pointselector.py
   director/polarisplatformplanner.py
   director/propertyanimation.py
   director/propertyset.py
