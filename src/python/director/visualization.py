@@ -794,14 +794,14 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
     grid.SetSurfaceEnabled(True)
     grid.Update()
 
-    gridObj = showPolyData(grid.GetOutput(), 'grid', view=view, alpha=alpha, color=color, visible=True, parent=parent)
+    gridObj = showPolyData(grid.GetOutput(), name, view=view, alpha=alpha, color=color, visible=True, parent=parent)
     gridObj.gridSource = grid
     gridObj.actor.GetProperty().LightingOff()
     gridObj.actor.SetPickable(False)
 
     gridTransform = gridTransform or vtk.vtkTransform()
     gridObj.actor.SetUserTransform(gridTransform)
-    showFrame(gridTransform, 'grid frame', scale=0.2, visible=False, parent=gridObj, view=view)
+    showFrame(gridTransform, name + ' frame', scale=0.2, visible=False, parent=gridObj, view=view)
 
     gridObj.setProperty('Surface Mode', 'Wireframe')
 
