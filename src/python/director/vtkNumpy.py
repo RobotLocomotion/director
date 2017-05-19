@@ -22,11 +22,15 @@ def numpyToPolyData(pts, pointData=None, createVertexCells=False):
     return pd
 
 
-def getNumpyFromVtk(dataObj, arrayName='Points'):
+def getNumpyFromVtk(dataObj, arrayName='Points', arrayType='points'):
+    assert arrayType in ('points', 'cells')
+
     if arrayName == 'Points':
         vtkArray = dataObj.GetPoints().GetData()
-    else:
+    elif arrayType == 'points':
         vtkArray = dataObj.GetPointData().GetArray(arrayName)
+    else:
+        vtkArray = dataObj.GetCellData().GetArray(arrayName)
 
     if not vtkArray:
         raise KeyError('Array not found')
@@ -69,9 +73,13 @@ def getVtkFromNumpy(numpyArray):
     return vtkArray
 
 
-def addNumpyToVtk(dataObj, numpyArray, arrayName):
-    assert dataObj.GetNumberOfPoints() == numpyArray.shape[0]
-
+def addNumpyToVtk(dataObj, numpyArray, arrayName, arrayType='points'):
+    assert arrayType in ('points', 'cells')
     vtkArray = getVtkFromNumpy(numpyArray)
     vtkArray.SetName(arrayName)
-    dataObj.GetPointData().AddArray(vtkArray)
+    if arrayType == 'points':
+        assert dataObj.GetNumberOfPoints() == numpyArray.shape[0]
+        dataObj.GetPointData().AddArray(vtkArray)
+    else:
+        assert dataObj.GetNumberOfCells() == numpyArray.shape[0]
+        dataObj.GetCellData().AddArray(vtkArray)
