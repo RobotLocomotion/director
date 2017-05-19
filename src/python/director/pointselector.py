@@ -66,6 +66,9 @@ class PointSelector(object):
     def getSelectedPoints(self):
         return filterUtils.thresholdPoints(self.polyData, 'is_selected', [1, 1])
 
+    def getNonSelectedPoints(self):
+        return filterUtils.thresholdPoints(self.polyData, 'is_selected', [0, 0])
+
     def onRubberBandPickEvent(self, obj, event):
         self.pickArea(self.rubberBandStyle.GetStartPosition(), self.rubberBandStyle.GetEndPosition())
 
@@ -93,7 +96,7 @@ class PointSelector(object):
 
         if not self.selectionObj:
             self.selectionObj = vis.showPolyData(selection, 'selected points', color=self.selectionColor, parent='selection')
-            self.selectionObj.setProperty('Point Size', 3)
+            self.selectionObj.setProperty('Point Size', 3.0)
         else:
             self.selectionObj.setPolyData(selection)
 
