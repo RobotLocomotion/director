@@ -426,9 +426,12 @@ class ObjectPicker(object):
         self.abortFunc = abortCallback
         self.hoverColor = hoverColor[0:3]
         self.hoverAlpha = hoverColor[3]
+        self.modifier = 0
+        self.mouseSelectionEventType = QtCore.QEvent.MouseButtonPress
         self.eventFilter = None
         self.pickedObj = None
         self.storedProps = {}
+        self.repeat = False
         self.clear()
 
     def start(self):
@@ -445,6 +448,7 @@ class ObjectPicker(object):
 
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyRelease)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
@@ -465,7 +469,7 @@ class ObjectPicker(object):
 
         if event.type() == QtCore.QEvent.MouseMove:
             self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
-        elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.LeftButton:
+        elif event.type() == self.mouseSelectionEventType and event.button() == QtCore.Qt.LeftButton:
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
 
     def clear(self):
@@ -478,10 +482,18 @@ class ObjectPicker(object):
 
     def onMouseMove(self, displayPoint, modifiers=None):
         self.lastMovePos = displayPoint
-        self.tick()
+        if modifiers == self.modifier:
+            self.tick()
+        else:
+            self.unsetHoverProperties(self.pickedObj)
 
     def onMousePress(self, displayPoint, modifiers=None):
+
+        if modifiers != self.modifier:
+            return
+
         for i in xrange(self.numberOfObjects):
+
             if self.objects[i] is None:
                 self.objects[i] = self.pickedObj
                 break
@@ -495,7 +507,8 @@ class ObjectPicker(object):
                 self.callbackFunc(self.objects)
             finally:
                 self.clear()
-                self.stop()
+                if not self.repeat:
+                    self.stop()
 
     def unsetHoverProperties(self, obj):
         if obj is None:
@@ -511,7 +524,7 @@ class ObjectPicker(object):
             return
 
         for propName, value in [['Color', self.hoverColor],
-                                ['Color Mode', 'Solid Color'],
+                                ['Color By', 'Solid Color'],
                                 ['Alpha', self.hoverAlpha]]:
 
             if obj.hasProperty(propName):
