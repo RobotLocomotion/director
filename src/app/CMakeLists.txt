@@ -10,7 +10,7 @@ find_package(PythonInterp 2.7 REQUIRED)
 find_package(PythonQt REQUIRED)
 find_package(CTKPythonConsole REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(VTK 7.1 COMPONENTS
+find_package(VTK 7.1 REQUIRED COMPONENTS
   vtkWrappingPythonCore
   vtkGUISupportQt
   vtkInteractionWidgets
@@ -20,7 +20,7 @@ find_package(VTK 7.1 COMPONENTS
   vtkIOXML
   vtkIOImage
   vtkIOGeometry
-  REQUIRED)
+  )
 find_package(QtPropertyBrowser REQUIRED)
 
 include(${VTK_USE_FILE})
@@ -122,12 +122,6 @@ set(srcs
   vtkSimpleActorInteractor.cxx
   vtkTDxInteractorStyleCallback.cxx
   )
-
-message("QT_LIBRARIES: ${QT_LIBRARIES}")
-message("VTK_LIBRARIES: ${VTK_LIBRARIES}")
-message("VTK_RENDERING_BACKEND: ${VTK_RENDERING_BACKEND}")
-
-#  qt5_use_modules(RenderWindowNoUiFile Core Gui)
 
 set(deps
   ${QT_LIBRARIES}
