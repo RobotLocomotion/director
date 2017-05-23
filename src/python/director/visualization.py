@@ -806,12 +806,24 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
     gridObj.setProperty('Surface Mode', 'Wireframe')
 
     def computeViewBoundsNoGrid():
-        if not gridObj.getProperty('Visible'):
+        if view not in gridObj.views or not gridObj.getProperty('Visible'):
             return
 
-        gridObj.actor.SetUseBounds(False)
-        bounds = view.renderer().ComputeVisiblePropBounds()
-        gridObj.actor.SetUseBounds(True)
+        actors = view.renderer().GetActors()
+        actors = [actors.GetItemAsObject(i) for i in xrange(actors.GetNumberOfItems())]
+        onlyGridShowing = (len(actors) > 0)
+        for actor in actors:
+            if actor != gridObj.actor and actor.GetVisibility():
+                onlyGridShowing = False
+
+        if onlyGridShowing:
+            gridObj.actor.SetUseBounds(True)
+            bounds = view.renderer().ComputeVisiblePropBounds()
+        else:
+            gridObj.actor.SetUseBounds(False)
+            bounds = view.renderer().ComputeVisiblePropBounds()
+            gridObj.actor.SetUseBounds(True)
+
         if vtk.vtkMath.AreBoundsInitialized(bounds):
             view.addCustomBounds(bounds)
         else:
