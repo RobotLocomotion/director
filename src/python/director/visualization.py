@@ -786,7 +786,30 @@ class ViewOptionsItem(om.ObjectModelItem):
         self.view.render()
 
 
-def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=[1,1,1], alpha=0.05, gridTransform=None):
+def getVisibleActors(view):
+    actors = view.renderer().GetActors()
+    return [actors.GetItemAsObject(i) for i in range(actors.GetNumberOfItems())
+                if actor.GetVisibility()]
+
+
+def computeViewBoundsNoGrid(view, gridObj):
+    gridObj.actor.SetUseBounds(False)
+    bounds = view.renderer().ComputeVisiblePropBounds()
+    gridObj.actor.SetUseBounds(True)
+    return bounds
+
+
+def computeViewBoundsSoloGrid(view, gridObj):
+    actors = getVisibleActors(view)
+    onlyGridShowing = (len(actors) == 1) and (actors[0] == gridObj.actor)
+    if onlyGridShowing:
+        gridObj.actor.SetUseBounds(True)
+        return view.renderer().ComputeVisiblePropBounds()
+    else:
+        return computeViewBoundsNoGrid(view, gridObj)
+
+
+def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=[1,1,1], alpha=0.05, gridTransform=None, viewBoundsFunction=None):
 
     grid = vtk.vtkGridSource()
     grid.SetScale(cellSize)
@@ -805,19 +828,17 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
 
     gridObj.setProperty('Surface Mode', 'Wireframe')
 
-    def computeViewBoundsNoGrid():
-        if not gridObj.getProperty('Visible'):
+    viewBoundsFunction = viewBoundsFunction or computeViewBoundsNoGrid
+    def onViewBoundsRequest():
+        if view not in gridObj.views or not gridObj.getProperty('Visible'):
             return
-
-        gridObj.actor.SetUseBounds(False)
-        bounds = view.renderer().ComputeVisiblePropBounds()
-        gridObj.actor.SetUseBounds(True)
+        bounds = viewBoundsFunction(view, gridObj)
         if vtk.vtkMath.AreBoundsInitialized(bounds):
             view.addCustomBounds(bounds)
         else:
             view.addCustomBounds([-1, 1, -1, 1, -1, 1])
+    view.connect('computeBoundsRequest(ddQVTKWidgetView*)', onViewBoundsRequest)
 
-    view.connect('computeBoundsRequest(ddQVTKWidgetView*)', computeViewBoundsNoGrid)
     return gridObj
 
 
