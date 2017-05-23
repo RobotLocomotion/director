@@ -14,14 +14,10 @@ set(sources
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
   vtkInteractorStyleTerrain2.cxx
-  #vtkDepthImageProcessingPass.cxx
-  #vtkEDLShading.cxx
-  #vtkOBJImporter.cxx
   )
 
 # extra source files to compile but do not python wrap
 set(EXTRA_SRCS
-  #vtkOBJImporterInternals.cxx
   )
 
 #####
