@@ -14,7 +14,7 @@ class vtkLightKit;
   class QVTKOpenGLWidget;
 #else
   class QVTKWidget;
-  typedef QVTKWidget QVTKOpenGLWidget;
+  using QVTKOpenGLWidget = QVTKWidget;
 #endif
 
 class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
