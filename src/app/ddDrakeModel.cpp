@@ -52,14 +52,6 @@ using std::string;
 using std::istringstream;
 using namespace Eigen;
 
-#if VTK_MAJOR_VERSION >= 6
- #define SetInputData(filter, obj) filter->SetInputData(obj);
- #define AddInputData(filter, obj) filter->AddInputData(obj);
-#else
-  #define SetInputData(filter, obj) filter->SetInput(obj);
-  #define AddInputData(filter, obj) filter->AddInput(obj);
-#endif
-
 class ddMeshVisual
 {
  public:
@@ -1276,7 +1268,7 @@ void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
   }
 
   appendFilter->Update();
-  polyData->DeepCopy(appendFilter->GetOutput());  
+  polyData->DeepCopy(appendFilter->GetOutput());
 }
 
 void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData)
