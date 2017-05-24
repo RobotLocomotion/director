@@ -14,6 +14,7 @@ set(sources
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
   vtkInteractorStyleTerrain2.cxx
+  vtkPickCenteredInteractorStyle.cxx
   )
 
 # extra source files to compile but do not python wrap
