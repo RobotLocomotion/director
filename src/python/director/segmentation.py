@@ -205,7 +205,8 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         utime = self.imageManager.queue.getCurrentImageTime(self.cameraName)
         if utime == self.lastUtime:
             if self.getProperty('Remove Stale Data') and ((time.time()-self.lastDataReceivedTime) > self.getProperty('Stale Data Timeout')):
-                self.setPolyData(vtk.vtkPolyData())
+                if self.polyData.GetNumberOfPoints() > 0:
+                    self.setPolyData(vtk.vtkPolyData())
             return
 
         if (utime < self.lastUtime):
