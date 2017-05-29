@@ -180,6 +180,9 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         self.imageManager = imageManager
         self.cameraName = cameraName
         self.setProperty('Visible', False)
+        self.addProperty('Remove Stale Data', False)
+        self.addProperty('Stale Data Timeout', 5.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
+        self.lastDataReceivedTime = time.time()
 
     def _onPropertyChanged(self, propertySet, propertyName):
         vis.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
@@ -199,12 +202,14 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         self.timer.stop()
 
     def update(self):
-
         utime = self.imageManager.queue.getCurrentImageTime(self.cameraName)
         if utime == self.lastUtime:
+            if self.getProperty('Remove Stale Data') and ((time.time()-self.lastDataReceivedTime) > self.getProperty('Stale Data Timeout')):
+                if self.polyData.GetNumberOfPoints() > 0:
+                    self.setPolyData(vtk.vtkPolyData())
             return
 
-        if (utime < self.lastUtime ):
+        if (utime < self.lastUtime):
             temp=0 # dummy
         elif (utime - self.lastUtime < 1E6/self.getProperty('Target FPS')):
             return
@@ -216,6 +221,7 @@ class DisparityPointCloudItem(vis.PolyDataItem):
                                           removeOutliers=False, removeSize=removeSize, rangeThreshold = rangeThreshold)
 
         self.setPolyData(polyData)
+        self.lastDataReceivedTime = time.time()
 
         if polyData.GetNumberOfPoints() > 0 and not self.lastUtime:
             self.setProperty('Color By', 'rgb_colors')

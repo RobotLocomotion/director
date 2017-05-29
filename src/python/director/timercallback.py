@@ -69,7 +69,7 @@ class TimerCallback(object):
     def _schedule(self, elapsedTimeInSeconds):
         '''
         This method is given an elapsed time since the start of the last
-        call to ticks().  It schedules a timer event to acheive the targetFps.
+        call to ticks().  It schedules a timer event to achieve the targetFps.
         '''
         fpsDelayMilliseconds = int(1000.0 / self.targetFps)
         elapsedMilliseconds = int(elapsedTimeInSeconds*1000.0)
