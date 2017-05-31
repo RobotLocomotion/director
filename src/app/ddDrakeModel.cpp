@@ -1135,19 +1135,19 @@ int ddDrakeModel::findLinkID(const QString& linkName) const
 //-----------------------------------------------------------------------------
 int ddDrakeModel::findFrameID(const QString& frameName) const
 {
-  return this->Internal->Model->findFrame(frameName.toAscii().data())->get_frame_index();
+  return this->Internal->Model->findFrame(frameName.toLatin1().data())->get_frame_index();
 }
 
 //-----------------------------------------------------------------------------
 int ddDrakeModel::findJointID(const QString& jointName) const
 {
-  return this->Internal->Model->FindIndexOfChildBodyOfJoint(jointName.toAscii().data(), -1);
+  return this->Internal->Model->FindIndexOfChildBodyOfJoint(jointName.toLatin1().data(), -1);
 }
 
 //-----------------------------------------------------------------------------
 QString ddDrakeModel::findNameOfChildBodyOfJoint(const QString &jointName) const
 {
-  std::string body_name = this->Internal->Model->FindChildBodyOfJoint(jointName.toAscii().data())->get_name();
+  std::string body_name = this->Internal->Model->FindChildBodyOfJoint(jointName.toLatin1().data())->get_name();
   return body_name.c_str();
 }
 
@@ -1202,7 +1202,7 @@ QString ddDrakeModel::getBodyOrFrameName(int bodyOrFrameId)
 //-----------------------------------------------------------------------------
 bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floatingBaseType)
 {
-  // std::cout << "loadFromFile: floating base type << " << floatingBaseType.toAscii().data() << std::endl;
+  // std::cout << "loadFromFile: floating base type << " << floatingBaseType.toLatin1().data() << std::endl;
   URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toLocal8Bit()().data(), floatingBaseType);
   if (!model)
   {
@@ -1286,15 +1286,15 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
     return;
   }
 
-  std::string linkNameString = linkName.toAscii().data();
+  std::string linkNameString = linkName.toLatin1().data();
   if (this->Internal->Model->FindBody(linkNameString) == nullptr)
   {
     std::cout << "couldn't find link " << linkNameString << " in ddDrakeModel::getLinkModelMesh, returning" << std::endl;
     return;
   }
 
-  int linkId = this->findLinkID(linkName.toAscii().data());
-  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->linkMeshVisuals(linkName.toAscii().data());
+  int linkId = this->findLinkID(linkName.toLatin1().data());
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->linkMeshVisuals(linkName.toLatin1().data());
   vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
   for (size_t i = 0; i < visuals.size(); ++i)
