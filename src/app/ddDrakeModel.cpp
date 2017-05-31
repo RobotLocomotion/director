@@ -1203,7 +1203,7 @@ QString ddDrakeModel::getBodyOrFrameName(int bodyOrFrameId)
 bool ddDrakeModel::loadFromFile(const QString& filename, const QString& floatingBaseType)
 {
   // std::cout << "loadFromFile: floating base type << " << floatingBaseType.toLatin1().data() << std::endl;
-  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toLocal8Bit()().data(), floatingBaseType);
+  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toLatin1().constData(), floatingBaseType);
   if (!model)
   {
     return false;
