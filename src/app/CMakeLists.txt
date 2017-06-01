@@ -10,7 +10,7 @@ find_package(PythonInterp 2.7 REQUIRED)
 find_package(PythonQt REQUIRED)
 find_package(CTKPythonConsole REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(VTK 7.1 REQUIRED COMPONENTS
+find_package(VTK REQUIRED COMPONENTS
   vtkWrappingPythonCore
   vtkGUISupportQt
   vtkInteractionWidgets

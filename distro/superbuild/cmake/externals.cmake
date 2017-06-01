@@ -314,7 +314,6 @@ option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." $
 if(NOT USE_SYSTEM_VTK)
   ExternalProject_Add(vtk
     GIT_REPOSITORY git://vtk.org/VTK.git
-#    GIT_TAG v5.10.1
     GIT_TAG 28deb5620e56f535fc92ff8c73ef00f54923839b
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
@@ -336,8 +335,9 @@ else()
 
   # Verifies that the system has VTK5.
   find_package(VTK REQUIRED HINTS ${vtk_homebrew_dir})
-  if (NOT ${VTK_VERSION_MAJOR} EQUAL 7)
-    message(FATAL_ERROR "System does not have VTK 7. It has version ${VTK_VERSION}.")
+  if (NOT ${VTK_VERSION} VERSION_GREATER "7.1.1")
+    message(FATAL_ERROR "Director requires a VTK minimum version of v6.0."
+      " System has VTK version ${VTK_VERSION}")
   endif()
 
   set(vtk_args -DVTK_DIR:PATH=${VTK_DIR})
