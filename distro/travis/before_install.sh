@@ -5,11 +5,19 @@ set -xe
 scriptDir=$(cd $(dirname $0) && pwd)
 
 
+# Update CMake on trusty to meet minimum requirement for VTK (CMake-3.3)
+update_cmake_trusty()
+{
+  wget https://cmake.org/files/v3.8/cmake-3.8.2-Linux-x86_64.tar.gz -O /tmp/cmake-3.8.2-Linux-x86_64.tar.gz 
+  pushd /usr
+  sudo tar -xvzf /tmp/cmake-3.8.2-Linux-x86_64.tar.gz --strip-components=1
+  popd
+}
+
+
 fetch_vtk_trusty()
 {
-  pushd /tmp
-  curl -O https://d2mbb5ninhlpdu.cloudfront.net/vtk/vtk-v7.1.1-1584-g28deb56-qt-4.8.6-trusty-x86_64.tar.gz
-  popd
+  wget https://d2mbb5ninhlpdu.cloudfront.net/vtk/vtk-v7.1.1-1584-g28deb56-qt-4.8.6-trusty-x86_64.tar.gz -O /tmp/vtk-v7.1.1-1584-g28deb56-qt-4.8.6-trusty-x86_64.tar.gz
   pushd /usr
   sudo tar -xvzf /tmp/vtk-v7.1.1-1584-g28deb56-qt-4.8.6-trusty-x86_64.tar.gz
   popd
@@ -17,15 +25,34 @@ fetch_vtk_trusty()
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
   sudo apt-get update -qq
-  sudo apt-get install -y build-essential cmake curl \
-    python-dev python-numpy python-yaml python-lxml xvfb \
-    doxygen graphviz python-sphinx python-coverage \
-    qt4-default libqt4-dev libqt4-declarative \
-    libqt4-private-dev libfreetype6-dev libxt-dev libxml2-dev \
-    libexpat-dev libjpeg-dev libtiff5-dev libglib2.0-dev
+  sudo apt-get install -y \
+    build-essential \
+    cmake \
+    doxygen \
+    graphviz \
+    libexpat-dev \
+    libfreetype6-dev \
+    libglib2.0-dev \
+    libjpeg-dev \
+    libqt4-declarative \
+    libqt4-dev \
+    libqt4-private-dev \
+    libtiff5-dev \
+    libxml2-dev \
+    libxt-dev \
+    python-coverage \
+    python-dev \
+    python-lxml \
+    python-numpy \
+    python-sphinx \
+    python-yaml \
+    qt4-default \
+    wget \
+    xvfb
 
   sudo pip install --upgrade sphinx_rtd_theme breathe
 
+  update_cmake_trusty
   fetch_vtk_trusty
 
   # start Xvfb for DISPLAY=:99.0
@@ -34,7 +61,6 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 
-  brew tap homebrew/python
   brew tap homebrew/science
   brew tap robotlocomotion/director
   brew tap-pin robotlocomotion/director
