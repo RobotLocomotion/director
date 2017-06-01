@@ -24,7 +24,13 @@ fi
 # build
 cd $TRAVIS_BUILD_DIR
 mkdir build && cd build
-cmake -DUSE_LCM:BOOL=$USE_LCM -DUSE_LIBBOT:BOOL=$USE_LIBBOT -DUSE_LCMGL:BOOL=$USE_LCMGL ../distro/superbuild
+cmake \
+  -DDD_QT_VERSION:STRING=4 \
+  -DUSE_SYSTEM_VTK:BOOL=ON \
+  -DUSE_LCM:BOOL=$USE_LCM \
+  -DUSE_LCMGL:BOOL=$USE_LCMGL \
+  -DUSE_LIBBOT:BOOL=$USE_LIBBOT \
+  ../distro/superbuild
 make -j2
 
 # test
