@@ -77,4 +77,6 @@ WORKDIR /root/build/src/director-build
 RUN cmake -DSITE:STRING=travis-docker -DBUILDNAME:STRING=travis-docker_lcm-$USE_LCM .
 
 # Run the tests and build the package
+ENV LD_LIBRARY_PATH /root/lib/
+ENV PYTHONPATH /root/lib/python2.7/site-packages/
 RUN /root/distro/docker/run_tests_and_package.sh
