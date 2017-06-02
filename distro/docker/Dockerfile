@@ -59,9 +59,6 @@ RUN apt-get install -y \
 
 RUN pip install sphinx-rtd-theme
 
-RUN wget https://d2mbb5ninhlpdu.cloudfront.net/vtk/vtk-v7.1.1-1584-g28deb56-qt-5.5.1-xenial-x86_64.tar.gz
-RUN tar -xvzf vtk-v7.1.1-1584-g28deb56-qt-5.5.1-xenial-x86_64.tar.gz
-
 COPY . /root/
 
 # Build
@@ -69,7 +66,8 @@ RUN mkdir build
 WORKDIR /root/build
 RUN cmake \
   -DDD_QT_VERSION:STRING=5 \
-  -DUSE_SYSTEM_VTK:BOOL=ON \
+  -DUSE_SYSTEM_VTK:BOOL=OFF \
+  -DDOWNLOAD_VTK_PACKAGE:BOOL=ON \
   -DUSE_LCM:BOOL=$USE_LCM \
   ../distro/superbuild
 RUN make -j2

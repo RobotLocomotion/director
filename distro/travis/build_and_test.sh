@@ -20,13 +20,24 @@ if [ "$USE_LIBBOT" = "ON" ]; then
   build_name=${build_name}_libbot
 fi
 
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  qt_version=4
+  system_vtk=OFF
+  download_vtk_package=ON
+else
+  qt_version=5
+  system_vtk=ON
+  download_vtk_package=OFF
+  export CMAKE_MODULE_PATH=/usr/local/opt/qt/lib/cmake/:/usr/local/opt/vtk@8.0/lib/cmake/vtk-7.1
+fi
 
 # build
 cd $TRAVIS_BUILD_DIR
 mkdir build && cd build
 cmake \
-  -DDD_QT_VERSION:STRING=4 \
-  -DUSE_SYSTEM_VTK:BOOL=ON \
+  -DDD_QT_VERSION:STRING=${qt_version} \
+  -DUSE_SYSTEM_VTK:BOOL=${system_vtk} \
+  -DDOWNLOAD_VTK_PACKAGE:BOOL=${download_vtk_package} \
   -DUSE_LCM:BOOL=$USE_LCM \
   -DUSE_LCMGL:BOOL=$USE_LCMGL \
   -DUSE_LIBBOT:BOOL=$USE_LIBBOT \

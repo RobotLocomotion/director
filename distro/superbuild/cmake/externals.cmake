@@ -15,6 +15,7 @@ option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be bui
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
 option(USE_SYSTEM_LIBBOT "Use system version of libbot.  If off, libbot will be built." OFF)
 option(USE_SYSTEM_PCL "Use system version of pcl.  If off, pcl will be built." OFF)
+option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." ON)
 
 set(DD_QT_VERSION "5" CACHE STRING "Expected Qt version")
 set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
@@ -308,35 +309,66 @@ ExternalProject_Add(QtPropertyBrowser
 
 ###############################################################################
 # vtk
-set(use_system_vtk_default ON)
-option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." ${use_system_vtk_default})
 
 if(NOT USE_SYSTEM_VTK)
-  ExternalProject_Add(vtk
-    GIT_REPOSITORY git://vtk.org/VTK.git
-    GIT_TAG 28deb5620e56f535fc92ff8c73ef00f54923839b
-    CMAKE_CACHE_ARGS
-      ${default_cmake_args}
-      ${python_args}
-      ${qt_args}
-      -DBUILD_SHARED_LIBS:BOOL=ON
-      -DBUILD_TESTING:BOOL=OFF
-      -DBUILD_EXAMPLES:BOOL=OFF
-      -DVTK_RENDERING_BACKEND:STRING=OpenGL2
-      -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
-      -DModule_vtkGUISupportQt:BOOL=ON
-      -DCMAKE_MACOSX_RPATH:BOOL=ON
-      -DVTK_WRAP_PYTHON:BOOL=ON
-    )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
+  set(BUILD_VTK TRUE)
+  if(UNIX AND NOT APPLE)
+    option(DOWNLOAD_VTK_PACKAGE
+      "Download and install pre-built VTK package.  If off, VTK will be built."
+      ON)
+
+    if(DOWNLOAD_VTK_PACKAGE)
+      set(vtk_package_url "https://d2mbb5ninhlpdu.cloudfront.net/vtk")
+      if(${DD_QT_VERSION} VERSION_GREATER "4")
+        set(vtk_package_url
+          "${vtk_package_url}/vtk-v7.1.1-1584-g28deb56-qt-5.5.1-xenial-x86_64.tar.gz"
+          )
+        set(vtk_package_md5 72a5f53dcf1eeeaf3aed4be5d630fedc)
+      else()
+        set(vtk_package_url
+          "${vtk_package_url}/vtk-v7.1.1-1584-g28deb56-qt-4.8.6-trusty-x86_64.tar.gz"
+          )
+        set(vtk_package_md5 1de2f31a20e31777eb217e31aaf67e31)
+      endif()
+      set(BUILD_VTK FALSE)
+      ExternalProject_Add(vtk
+        URL ${vtk_package_url}
+        URL_MD5 ${vtk_package_md5}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+      )
+      set(vtk_args -DVTK_DIR:PATH=${PROJECT_BINARY_DIR}/src/vtk/lib/cmake/vtk-7.1)
+    endif()
+  endif()
+  if(BUILD_VTK)
+    ExternalProject_Add(vtk
+      GIT_REPOSITORY git://vtk.org/VTK.git
+      GIT_TAG 28deb5620e56f535fc92ff8c73ef00f54923839b
+      CMAKE_CACHE_ARGS
+        ${default_cmake_args}
+        ${python_args}
+        ${qt_args}
+        -DBUILD_SHARED_LIBS:BOOL=ON
+        -DBUILD_TESTING:BOOL=OFF
+        -DBUILD_EXAMPLES:BOOL=OFF
+        -DVTK_RENDERING_BACKEND:STRING=OpenGL2
+        -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
+        -DModule_vtkGUISupportQt:BOOL=ON
+        -DCMAKE_MACOSX_RPATH:BOOL=ON
+        -DVTK_WRAP_PYTHON:BOOL=ON
+      )
+    set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
+  endif()
+
   set(vtk_depends vtk)
 else()
 
   # Verifies that the system has VTK5.
   find_package(VTK REQUIRED HINTS ${vtk_homebrew_dir})
   if (NOT ${VTK_VERSION} VERSION_GREATER "7.1.1")
-    message(FATAL_ERROR "Director requires a VTK minimum version of v6.0."
+    message(FATAL_ERROR "Director requires a VTK minimum version of v8.0."
       " System has VTK version ${VTK_VERSION}")
   endif()
 
