@@ -28,7 +28,7 @@ else
   qt_version=5
   system_vtk=ON
   download_vtk_package=OFF
-  export CMAKE_MODULE_PATH=/usr/local/opt/qt/lib/cmake/:/usr/local/opt/vtk@8.0/lib/cmake/vtk-7.1
+  export CMAKE_PREFIX_PATH=/usr/local/opt/qt/lib/cmake/:/usr/local/opt/vtk@8.0/lib/cmake/
 fi
 
 # build
@@ -47,4 +47,5 @@ make -j2
 # test
 cd $TRAVIS_BUILD_DIR/build/src/director-build
 cmake -DSITE:STRING=travis-$TRAVIS_OS_NAME -DBUILDNAME:STRING=${build_name} .
-ctest -j 1 --dashboard Experimental --track travis --output-on-failure
+LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/install/lib:$LD_LIBRARY_PATH \
+  ctest -j 1 --dashboard Experimental --track travis --output-on-failure

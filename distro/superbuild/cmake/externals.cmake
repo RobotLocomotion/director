@@ -337,9 +337,9 @@ if(NOT USE_SYSTEM_VTK)
         URL_MD5 ${vtk_package_md5}
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
-        INSTALL_COMMAND ""
+        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${PROJECT_BINARY_DIR}/src/vtk ${install_prefix}
       )
-      set(vtk_args -DVTK_DIR:PATH=${PROJECT_BINARY_DIR}/src/vtk/lib/cmake/vtk-7.1)
     endif()
   endif()
   if(BUILD_VTK)
@@ -359,9 +359,9 @@ if(NOT USE_SYSTEM_VTK)
         -DCMAKE_MACOSX_RPATH:BOOL=ON
         -DVTK_WRAP_PYTHON:BOOL=ON
       )
-    set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
   endif()
 
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
   set(vtk_depends vtk)
 else()
 
