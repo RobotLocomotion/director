@@ -1,38 +1,36 @@
-import vtkAll as vtk
-from shallowCopy import shallowCopy
+from director.shallowCopy import shallowCopy
+import director.vtkAll as vtk
+from vtk.util import numpy_support
 import numpy as np
 
-try:
-    from vtk.util import numpy_support
-except ImportError:
-    from paraview import numpy_support
 
 def numpyToPolyData(pts, pointData=None, createVertexCells=False):
+
     pd = vtk.vtkPolyData()
-    pd.SetPoints(vtk.vtkPoints())
-    # Makes a deep copy
-    pd.GetPoints().SetData(getVtkFromNumpy(pts.copy()))
+    pd.SetPoints(getVtkPointsFromNumpy(pts.copy()))
 
     if pointData is not None:
         for key, value in pointData.iteritems():
             addNumpyToVtk(pd, value.copy(), key)
 
     if createVertexCells:
-        cellIds = vtk.vtkIdList()
-        cellIds.SetNumberOfIds(pd.GetNumberOfPoints())
-        for i in range(pd.GetNumberOfPoints()):
-            cellIds.SetId(i, i)
-        cells = vtk.vtkCellArray()
-        cells.InsertNextCell(cellIds)
-        pd.SetVerts(cells)
+        f = vtk.vtkVertexGlyphFilter()
+        f.SetInput(pd)
+        f.Update()
+        pd = shallowCopy(f.GetOutput())
 
     return pd
 
-def getNumpyFromVtk(dataObj, arrayName='Points'):
+
+def getNumpyFromVtk(dataObj, arrayName='Points', arrayType='points'):
+    assert arrayType in ('points', 'cells')
+
     if arrayName == 'Points':
         vtkArray = dataObj.GetPoints().GetData()
-    else:
+    elif arrayType == 'points':
         vtkArray = dataObj.GetPointData().GetArray(arrayName)
+    else:
+        vtkArray = dataObj.GetCellData().GetArray(arrayName)
 
     if not vtkArray:
         raise KeyError('Array not found')
@@ -75,9 +73,13 @@ def getVtkFromNumpy(numpyArray):
     return vtkArray
 
 
-def addNumpyToVtk(dataObj, numpyArray, arrayName):
-    assert dataObj.GetNumberOfPoints() == numpyArray.shape[0]
-
+def addNumpyToVtk(dataObj, numpyArray, arrayName, arrayType='points'):
+    assert arrayType in ('points', 'cells')
     vtkArray = getVtkFromNumpy(numpyArray)
     vtkArray.SetName(arrayName)
-    dataObj.GetPointData().AddArray(vtkArray)
+    if arrayType == 'points':
+        assert dataObj.GetNumberOfPoints() == numpyArray.shape[0]
+        dataObj.GetPointData().AddArray(vtkArray)
+    else:
+        assert dataObj.GetNumberOfCells() == numpyArray.shape[0]
+        dataObj.GetCellData().AddArray(vtkArray)

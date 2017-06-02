@@ -15,6 +15,7 @@ set(python_tests_core
   testObjectModel.py
   testPackagePath.py
   testPropertiesPanel.py
+  testPointSelector.py
   testPythonConsole.py
   testTaskQueue.py
   testTransformations.py
