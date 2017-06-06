@@ -124,11 +124,10 @@ def wrap(args):
 
     sortedClasses = list(includeClasses)
     sortedClasses.sort()
-
     if autoClassIncludes:
-        classIncludes = "\n".join(['#include "%s.h"' % className for className in sortedClasses] + includeLines)
-    else:
-        classIncludes = ""
+        includeLines += ['#include "%s.h"' % className for className in sortedClasses]
+
+    classIncludes = "\n".join(includeLines)
     classRegisters = "\n".join(['    this->registerClassForPythonQt(&%s::staticMetaObject);' % className
                                 for className in sortedClasses if className.startswith(qtClassNamePrefixes)])
 
