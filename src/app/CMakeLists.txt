@@ -253,6 +253,6 @@ add_custom_command(OUTPUT ${decorator_file}
   -i ${wrap_files} -o "${decorator_file}"
   --class-prefixes vtk dd QVTK --qt-class-prefixes dd QVTK
   --export-header ddAppConfigure.h --export-symbol DD_APP_EXPORT
-  --module-name dd
+  --auto-class-includes --module-name dd
   DEPENDS ${wrap_files} WrapPythonQt.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
