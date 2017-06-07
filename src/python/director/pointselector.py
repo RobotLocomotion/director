@@ -46,6 +46,7 @@ class PointSelector(object):
         self.polyData = shallowCopy(polyData)
         self.selectionObj = None
         self.selectionColor = [1, 0, 0]
+        self.selectionPointSize = 3
         self.selectMode = 1
         self.iren = view.renderWindow().GetInteractor()
         self.prevStyle = self.iren.GetInteractorStyle()
@@ -74,13 +75,14 @@ class PointSelector(object):
 
     def pickArea(self, startPos, endPos):
 
+        self.iren.SetInteractorStyle(self.prevStyle)
+
         picker = vtk.vtkAreaPicker()
         picker.AreaPick(min(startPos[0], endPos[0]),
                         min(startPos[1], endPos[1]),
                         max(startPos[0], endPos[0]),
                         max(startPos[1], endPos[1]),
                         self.view.renderer())
-
         frustum = picker.GetFrustum()
 
         extractGeometry = vtk.vtkExtractPolyDataGeometry()
@@ -90,14 +92,15 @@ class PointSelector(object):
         extractGeometry.Update()
         selected = filterUtils.cleanPolyData(extractGeometry.GetOutput())
 
+        if not selected.GetNumberOfPoints():
+            return
+
         pickedIds = vnp.getNumpyFromVtk(selected, 'point_ids')
         vnp.getNumpyFromVtk(self.polyData, 'is_selected')[pickedIds] = self.selectMode
         selection = self.getSelectedPoints()
 
         if not self.selectionObj:
             self.selectionObj = vis.showPolyData(selection, 'selected points', color=self.selectionColor, parent='selection')
-            self.selectionObj.setProperty('Point Size', 3.0)
+            self.selectionObj.setProperty('Point Size', float(self.selectionPointSize))
         else:
             self.selectionObj.setPolyData(selection)
-
-        self.iren.SetInteractorStyle(self.prevStyle)
