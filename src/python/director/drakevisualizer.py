@@ -8,7 +8,7 @@ from director import transformUtils
 from director.debugVis import DebugData
 from director import ioUtils
 from director import filterUtils
-from director.shallowCopy import shallowCopy
+from director.timercallback import TimerCallback
 from director import vtkAll as vtk
 from director import vtkNumpy as vnp
 from director import visualization as vis
@@ -282,6 +282,49 @@ class Geometry(object):
         self.polyDataItem.actor.SetTexture(visInfo.texture)
 
 
+class LidarSource(object):
+
+    def __init__(self, view):
+        self.lidars = {}
+        self.view = view
+
+        lcm = lcmUtils.getGlobalLCMThread()
+        self.lidarAggregator = PythonQt.dd.ddLidarPointCloudLCM(lcm)
+
+        self.lidarAggregator.channelAdded.connect(self.addChannel)
+
+        self.channels = set(self.lidarAggregator.channels())
+        self.lidarAggregator.init(lcm)
+
+        self.timer = TimerCallback(targetFps=30)
+        self.timer.callback = self._updateSource
+
+    def start(self):
+        self.timer.start()
+
+    def stop(self):
+        self.timer.stop()
+
+    def addChannel(self, channel):
+        self.channels.add(channel)
+
+    def _updateSource(self):
+        for channel in self.channels:
+            pd = vtk.vtkPolyData()
+            self.lidarAggregator.extractPolyData(channel, pd)
+
+            if not channel in self.lidars:
+                name = '%s lidar source' % channel
+                pdObj = vis.PolyDataItem(name, pd, self.view)
+                pdObj.setProperty('Visible', True)
+                pdObj.initialized = True
+                self.lidars[channel] = pdObj
+            else:
+                self.lidars[channel].setPolyData(pd)
+
+        self.view.render()
+
+
 class Link(object):
 
     def __init__(self, link):
@@ -304,6 +347,8 @@ class DrakeVisualizer(object):
     name = 'Drake Visualizer'
 
     def __init__(self, view):
+
+        self.lidarSource = LidarSource(view)
 
         self.subscribers = []
         self.view = view
@@ -330,8 +375,10 @@ class DrakeVisualizer(object):
     def setEnabled(self, enabled):
         if enabled and not self.isEnabled():
             self._addSubscribers()
+            self.lidarSource.start()
         elif not enabled and self.isEnabled():
             self._removeSubscribers()
+            self.lidarSource.stop()
 
     def enable(self):
         self.setEnabled(True)

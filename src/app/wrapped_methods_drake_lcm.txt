@@ -1,0 +1,5 @@
+ddLidarPointCloudLCM::ddLidarPointCloudLCM(QObject*);
+void ddLidarPointCloudLCM::init(ddLCMThread*);
+void ddLidarPointCloudLCM::init(ddLCMThread*, QString const&);
+QStringList ddLidarPointCloudLCM::channels() const;
+void ddLidarPointCloudLCM::extractPolyData(QString const&, vtkPolyData*) const;
