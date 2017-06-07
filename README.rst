@@ -84,6 +84,12 @@ The dependencies can be installed on Ubuntu using apt-get:
 
     sudo apt-get install cmake libvtk5-qt4-dev libeigen3-dev python-dev python-vtk python-numpy
 
+If you are running Ubuntu 16.04, please install the following non-conservative set of
+dependencies by executing:
+
+::
+
+    ./distro/pods/drake-distro/install_prereqs.sh ubuntu_16_04
 
 Building
 ========
