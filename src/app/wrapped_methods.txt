@@ -2,6 +2,7 @@ ddGroupBoxHider::ddGroupBoxHider(QGroupBox*);
 ddGroupBoxHider::~ddGroupBoxHider();
 
 ddQVTKWidgetView::ddQVTKWidgetView();
+ddQVTKWidgetView::ddQVTKWidgetView(bool);
 ddQVTKWidgetView::~ddQVTKWidgetView();
 vtkCamera* ddQVTKWidgetView::camera() const;
 double ddQVTKWidgetView::getAverageFramesPerSecond();

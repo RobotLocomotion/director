@@ -167,7 +167,7 @@ class MainWindowAppFactory(object):
         return components, disabledComponents
 
     def initView(self, fields):
-        view = PythonQt.dd.ddQVTKWidgetView()
+        view = PythonQt.dd.ddQVTKWidgetView(True)
         applogic._defaultRenderView = view
         applogic.setCameraTerrainModeEnabled(view, True)
         applogic.resetCamera(viewDirection=[-1, -1, -0.3], view=view)
@@ -477,7 +477,8 @@ class MainWindowPanelFactory(object):
           )
 
 
-def construct(globalsDict=None):
+def construct(globalsDict=None, disable_anti_alias=False):
+    print disable_anti_alias
     fact = ComponentFactory()
     fact.register(MainWindowAppFactory)
     fact.register(MainWindowPanelFactory)
