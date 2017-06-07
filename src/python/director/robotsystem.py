@@ -274,16 +274,19 @@ class RobotSystemFactory(object):
         from director import plannerPublisher
         from director import pydrakeik
         from director import matlabik
+        from director import genericdrakeik
 
         dummyPlannerPub = plannerPublisher.DummyPlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
         pyDrakePlannerPub = pydrakeik.PyDrakePlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
         exoticaPlannerPub = plannerPublisher.ExoticaPlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
         matlabPlannerPub = plannerPublisher.MatlabDrakePlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
+        genericPlannerPub = genericdrakeik.GenericDrakePlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
 
         robotSystem.ikPlanner.addPublisher('dummy', dummyPlannerPub)
         robotSystem.ikPlanner.addPublisher('pydrake', pyDrakePlannerPub)
         robotSystem.ikPlanner.addPublisher('matlabdrake', matlabPlannerPub)
         robotSystem.ikPlanner.addPublisher('exotica', exoticaPlannerPub)
+        robotSystem.ikPlanner.addPublisher('generic', genericPlannerPub)
 
         directorConfig = robotSystem.directorConfig
         if 'planningMode' in directorConfig:
