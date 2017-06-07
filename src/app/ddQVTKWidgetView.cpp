@@ -110,7 +110,7 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 #endif
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
-  this->Internal->RenderWindow->SetMultiSamples(8);
+  this->Internal->RenderWindow->SetMultiSamples(0);
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
   this->Internal->RenderWindow->StereoRenderOff();
