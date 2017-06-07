@@ -21,5 +21,6 @@
     <file>ddSensorDataRequest.ui</file>
     <file>ddPFGrasp.ui</file>
     <file>ddCameraPanel.ui</file>
+    <file>ddValkyrieDriverPanel.ui</file>
   </qresource>
 </RCC>

@@ -65,8 +65,14 @@ class AtlasDriver(object):
         sub = lcmUtils.addSubscriber('ATLAS_STATE_EXTRA', atlas.state_extra_t, self.onAtlasStateExtra)
         sub.setSpeedLimit(5)
 
+        sub = lcmUtils.addSubscriber('LCM2ROSCONTROL_STATUS', self.onLCM2ROSCONTROLStatus)
+        sub.setSpeedLimit(60)
+
     def onAtlasStatus(self, message):
         self.lastAtlasStatusMessage = message
+
+    def onLCM2ROSCONTROLStatus(self, message):
+        self.lastLCM2ROSControlStatusMessage = message
 
     def onControllerStatus(self, message):
         self.lastControllerStatusMessage = message
@@ -104,6 +110,13 @@ class AtlasDriver(object):
                     }
         return self._behaviorMap
 
+    def getValkyrieBehaviorMap(self):
+        behaviorMap = {'0': 'freeze',
+                       '1': 'position',
+                       '2': 'force'}
+
+        return behaviorMap
+
     def getControllerStatusMap(self):
         '''
         Return a dict that maps controller status ids (int) to names (string).
@@ -137,6 +150,15 @@ class AtlasDriver(object):
 
         behaviors = self.getBehaviorMap()
         behaviorId = self.lastAtlasStatusMessage.behavior
+        assert behaviorId in behaviors
+        return behaviors[behaviorId]
+
+    def getCurrentValkyrieBehaviorName(self):
+        if not self.lastLCM2ROSControlStatusMessage:
+            return None
+
+        behaviors = self.getValkyrieBehaviorMap()
+        behaviorId = self.lastLCM2ROSControlStatusMessage.behavior
         assert behaviorId in behaviors
         return behaviors[behaviorId]
 
@@ -382,9 +404,33 @@ class AtlasDriver(object):
         lcmUtils.publish('STATE_EST_READY', ready_init)
         time.sleep(1) # sleep needed to give SE time to restart
 
+
+    # for valkyrie
     def sendTareFT(self):
         msg = bot_core.utime_t()
         lcmUtils.publish("TARE_FOOT_SENSORS", msg)
+
+    # for valkyrie
+    def sendForceControlCommand(self, transitionTime):
+        msg = lcmdrc.behavior_transition_t()
+        msg.behavior = 2
+        msg.transition_duration_s = transitionTime
+        lcmUtils.publish("ROBOT_BEHAVIOR", msg)
+
+
+    # for valkyrie
+    def sendPositionControlCommand(self, transitionTime):
+        msg = lcmdrc.behavior_transition_t()
+        msg.behavior = 1
+        msg.transition_duration_s = transitionTime
+        lcmUtils.publish("ROBOT_BEHAVIOR", msg)
+
+    # for valkyrie
+    def sendValkyrieFreezeCommand(self):
+        msg = lcmdrc.behavior_transition_t()
+        msg.behavior = 1
+        msg.transition_duration_s = 0
+        lcmUtils.publish("ROBOT_BEHAVIOR", msg)
 
 
     def sendInitMessage(self, pos, yaw):

@@ -17,10 +17,13 @@ import argparse
 
 from director.utime import getUtime
 from drake import lcmt_qp_controller_input, lcmt_whole_body_data
+import drake
+
 
 import scipy.interpolate
 import yaml
 import os
+import time as systemtime
 
 
 
@@ -152,51 +155,76 @@ def atlasCommandToDrakePose(msg):
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
-def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True, useConstrainedDofs=False, fixedBase=False,
-                       forceControl=False):
+def drakePoseToQPInput(pose, velocity, atlasVersion=5, useValkyrie=True, useConstrainedDofs=False, fixedBase=False,
+                       forceControl=False, paramSetName='base', timestamp=None):
+
+
+    if timestamp is None:
+        t = systemtime.time()
+        timestamp = t*1e6
+
+    t = timestamp*1.0/(1e6)
+
 
     numFloatingBaseJoints = 6
 
     # only publish the fixed base joints
     if fixedBase:
-        numFloatingBaseJoints = 0
-        pose = pose[6:]
+        numFloatingBaseJoints = 6
+        pose = pose[numFloatingBaseJoints:]
+        velocity = velocity[numFloatingBaseJoints:]
 
     numPositions = np.size(pose)
 
-    msg = lcmt_qp_controller_input()
-    msg.timestamp = getUtime()
+    msg = drake.lcmt_qp_controller_input_new()
+    msg.timestamp = timestamp
     msg.num_support_data = 0
     msg.num_tracked_bodies = 0
     msg.num_external_wrenches = 0
     msg.num_joint_pd_overrides = 0
 
     if useValkyrie:
-        if forceControl:
-            msg.param_set_name = 'base'
-        else:
-            msg.param_set_name = 'streaming'
+        msg.param_set_name = paramSetName
     else:
         msg.param_set_name = 'position_control'
 
-    whole_body_data = lcmt_whole_body_data()
-    whole_body_data.timestamp = getUtime()
-    whole_body_data.num_positions = numPositions
-    whole_body_data.q_des = pose
 
-    # what are these? Is it still correct for valkyrie
-    # if useValkyrie:
-    #     whole_body_data.num_constrained_dofs = len(valConstrainedJointsIdx)
-    #     whole_body_data.constrained_dofs = valConstrainedJointsIdx
-    # else:
-    #     whole_body_data.num_constrained_dofs = numPositions - 6
-    #     whole_body_data.constrained_dofs = range(7, numPositions+1)
+    # update this to use the spline stuff
+    # for now just do a first order hold
+    # this corresponds to a PolynomialMatrix of size (numPositions,1).
+    coefficientMatrix = np.zeros((pose.size, 2))
+    coefficientMatrix[:,0] = pose
+    coefficientMatrix[:,1] = velocity
+    breaks = np.array([t,t+1]) # just first order hold for 1 second
+    numSegments = 1
+    numBreaks = 2
+
+
+
+    polynomialMatrixMsg = lcmUtils.encodePolynomialVector(coefficientMatrix)
+
+    # this msg encodes the spline
+    splineMsg = drake.lcmt_piecewise_polynomial()
+    splineMsg.timestamp = timestamp
+    splineMsg.breaks = breaks
+    splineMsg.num_segments = numSegments
+    splineMsg.num_breaks = numBreaks
+    splineMsg.polynomial_matrices = [polynomialMatrixMsg]
+
+
+    whole_body_data = drake.lcmt_whole_body_data_new()
+    whole_body_data.timestamp = timestamp
+    whole_body_data.num_positions = numPositions
+    whole_body_data.spline = splineMsg
+
 
 
     # be careful with off by one indexing of constrained_dofs for lcm
     if useConstrainedDofs:
         # if we aren't using the fixed base then remove the fixed base from this
         whole_body_data.num_constrained_dofs = numPositions - numFloatingBaseJoints
+
+        # use off by one indexing, not sure why we have this convention
         whole_body_data.constrained_dofs = range(numFloatingBaseJoints+1, numPositions+1)
 
     msg.whole_body_data = whole_body_data
@@ -224,17 +252,32 @@ class AtlasCommandStream(object):
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.useControllerFlag = False
         self.drivingGainsFlag = False
+
+        self.initializeLCMSubscriptions()
         self.applyDefaults()
+        self.options = dict()
+        self.applyDefaultOptions()
 
     def initialize(self, currentRobotPose):
         assert not self._initialized
         self._currentCommandedPose = np.array(currentRobotPose)
         self._previousCommandedPose = np.array(currentRobotPose)
         self._goalPose = np.array(currentRobotPose)
+        self.currentVelocity = np.zeros(self._numPositions)
+        self.prevVelocity = np.zeros(self._numPositions)
         self._initialized = True
+        self.utime = None # stores the utime we get from EST_ROBOT_STATE
+
+    def initializeLCMSubscriptions(self):
+        lcmUtils.addSubscriber("STREAMING_QP_PARAM_SET", lcmdrc.string_t, self.onStreamingQPParamSet)
+        lcmUtils.addSubscriber("EST_ROBOT_STATE", lcmbotcore.robot_state_t, self.onEstRobotState)
 
     def setOptions(self, options):
         self.options = options
+        self.applyDefaultOptions()
+
+    def applyDefaultOptions(self):
+        self.options.setdefault('qp_param_set_name', 'base')
 
     def useController(self):
         self.useControllerFlag = True
@@ -303,6 +346,7 @@ class AtlasCommandStream(object):
         pose = robotstate.convertStateMessageToDrakePose(msg)
         pose[:6] = np.zeros(6)
         self.initialize(pose)
+        self.onEstRobotState(msg) # initializes our utime
 
     def _updateAndSendCommandMessage(self):
         self._currentCommandedPose = self.clipPoseToJointLimits(self._currentCommandedPose)
@@ -312,8 +356,11 @@ class AtlasCommandStream(object):
             msg = drakePoseToAtlasCommand(self._currentCommandedPose)
 
         if self.useControllerFlag:
-            msg = drakePoseToQPInput(self._currentCommandedPose, useConstrainedDofs=self.options['useConstrainedDofs'],
-                                     fixedBase=self.options['fixedBase'], forceControl=self.options['forceControl'])
+            msg = drakePoseToQPInput(self._currentCommandedPose, self.currentVelocity,
+                                     timestamp=self.utime, useConstrainedDofs=self.options['useConstrainedDofs'],
+                                     fixedBase=self.options['fixedBase'], forceControl=self.options['forceControl'],
+                                     paramSetName=self.options['qp_param_set_name'])
+
 
         lcmUtils.publish(self.publishChannel, msg)
 
@@ -352,7 +399,19 @@ class AtlasCommandStream(object):
         v_next = np.clip(v_next,-maxSpeed,maxSpeed) # velocity clamp
         nextPose = currentPose + v_next*elapsed
         nextPose = self.clipPoseToJointLimits(nextPose)
+
+        # store the velocities, for use in making the message
+        self.prevVelocity = v
+        self.currentVelocity = v_next
         return nextPose
+
+
+    def onStreamingQPParamSet(self, msg):
+        self.options['qp_param_set_name'] = msg.data
+
+    def onEstRobotState(self, msg):
+        self.utime = msg.utime
+
 
 commandStream = AtlasCommandStream()
 
@@ -492,6 +551,7 @@ class JointCommandPanel(object):
         self.ui.hidePreviewButton.connect('clicked()', self.onHidePreviewClicked)
         self.ui.previewSlider.connect('valueChanged(int)', self.onPreviewSliderChanged)
         self.ui.speedSpinBox.connect('valueChanged(double)', self.onSpeedChanged)
+        self.ui.qpParamSetComboBox.connect('currentIndexChanged(const QString &)', self.onQPParamSetChanged)
         self.hidePreviewModels()
 
         self.throttleControlEnabled = False
@@ -519,6 +579,16 @@ class JointCommandPanel(object):
 
     def onSpeedChanged(self, value):
         commandStream._maxSpeed = np.deg2rad(value)
+
+    def onQPParamSetChanged(self, comboBoxText):
+        d = {'position': 'base', 'gravity comp': 'gravity_comp'}
+        if comboBoxText not in d:
+            print "didn't recognize that QP param set, doing nothing"
+
+        msg = lcmdrc.string_t()
+        msg.data = d[comboBoxText]
+        lcmUtils.publish("STREAMING_QP_PARAM_SET", msg)
+
 
     def onStreamingClicked(self):
         streamingEnabled = bool(self.ui.streamingButton.checked)

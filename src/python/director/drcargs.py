@@ -169,6 +169,17 @@ class DRCArgParser(object):
                             default=[], action='append', metavar='filename',
                             help='python scripts to run at startup')
 
+    def getRobotType(self):
+        args = self.getArgs()
+
+        if ('val' in args.directorConfigFile):
+            return 'val'
+
+        if ('atlas' in args.directorConfigFile):
+            return 'atlas'
+
+        return 'unknown'
+
 
 _argParser = None
 def getGlobalArgParser():
