@@ -999,7 +999,8 @@ QVector<double> ddDrakeModel::getCenterOfMass() const
 {
   URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
   Vector3d com;
-  com = model->centerOfMass<double>(*model->cache);
+  com = model->centerOfMass<double>(*model->cache,
+                                    {0} /* model instance ID set */);
 
   QVector<double> ret;
   ret << com[0] << com[1] << com[2];
