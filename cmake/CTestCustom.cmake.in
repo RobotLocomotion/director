@@ -8,4 +8,5 @@ set(CTEST_CUSTOM_COVERAGE_EXCLUDE
 
 set(CTEST_CUSTOM_WARNING_EXCEPTION
   ${CTEST_CUSTOM_WARNING_EXCEPTION}
+  "CMake Warning (dev) at /usr/lib/vtk-5.8/CMake/vtkWrapPython.cmake:147 (CONFIGURE_FILE)"
   )
