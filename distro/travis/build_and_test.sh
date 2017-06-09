@@ -46,5 +46,4 @@ make -j2
 # test
 cd $TRAVIS_BUILD_DIR/build/src/director-build
 cmake -DSITE:STRING=travis-$TRAVIS_OS_NAME -DBUILDNAME:STRING=${build_name} .
-LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/install/lib:$LD_LIBRARY_PATH \
-  ctest -j 1 --dashboard Experimental --track travis --output-on-failure
+ctest -j 1 --dashboard Experimental --track travis --output-on-failure

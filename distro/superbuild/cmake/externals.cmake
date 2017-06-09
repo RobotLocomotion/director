@@ -375,7 +375,7 @@ else()
 
   # Verifies that the system has VTK5.
   find_package(VTK REQUIRED PATHS ${vtk_homebrew_dir})
-  if (NOT ${VTK_VERSION} VERSION_GREATER "7.1")
+  if (${VTK_VERSION} VERSION_LESS "8.0")
     message(FATAL_ERROR "Director requires a VTK minimum version of v8.0."
       " System has VTK version ${VTK_VERSION}")
   endif()
