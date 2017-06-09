@@ -322,14 +322,14 @@ if(NOT USE_SYSTEM_VTK)
       set(vtk_package_url "https://d2mbb5ninhlpdu.cloudfront.net/vtk")
       if(${DD_QT_VERSION} VERSION_GREATER "4")
         set(vtk_package_url
-          "${vtk_package_url}/vtk-v7.1.1-1584-g28deb56-qt-5.5.1-xenial-x86_64.tar.gz"
+          "${vtk_package_url}/vtk-v8.0.0.rc2-qt-5.5.1-xenial-x86_64.tar.gz"
           )
-        set(vtk_package_md5 72a5f53dcf1eeeaf3aed4be5d630fedc)
+        set(vtk_package_md5 3dd13a3001fead90ead6547c8277a674)
       else()
         set(vtk_package_url
-          "${vtk_package_url}/vtk-v7.1.1-1584-g28deb56-qt-4.8.6-trusty-x86_64.tar.gz"
+          "${vtk_package_url}/vtk-v8.0.0.rc2-qt-4.8.6-trusty-x86_64.tar.gz"
           )
-        set(vtk_package_md5 1de2f31a20e31777eb217e31aaf67e31)
+        set(vtk_package_md5 250e5b49f42db7a30b4269294be9223f)
       endif()
       set(BUILD_VTK FALSE)
       ExternalProject_Add(vtk
@@ -367,7 +367,7 @@ else()
 
   # Verifies that the system has VTK5.
   find_package(VTK REQUIRED HINTS ${vtk_homebrew_dir})
-  if (NOT ${VTK_VERSION} VERSION_GREATER "7.1.1")
+  if (NOT ${VTK_VERSION} VERSION_GREATER "7.1")
     message(FATAL_ERROR "Director requires a VTK minimum version of v8.0."
       " System has VTK version ${VTK_VERSION}")
   endif()
