@@ -28,7 +28,6 @@ else
   qt_version=5
   system_vtk=ON
   download_vtk_package=OFF
-  export CMAKE_PREFIX_PATH=/usr/local/opt/qt/lib/cmake/:/usr/local/opt/vtk@8.0/lib/cmake/
 fi
 
 # build

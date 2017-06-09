@@ -46,7 +46,11 @@ set(default_cmake_args
 # Find required external dependencies
 set(qt_args)
 if (${DD_QT_VERSION} VERSION_GREATER "4")
-  find_package(Qt5 REQUIRED Core Gui Widgets OpenGL)
+  if(APPLE)
+    set(qt_homebrew_dir /usr/local/opt/qt/lib/cmake/)
+  endif()
+  find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets OpenGL
+    PATHS ${qt_homebrew_dir})
   set(qt_args
     -DQt5_DIR:PATH=${Qt5_DIR}
     -DQt5Core_DIR:PATH=${Qt5Core_DIR}
@@ -365,8 +369,12 @@ if(NOT USE_SYSTEM_VTK)
   set(vtk_depends vtk)
 else()
 
+  if(APPLE)
+    set(vtk_homebrew_dir /usr/local/opt/vtk@8.0/lib/cmake/vtk)
+  endif()
+
   # Verifies that the system has VTK5.
-  find_package(VTK REQUIRED HINTS ${vtk_homebrew_dir})
+  find_package(VTK REQUIRED PATHS ${vtk_homebrew_dir})
   if (NOT ${VTK_VERSION} VERSION_GREATER "7.1")
     message(FATAL_ERROR "Director requires a VTK minimum version of v8.0."
       " System has VTK version ${VTK_VERSION}")

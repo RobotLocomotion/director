@@ -15,7 +15,11 @@ endmacro()
 
 
 macro(setup_qt5)
-  find_package(Qt5 REQUIRED Core Gui Widgets OpenGL)
+  if(APPLE)
+    set(qt_homebrew_dir /usr/local/opt/qt/lib/cmake/)
+  endif()
+  find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets OpenGL
+    PATHS ${qt_homebrew_dir})
 endmacro()
 
 
