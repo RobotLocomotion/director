@@ -15,7 +15,7 @@ class ImageView(object):
         self.view.installImageInteractor()
 
     def setImage(self, image):
-        self.imageActor.SetInput(image)
+        self.imageActor.SetInputData(image)
 
     def getImage(self):
         return self.imageActor.GetInput()

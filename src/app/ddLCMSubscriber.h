@@ -44,7 +44,7 @@ public:
 
   virtual void subscribe(lcm::LCM* lcmHandle)
   {
-    mSubscription = lcmHandle->subscribe(mChannel.toAscii().data(), &ddLCMSubscriber::messageHandler, this);
+    mSubscription = lcmHandle->subscribe(mChannel.toLocal8Bit().data(), &ddLCMSubscriber::messageHandler, this);
   }
 
   virtual void unsubscribe(lcm::LCM* lcmHandle)

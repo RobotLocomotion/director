@@ -1,7 +1,5 @@
 language: generic
 sudo: required
-dist: trusty
-osx_image: xcode7.3
 
 virtualenv:
   system_site_packages: true
@@ -12,12 +10,16 @@ matrix:
       osx_image: xcode7.3
       env: USE_LCM=ON USE_LIBBOT=OFF USE_LCMGL=OFF MAKE_PACKAGE=ON
     - os: linux
+      dist: trusty
       env: USE_LCM=ON USE_LIBBOT=OFF USE_LCMGL=OFF MAKE_PACKAGE=ON MAKE_DOCS=ON
     - os: linux
+      dist: trusty
       env: USE_LCM=OFF USE_LIBBOT=OFF USE_LCMGL=OFF
     - os: linux
+      dist: trusty
       env: USE_LCM=ON USE_LIBBOT=ON USE_LCMGL=ON
     - os: linux
+      dist: trusty
       services:
         - docker
       env: USE_DOCKER=ON

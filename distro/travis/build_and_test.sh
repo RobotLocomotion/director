@@ -20,11 +20,27 @@ if [ "$USE_LIBBOT" = "ON" ]; then
   build_name=${build_name}_libbot
 fi
 
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  qt_version=4
+  system_vtk=OFF
+  download_vtk_package=ON
+else
+  qt_version=5
+  system_vtk=ON
+  download_vtk_package=OFF
+fi
 
 # build
 cd $TRAVIS_BUILD_DIR
 mkdir build && cd build
-cmake -DUSE_LCM:BOOL=$USE_LCM -DUSE_LIBBOT:BOOL=$USE_LIBBOT -DUSE_LCMGL:BOOL=$USE_LCMGL ../distro/superbuild
+cmake \
+  -DDD_QT_VERSION:STRING=${qt_version} \
+  -DUSE_SYSTEM_VTK:BOOL=${system_vtk} \
+  -DDOWNLOAD_VTK_PACKAGE:BOOL=${download_vtk_package} \
+  -DUSE_LCM:BOOL=$USE_LCM \
+  -DUSE_LCMGL:BOOL=$USE_LCMGL \
+  -DUSE_LIBBOT:BOOL=$USE_LIBBOT \
+  ../distro/superbuild
 make -j2
 
 # test

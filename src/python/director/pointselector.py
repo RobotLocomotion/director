@@ -85,7 +85,7 @@ class PointSelector(object):
 
         extractGeometry = vtk.vtkExtractPolyDataGeometry()
         extractGeometry.SetImplicitFunction(frustum)
-        extractGeometry.SetInput(self.polyData)
+        extractGeometry.SetInputData(self.polyData)
         extractGeometry.ExtractBoundaryCellsOn()
         extractGeometry.Update()
         selected = filterUtils.cleanPolyData(extractGeometry.GetOutput())

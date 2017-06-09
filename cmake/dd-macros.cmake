@@ -1,6 +1,25 @@
+macro(ddqt)
+  set(DD_QT_VERSION "5" CACHE STRING "Expected Qt version")
+
+  set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
+
+  if(NOT (DD_QT_VERSION VERSION_EQUAL "4" OR DD_QT_VERSION VERSION_EQUAL "5"))
+    message(FATAL_ERROR "Expected value for DD_QT_VERSION is either '4' or '5'")
+  endif()
+endmacro()
+
 macro(setup_qt4)
   find_package(Qt4 REQUIRED QtCore QtGui QtOpenGL QtScript)
-  include(${QT_USE_FILE})
+  include (${QT_USE_FILE})
+endmacro()
+
+
+macro(setup_qt5)
+  if(APPLE)
+    set(qt_homebrew_dir /usr/local/opt/qt/lib/cmake/)
+  endif()
+  find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets OpenGL
+    PATHS ${qt_homebrew_dir})
 endmacro()
 
 
@@ -13,7 +32,7 @@ macro(use_cpp11)
     elseif(GCC_VERSION VERSION_LESS 4.7)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
     else()
-	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

@@ -15,6 +15,13 @@ option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be bui
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
 option(USE_SYSTEM_LIBBOT "Use system version of libbot.  If off, libbot will be built." OFF)
 option(USE_SYSTEM_PCL "Use system version of pcl.  If off, pcl will be built." OFF)
+option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." ON)
+
+set(DD_QT_VERSION "5" CACHE STRING "Expected Qt version")
+set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
+if(NOT (DD_QT_VERSION VERSION_EQUAL "4" OR DD_QT_VERSION VERSION_EQUAL "5"))
+  message(FATAL_ERROR "Expected value for DD_QT_VERSION is either '4' or '5'")
+endif()
 
 if(USE_DRAKE)
   set(DRAKE_SOURCE_DIR CACHE PATH "")
@@ -37,11 +44,26 @@ set(default_cmake_args
   )
 
 # Find required external dependencies
-find_package(Qt4 4.8 REQUIRED)
+set(qt_args)
+if (${DD_QT_VERSION} VERSION_GREATER "4")
+  if(APPLE)
+    set(qt_homebrew_dir /usr/local/opt/qt/lib/cmake/)
+  endif()
+  find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets OpenGL
+    PATHS ${qt_homebrew_dir})
+  set(qt_args
+    -DQt5_DIR:PATH=${Qt5_DIR}
+    -DQt5Core_DIR:PATH=${Qt5Core_DIR}
+    -DQt5Gui_DIR:PATH=${Qt5Gui_DIR}
+    -DQt5Widgets_DIR:PATH=${Qt5Widgets_DIR}
+    )
+else()
+  find_package(Qt4 4.8 REQUIRED)
+  set(qt_args
+    -DQT_QMAKE_EXECUTABLE:FILEPATH=${QT_QMAKE_EXECUTABLE}
+    )
+endif()
 
-set(qt_args
-  -DQT_QMAKE_EXECUTABLE:PATH=${QT_QMAKE_EXECUTABLE}
-  )
 
 if(APPLE)
   find_program(PYTHON_CONFIG_EXECUTABLE python-config)
@@ -76,6 +98,7 @@ ExternalProject_Add(
   URL_MD5 a0e0a32d62028218b1c1848ad7121476
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
+    ${qt_args}
 )
 
 ExternalProject_Add_Step(eigen make_pkgconfig_dir
@@ -224,9 +247,18 @@ endif()
 
 ###############################################################################
 # PythonQt
+set(PythonQt_REPO)
+set(PythonQt_TAG)
+if(${DD_QT_VERSION} VERSION_GREATER "4")
+  set(PythonQt_REPO https://github.com/patmarion/PythonQt.git)
+  set(PythonQt_TAG fix-compile-error-on-qt5.8)
+else()
+  set(PythonQt_REPO https://github.com/commontk/PythonQt.git)
+  set(PythonQt_TAG patched-6)
+endif()
 ExternalProject_Add(PythonQt
-  GIT_REPOSITORY https://github.com/commontk/PythonQt.git
-  GIT_TAG patched-6
+  GIT_REPOSITORY ${PythonQt_REPO}
+  GIT_TAG ${PythonQt_TAG}
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -238,9 +270,18 @@ ExternalProject_Add(PythonQt
 
 ###############################################################################
 # ctkPythonConsole
+set(ctkPythonConsole_REPO)
+set(ctkPythonConsole_TAG)
+if(${DD_QT_VERSION} VERSION_GREATER "4")
+  set(ctkPythonConsole_REPO https://github.com/mwoehlke-kitware/ctkPythonConsole)
+  set(ctkPythonConsole_TAG qt5)
+else()
+  set(ctkPythonConsole_REPO https://github.com/patmarion/ctkPythonConsole)
+  set(ctkPythonConsole_TAG 15988c5)
+endif()
 ExternalProject_Add(ctkPythonConsole
-  GIT_REPOSITORY https://github.com/patmarion/ctkPythonConsole
-  GIT_TAG 15988c5
+  GIT_REPOSITORY ${ctkPythonConsole_REPO}
+  GIT_TAG ${ctkPythonConsole_TAG}
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -251,52 +292,95 @@ ExternalProject_Add(ctkPythonConsole
 
 ###############################################################################
 # QtPropertyBrowser
+set(QtPropertyBrowser_REPO)
+set(QtPropertyBrowser_TAG)
+if(${DD_QT_VERSION} VERSION_GREATER "4")
+  set(QtPropertyBrowser_REPO https://github.com/intbots/QtPropertyBrowser)
+  set(QtPropertyBrowser_TAG master)
+else()
+  set(QtPropertyBrowser_REPO https://github.com/patmarion/QtPropertyBrowser)
+  set(QtPropertyBrowser_TAG baf10af)
+endif()
 ExternalProject_Add(QtPropertyBrowser
-  GIT_REPOSITORY https://github.com/patmarion/QtPropertyBrowser
-  GIT_TAG baf10af
+  GIT_REPOSITORY ${QtPropertyBrowser_REPO}
+  GIT_TAG ${QtPropertyBrowser_TAG}
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
+    -DCMAKE_MACOSX_RPATH:BOOL=ON
   )
 
 
 ###############################################################################
 # vtk
-set(use_system_vtk_default ON)
-option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." ${use_system_vtk_default})
 
 if(NOT USE_SYSTEM_VTK)
-  ExternalProject_Add(vtk
-    GIT_REPOSITORY git://vtk.org/VTK.git
-    GIT_TAG v5.10.1
-    CMAKE_CACHE_ARGS
-      ${default_cmake_args}
-      ${python_args}
-      ${qt_args}
-      -DBUILD_SHARED_LIBS:BOOL=ON
-      -DBUILD_TESTING:BOOL=OFF
-      -DBUILD_EXAMPLES:BOOL=OFF
-      -DVTK_USE_GUISUPPORT:BOOL=ON
-      -DVTK_USE_QT:BOOL=ON
-      -DVTK_WRAP_PYTHON:BOOL=ON
-      -DVTK_WRAP_TCL:BOOL=OFF
-      -DVTK_USE_TK:BOOL=OFF
-      -DCMAKE_CXX_FLAGS:STRING=-DGLX_GLXEXT_LEGACY # fixes compile error on ubuntu 16.04
-    )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/vtk-5.10)
+  set(BUILD_VTK TRUE)
+  if(UNIX AND NOT APPLE)
+    option(DOWNLOAD_VTK_PACKAGE
+      "Download and install pre-built VTK package.  If off, VTK will be built."
+      ON)
+
+    if(DOWNLOAD_VTK_PACKAGE)
+      set(vtk_package_url "https://d2mbb5ninhlpdu.cloudfront.net/vtk")
+      if(${DD_QT_VERSION} VERSION_GREATER "4")
+        set(vtk_package_url
+          "${vtk_package_url}/vtk-v8.0.0.rc2-qt-5.5.1-xenial-x86_64.tar.gz"
+          )
+        set(vtk_package_md5 3dd13a3001fead90ead6547c8277a674)
+      else()
+        set(vtk_package_url
+          "${vtk_package_url}/vtk-v8.0.0.rc2-qt-4.8.6-trusty-x86_64.tar.gz"
+          )
+        set(vtk_package_md5 250e5b49f42db7a30b4269294be9223f)
+      endif()
+      set(BUILD_VTK FALSE)
+      ExternalProject_Add(vtk
+        URL ${vtk_package_url}
+        URL_MD5 ${vtk_package_md5}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${PROJECT_BINARY_DIR}/src/vtk ${install_prefix}
+      )
+    endif()
+  endif()
+  if(BUILD_VTK)
+    ExternalProject_Add(vtk
+      GIT_REPOSITORY git://vtk.org/VTK.git
+      GIT_TAG 28deb5620e56f535fc92ff8c73ef00f54923839b
+      CMAKE_CACHE_ARGS
+        ${default_cmake_args}
+        ${python_args}
+        ${qt_args}
+        -DBUILD_SHARED_LIBS:BOOL=ON
+        -DBUILD_TESTING:BOOL=OFF
+        -DBUILD_EXAMPLES:BOOL=OFF
+        -DVTK_RENDERING_BACKEND:STRING=OpenGL2
+        -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
+        -DModule_vtkGUISupportQt:BOOL=ON
+        -DCMAKE_MACOSX_RPATH:BOOL=ON
+        -DVTK_WRAP_PYTHON:BOOL=ON
+      )
+  endif()
+
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
   set(vtk_depends vtk)
 else()
-  set(vtk_homebrew_dir /usr/local/opt/vtk5/lib/vtk-5.10)
-  if (APPLE AND IS_DIRECTORY ${vtk_homebrew_dir})
-    set(vtk_args -DVTK_DIR:PATH=${vtk_homebrew_dir})
+
+  if(APPLE)
+    set(vtk_homebrew_dir /usr/local/opt/vtk@8.0/lib/cmake/vtk)
   endif()
 
   # Verifies that the system has VTK5.
-  find_package(VTK REQUIRED HINTS ${vtk_homebrew_dir})
-  if (NOT ${VTK_VERSION_MAJOR} EQUAL 5)
-    message(FATAL_ERROR "System does not have VTK5. It has version ${VTK_VERSION}.")
+  find_package(VTK REQUIRED PATHS ${vtk_homebrew_dir})
+  if (${VTK_VERSION} VERSION_LESS "8.0")
+    message(FATAL_ERROR "Director requires a VTK minimum version of v8.0."
+      " System has VTK version ${VTK_VERSION}")
   endif()
+
+  set(vtk_args -DVTK_DIR:PATH=${VTK_DIR})
 endif()
 
 
@@ -475,6 +559,7 @@ ExternalProject_Add(director
     -DUSE_COLLECTIONS:BOOL=${USE_COLLECTIONS}
     -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_DRAKE:BOOL=${USE_DRAKE}
+    -DDD_QT_VERSION:STRING=${DD_QT_VERSION}
 
     ${default_cmake_args}
     ${eigen_args}

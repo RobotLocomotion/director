@@ -27,6 +27,12 @@ include(cmake/dd-macros.cmake)
 include(cmake/dd-testing.cmake)
 include(cmake/dd-version.cmake)
 
+# Setup flags for C++11
+use_cpp11()
+
+# Setup options for choosing the version of Qt to compile against
+ddqt()
+
 # dependency options
 option(USE_PORTMIDI "Build director with portmidi dependency." OFF)
 option(USE_LCM "Build director with lcm dependency." OFF)

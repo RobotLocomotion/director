@@ -15,7 +15,7 @@ def numpyToPolyData(pts, pointData=None, createVertexCells=False):
 
     if createVertexCells:
         f = vtk.vtkVertexGlyphFilter()
-        f.SetInput(pd)
+        f.SetInputData(pd)
         f.Update()
         pd = shallowCopy(f.GetOutput())
 
