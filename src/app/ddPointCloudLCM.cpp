@@ -41,7 +41,7 @@ void ddPointCloudLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 {
 
   if (botConfigFile.length()) {
-    mBotParam = bot_param_new_from_file(botConfigFile.toAscii().data());
+    mBotParam = bot_param_new_from_file(botConfigFile.toLocal8Bit().data());
   } else {
     while (!mBotParam) {
       mBotParam = bot_param_new_from_server(
@@ -269,8 +269,8 @@ QString ddPointCloudLCM::getLidarChannelName(const QString& lidarName) {
   QString key = QString("planar_lidars.") + lidarName + QString(".lcm_channel");
 
   char* channelName;
-  if (!bot_param_get_str(mBotParam, key.toAscii().data(), &channelName) == 0){
-    printf("Could not find lcm_channel property of %s\n", lidarName.toAscii().data());
+  if (!bot_param_get_str(mBotParam, key.toLocal8Bit().data(), &channelName) == 0){
+    printf("Could not find lcm_channel property of %s\n", lidarName.toLocal8Bit().data());
     return 0;
   }
 
@@ -282,8 +282,8 @@ QString ddPointCloudLCM::getLidarFriendlyName(const QString& lidarName) {
   QString key = QString("planar_lidars.") + lidarName + QString(".sensor_name");
 
   char* friendlyName;
-  if (!bot_param_get_str(mBotParam, key.toAscii().data(), &friendlyName) == 0){
-    printf("Could not find sensor_name property of %s\n", lidarName.toAscii().data());
+  if (!bot_param_get_str(mBotParam, key.toLocal8Bit().data(), &friendlyName) == 0){
+    printf("Could not find sensor_name property of %s\n", lidarName.toLocal8Bit().data());
     return 0;
   }
 
@@ -295,8 +295,8 @@ QString ddPointCloudLCM::getLidarCoordinateFrame(const QString& lidarName) {
   QString key = QString("planar_lidars.") + lidarName + QString(".coord_frame");
 
   char* coordFrame;
-  if (!bot_param_get_str(mBotParam, key.toAscii().data(), &coordFrame) == 0){
-    printf("Could not find coord_frame property of %s\n", lidarName.toAscii().data());
+  if (!bot_param_get_str(mBotParam, key.toLocal8Bit().data(), &coordFrame) == 0){
+    printf("Could not find coord_frame property of %s\n", lidarName.toLocal8Bit().data());
     return 0;
   }
 
@@ -308,8 +308,8 @@ int ddPointCloudLCM::getLidarFrequency(const QString& lidarName) {
   QString key = QString("planar_lidars.") + lidarName + QString(".frequency");
 
   int frequency = 0;
-  if (!bot_param_get_int(mBotParam, key.toAscii().data(), &frequency) == 0){
-    printf("Could not find frequency property of %s\n", lidarName.toAscii().data());
+  if (!bot_param_get_int(mBotParam, key.toLocal8Bit().data(), &frequency) == 0){
+    printf("Could not find frequency property of %s\n", lidarName.toLocal8Bit().data());
     return 0;
   }
   return frequency;
@@ -320,8 +320,8 @@ bool ddPointCloudLCM::displayLidar(const QString& lidarName) {
   QString key = QString("planar_lidars.") + lidarName + QString(".director_show");
 
   int displayLidar = 0;
-  if (!bot_param_get_boolean(mBotParam, key.toAscii().data(), &displayLidar) == 0){
-    // printf("Could not find display property of %s\n", lidarName.toAscii().data()); // don't spam
+  if (!bot_param_get_boolean(mBotParam, key.toLocal8Bit().data(), &displayLidar) == 0){
+    // printf("Could not find display property of %s\n", lidarName.toLocal8Bit().data()); // don't spam
     return false;
   }
   return displayLidar;
@@ -333,8 +333,8 @@ QList<int> ddPointCloudLCM::getLidarIntensity(const QString& lidarName) {
 
   int intensities[2];
   QList<int> qIntensities;
-  if(2 != bot_param_get_int_array(mBotParam, key.toAscii().data(), &intensities[0], 2)) {
-    printf("Could not find display property of %s\n", lidarName.toAscii().data());
+  if(2 != bot_param_get_int_array(mBotParam, key.toLocal8Bit().data(), &intensities[0], 2)) {
+    printf("Could not find display property of %s\n", lidarName.toLocal8Bit().data());
     qIntensities.append(0.0);
     qIntensities.append(0.0);
     return qIntensities;
