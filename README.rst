@@ -28,9 +28,9 @@ the greater MIT DRC codebase.
 System Requirements
 -------------------
 
-As of this writing, the software is supported on Ubuntu 14.04, MacOSX 10.10,
-and Microsoft Windows 8 using the system native compilers.  It likely also
-works on similar platforms and OS versions.
+As of this writing, the software is tested on Ubuntu 14.04 and 16.04, and MacOSX 10.11.
+The build should work on Microsoft Windows with MSVC but it is not continuously tested.
+In theory it can run on any platform where VTK and Qt are supported.
 
 
 Download Instructions
@@ -64,8 +64,8 @@ Required Dependencies
 
 The required 3rd party dependencies are:
 
-  - Qt 4.8
-  - VTK 5.8 or 5.10
+  - Qt4 or Qt5 (Qt 4.8.7 recommended)
+  - VTK 6.2+ (VTK 7.1.1 recommended)
   - Python 2.7 and numpy
 
 Additionally, you will need CMake 2.8 or greater to configure the source code.
@@ -75,15 +75,17 @@ The dependencies can be installed on Mac using `Homebrew <http://brew.sh/>`_:
 ::
 
     brew tap homebrew/python
-    brew tap patmarion/director
-    brew install cmake python numpy vtk5 eigen
+    brew tap patmarion/director && brew tap-pin patmarion/director
+    brew install cmake python numpy qt vtk7 eigen
 
 The dependencies can be installed on Ubuntu using apt-get:
 
 ::
 
-    sudo apt-get install cmake libvtk5-qt4-dev libeigen3-dev python-dev python-vtk python-numpy
+    sudo apt-get install cmake libqt4-dev python-dev python-numpy
 
+On Ubuntu the build does not require VTK to be installed.  A compatible version
+of VTK will be downloaded (precompiled binaries) at build time.
 
 Building
 ========
@@ -100,9 +102,9 @@ This is an alias for:
 
 ::
 
-    mkdir build
-    cd build
+    mkdir build && cd build
     cmake ../distro/superbuild
+    make
 
 
 Documentation
