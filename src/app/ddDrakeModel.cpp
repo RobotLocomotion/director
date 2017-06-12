@@ -52,13 +52,6 @@ using std::string;
 using std::istringstream;
 using namespace Eigen;
 
-#if VTK_MAJOR_VERSION == 6
- #define SetInputData(filter, obj) filter->SetInputData(obj);
- #define AddInputData(filter, obj) filter->AddInputData(obj);
-#else
-  #define SetInputData(filter, obj) filter->SetInput(obj);
-  #define AddInputData(filter, obj) filter->AddInput(obj);
-#endif
 
 class ddMeshVisual
 {
@@ -159,7 +152,7 @@ vtkSmartPointer<vtkPolyData> computeNormals(vtkPolyData* polyData)
 {
   vtkSmartPointer<vtkPolyDataNormals> normalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
   normalsFilter->SetFeatureAngle(45);
-  SetInputData(normalsFilter, polyData);
+  normalsFilter->SetInputData(polyData);
   normalsFilter->Update();
   return shallowCopy(normalsFilter->GetOutput());
 }
@@ -168,7 +161,7 @@ vtkSmartPointer<vtkPolyData> transformPolyData(vtkPolyData* polyData, vtkTransfo
 {
   vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   transformFilter->SetTransform(transform);
-  SetInputData(transformFilter, polyData);
+  transformFilter->SetInputData(polyData);
   transformFilter->Update();
   return shallowCopy(transformFilter->GetOutput());
 }
@@ -327,7 +320,7 @@ vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyD
   }
 
   vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
-  texture->SetInput(image);
+  texture->SetInputData(image);
   texture->EdgeClampOn();
   texture->RepeatOn();
   TextureMap[textureFileName] = texture;
@@ -347,7 +340,7 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
   visual->Actor->GetProperty()->SetSpecularPower(20);
   visual->Actor->GetProperty()->SetColor(GRAY_DEFAULT/255.0, GRAY_DEFAULT/255.0, GRAY_DEFAULT/255.0);
   vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  SetInputData(mapper, visual->PolyData);
+  mapper->SetInputData(visual->PolyData);
   visual->Actor->SetMapper(mapper);
 
   bool useShadows = false;
@@ -1245,7 +1238,7 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
 
   for (size_t i = 0; i < visuals.size(); ++i)
   {
-    AddInputData(appendFilter, transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
+    appendFilter->AddInputData(transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
   }
 
   if (visuals.size())
@@ -1272,11 +1265,11 @@ void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
     QString linkName = QString::fromStdString(linkNameString);
     vtkSmartPointer<vtkPolyData> tempPolyData = vtkSmartPointer<vtkPolyData>::New();
     this->getLinkModelMesh(linkName, tempPolyData);
-    AddInputData(appendFilter, tempPolyData);
+    appendFilter->AddInputData(tempPolyData);
   }
 
   appendFilter->Update();
-  polyData->DeepCopy(appendFilter->GetOutput());  
+  polyData->DeepCopy(appendFilter->GetOutput());
 }
 
 void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData)
@@ -1299,7 +1292,7 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
 
   for (size_t i = 0; i < visuals.size(); ++i)
   {
-    AddInputData(appendFilter, transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
+    appendFilter->AddInputData(transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
   }
 
   if (visuals.size())
@@ -1319,7 +1312,7 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
     // Generate normals
     std::cout << "trying to generate cell normals" << std::endl;
     vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
-    SetInputData(normalGenerator, polyData);
+    normalGenerator->SetInputData(polyData);
     std::cout << "visuals size is " << visuals.size() << std::endl;
     std::cout << "number of cells is " << polyData->GetNumberOfCells() << std::endl;
     normalGenerator->ComputePointNormalsOff();

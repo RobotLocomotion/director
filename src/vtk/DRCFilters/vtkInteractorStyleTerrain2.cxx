@@ -415,13 +415,13 @@ void vtkInteractorStyleTerrain2::CreateLatLong()
   if (this->LatLongExtractEdges == NULL)
     {
     this->LatLongExtractEdges = vtkExtractEdges::New();
-    this->LatLongExtractEdges->SetInput(this->LatLongSphere->GetOutput());
+    this->LatLongExtractEdges->SetInputData(this->LatLongSphere->GetOutput());
     }
 
   if (this->LatLongMapper == NULL)
     {
     this->LatLongMapper = vtkPolyDataMapper::New();
-    this->LatLongMapper->SetInput(this->LatLongExtractEdges->GetOutput());
+    this->LatLongMapper->SetInputData(this->LatLongExtractEdges->GetOutput());
     }
 
   if (this->LatLongActor == NULL)
