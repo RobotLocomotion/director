@@ -1,4 +1,5 @@
 #!/bin/bash
+set -ex
 
 scriptDir=$(cd $(dirname $0) && pwd)
 
@@ -23,12 +24,15 @@ sitePackagesDir=$libDir/python2.7/site-packages
 rm -rf $bundleDir
 cp -r $scriptDir/bundle_template.app $bundleDir
 
+# depending on build options the share directory might not exist already
+mkdir -p $superbuildInstallDir/share
+
 cp -r $superbuildInstallDir/{bin,lib,include,share} $bundleDir/Contents/MacOS/
 cp /usr/local/bin/python $binDir/
 touch $binDir/qt.conf
 
 mkdir -p $sitePackagesDir
-cp -r /usr/local/opt/vtk5/lib/python2.7/site-packages/vtk $sitePackagesDir/
+cp -r /usr/local/opt/vtk7/lib/python2.7/site-packages/vtk $sitePackagesDir/
 cp -r /usr/local/lib/python2.7/site-packages/numpy $sitePackagesDir/
 cp -r /usr/local/lib/python2.7/site-packages/scipy $sitePackagesDir/
 cp -r /usr/local/lib/python2.7/site-packages/yaml $sitePackagesDir/

@@ -14,14 +14,10 @@ set(sources
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
   vtkInteractorStyleTerrain2.cxx
-  vtkDepthImageProcessingPass.cxx
-  vtkEDLShading.cxx
-  vtkOBJImporter.cxx
   )
 
 # extra source files to compile but do not python wrap
 set(EXTRA_SRCS
-  vtkOBJImporterInternals.cxx
   )
 
 #####
@@ -41,7 +37,7 @@ set(GLSL_SRCS
 # Create custom commands to encode each glsl file into a C string literal
 # in a header file
 # -----------------------------------------------------------------------------
-if(NOT EXISTS "${VTK_ENCODESTRING_EXE}")
+if(NOT TARGET vtkEncodeString)
   message(SEND_ERROR "The required vtkEncodeString executable was not found.\nThis may indicate an error in your VTK install or configuration.")
 endif()
 
@@ -51,7 +47,7 @@ foreach(file ${GLSL_SRCS})
   add_custom_command(
     OUTPUT ${res}
     DEPENDS ${src}
-    COMMAND ${VTK_ENCODESTRING_EXE}
+    COMMAND vtkEncodeString
     ARGS ${res} ${src} ${file}
     )
   set(EXTRA_SRCS ${EXTRA_SRCS} ${res})
@@ -61,9 +57,14 @@ endforeach(file)
 #####
 
 set(VTK_LIBRARIES
-  vtkFiltering
-  vtkIO
-  vtkWidgets
+  vtkInteractionWidgets
+  vtkInteractionStyle
+  vtkRenderingFreeType
+  vtkRenderingCore
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkFiltersExtraction
+  vtkFiltersCore
+  vtkCommonCore
   )
 
 
@@ -111,7 +112,6 @@ if (USE_DRC_MAPS)
   include_directories(${PCL_INCLUDE_DIRS})
   include_directories(${MAPS_INCLUDE_DIRS})
   list(APPEND deps ${MAPS_LIBRARIES} ${PCL_LIBRARIES})
-  use_cpp11()
 endif()
 
 if (USE_DRC_PLANE_SEG)
@@ -127,7 +127,6 @@ if (USE_DRC_PLANE_SEG)
   include_directories(${PLANE_SEG_INCLUDE_DIRS})
   include_directories(${PCL_INCLUDE_DIRS})
   list(APPEND deps ${PLANE_SEG_LIBRARIES} ${PCL_LIBRARIES})
-  use_cpp11()
 endif()
 
 if(USE_LCMGL)

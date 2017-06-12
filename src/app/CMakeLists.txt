@@ -1,18 +1,29 @@
-setup_qt4()
-
-if(USE_DRC OR USE_DRAKE)
-  use_cpp11()
-endif()
-
 find_package(PythonLibs 2.7 REQUIRED)
 find_package(PythonInterp 2.7 REQUIRED)
 find_package(PythonQt REQUIRED)
 find_package(CTKPythonConsole REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(VTK REQUIRED)
 find_package(QtPropertyBrowser REQUIRED)
+if(DD_QT_VERSION EQUAL 4)
+  include(${QT_USE_FILE})
+else()
+  include_directories(${Qt5Core_INCLUDE_DIRS})
+endif()
 
+find_package(VTK REQUIRED COMPONENTS
+  vtkWrappingPythonCore
+  vtkGUISupportQt
+  vtkInteractionWidgets
+  vtkRenderingAnnotation
+  vtkRenderingFreeType
+  vtkInteractionStyle
+  vtkIOXML
+  vtkIOImage
+  vtkIOGeometry
+  )
 include(${VTK_USE_FILE})
+check_vtk_qt_version()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/src/common)
@@ -27,7 +38,7 @@ set(wrap_files
   wrapped_methods.txt
   )
 
-qt4_wrap_cpp(moc_srcs
+qt_wrap_cpp(moc_srcs
   ${decorator_file}
   ddLumberSelection.h
   ddGLWidgetView.h
@@ -47,17 +58,16 @@ qt4_wrap_cpp(moc_srcs
   ddViewMenu.h
   )
 
-qt4_wrap_ui(ui_srcs
+qt_wrap_ui(ui_srcs
   ddMainWindow.ui
   ddLumberSelection.ui
   ddTaskSelection.ui
   )
 
-qt4_add_resources(resource_srcs
+qt_add_resources(resource_srcs
   uiresources.qrc
   images/resources.qrc
   )
-
 
 set(srcs
   ${moc_srcs}
@@ -82,12 +92,6 @@ set(srcs
 
   vtkSimpleActorInteractor.cxx
   vtkTDxInteractorStyleCallback.cxx
-  )
-
-
-set(VTK_LIBRARIES
-  QVTK
-  vtkPythonCore
   )
 
 set(deps
@@ -117,7 +121,7 @@ if (USE_DRAKE)
   )
 
   set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
+  qt_wrap_cpp(moc_srcs
     ddDrakeModel.h
     ddDrakeWrapper.h
   )
@@ -155,7 +159,7 @@ if (USE_LCM)
   include_directories(${LCM_INCLUDE_DIRS})
 
   set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
+  qt_wrap_cpp(moc_srcs
     ddLCMSubscriber.h
     ddLCMThread.h
   )
@@ -184,7 +188,7 @@ if (USE_DRC)
   include_directories(${PCL_INCLUDE_DIRS})
 
   set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
+  qt_wrap_cpp(moc_srcs
     ddBotImageQueue.h
     ddKinectLCM.h
     ddPointCloudLCM.h

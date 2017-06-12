@@ -120,7 +120,7 @@ class DepthScanner(object):
 
         depthImage, polyData = computeDepthImageAndPointCloud(self.getDepthBufferImage(), self.getColorBufferImage(), self.view.camera())
 
-        self.depthScaleFilter.SetInput(depthImage)
+        self.depthScaleFilter.SetInputData(depthImage)
         self.depthScaleFilter.Update()
 
         self.depthImageLookupTable.SetRange(self.depthScaleFilter.GetOutput().GetScalarRange())

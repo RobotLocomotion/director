@@ -1,7 +1,8 @@
 #!/bin/bash
+set -ex
+
 
 scriptDir=$(cd $(dirname $0) && pwd)
-
 
 superbuildInstallDir=$scriptDir/../../build/install
 

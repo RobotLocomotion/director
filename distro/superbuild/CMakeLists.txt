@@ -13,6 +13,7 @@ endif()
 option(USE_EXTERNAL_INSTALL "If enabled, install dependencies to CMAKE_INSTALL_PREFIX." OFF)
 mark_as_advanced(USE_EXTERNAL_INSTALL)
 
+include(${CMAKE_SOURCE_DIR}/../../cmake/dd-macros.cmake)
 include(ExternalProject)
 set_property(DIRECTORY PROPERTY EP_PREFIX ${Superbuild_BINARY_DIR})
 

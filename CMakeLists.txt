@@ -39,6 +39,10 @@ option(USE_DRC_PLANE_SEG "Build director with drc plane segmentation." OFF)
 option(USE_OCTOMAP "Build director with octomap dependency." OFF)
 option(USE_COLLECTIONS "Build director with collections dependency." OFF)
 
+use_cpp11()
+setup_qt()
+setup_pkg_config_path()
+
 # build project
 add_subdirectory(src)
 

@@ -150,7 +150,7 @@ def writePolyData(polyData, filename):
             writer.SetArrayName('RGB255')
 
     writer.SetFileName(filename)
-    writer.SetInput(polyData)
+    writer.SetInputData(polyData)
     writer.Update()
 
 def writeImage(image, filename):
@@ -171,19 +171,19 @@ def writeImage(image, filename):
 
     writer = writers[ext]()
     writer.SetFileName(filename)
-    writer.SetInput(image)
+    writer.SetInputData(image)
     writer.Write()
 
 def _computeNormals(polyData):
     normals = vtk.vtkPolyDataNormals()
     normals.SetFeatureAngle(45)
-    normals.SetInput(polyData)
+    normals.SetInputData(polyData)
     normals.Update()
     return shallowCopy(normals.GetOutput())
 
 def _triangulate(polyData):
     normals = vtk.vtkTriangleFilter()
-    normals.SetInput(polyData)
+    normals.SetInputData(polyData)
     normals.Update()
     return shallowCopy(normals.GetOutput())
 

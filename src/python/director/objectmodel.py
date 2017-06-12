@@ -1,4 +1,5 @@
 import os
+import re
 import PythonQt
 from PythonQt import QtCore, QtGui
 from director.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper
@@ -497,8 +498,12 @@ class ObjectModelTree(object):
         treeWidget.headerItem().setIcon(1, Icons.getIcon(Icons.Eye))
         treeWidget.header().setVisible(True)
         treeWidget.header().setStretchLastSection(False)
-        treeWidget.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
-        treeWidget.header().setResizeMode(1, QtGui.QHeaderView.Fixed)
+        if int(re.search(r'^([0-9]+).*', QtCore.qVersion()).group(1)) < 5:
+            treeWidget.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
+            treeWidget.header().setResizeMode(1, QtGui.QHeaderView.Fixed)
+        else:
+            treeWidget.header().setSectionResizeMode(0, QtGui.QHeaderView.Stretch)
+            treeWidget.header().setSectionResizeMode(1, QtGui.QHeaderView.Fixed)
         treeWidget.setColumnWidth(1, 24)
         treeWidget.connect('itemSelectionChanged()', self._onTreeSelectionChanged)
         treeWidget.connect('itemClicked(QTreeWidgetItem*, int)', self._onItemClicked)
