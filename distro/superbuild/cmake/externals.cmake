@@ -367,7 +367,7 @@ else()
 
   ExternalProject_Add(vtk
     GIT_REPOSITORY git://vtk.org/VTK.git
-    GIT_TAG v7.1.1
+    GIT_TAG 28deb5620e56f535fc92ff8c73ef00f54923839b
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
@@ -375,7 +375,7 @@ else()
       -DBUILD_SHARED_LIBS:BOOL=ON
       -DBUILD_TESTING:BOOL=OFF
       -DBUILD_EXAMPLES:BOOL=OFF
-      -DVTK_RENDERING_BACKEND:STRING=OpenGL
+      -DVTK_RENDERING_BACKEND:STRING=OpenGL2
       -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
       -DVTK_PYTHON_VERSION=2
       -DModule_vtkGUISupportQt:BOOL=ON
