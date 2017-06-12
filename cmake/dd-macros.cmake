@@ -1,8 +1,64 @@
-macro(setup_qt4)
-  find_package(Qt4 REQUIRED QtCore QtGui QtOpenGL QtScript)
-  include(${QT_USE_FILE})
+macro(setup_qt)
+  set(DD_QT_VERSION 4 CACHE STRING "Selected Qt version")
+  set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
+
+  if(NOT (DD_QT_VERSION VERSION_EQUAL 4 OR DD_QT_VERSION VERSION_EQUAL 5))
+    message(FATAL_ERROR "DD_QT_VERSION set to unsupported value: ${DD_QT_VERSION}")
+  endif()
+
+  if(DEFINED Qt5_DIR AND DEFINED QT_QMAKE_EXECUTABLE)
+    message(FATAL_ERROR
+      "This project should not be configured with both Qt5_DIR and QT_QMAKE_EXECUTABLE options.
+  To build with Qt4, specify QT_QMAKE_EXECUTABLE. To build with Qt5, specify  Qt5_DIR.")
+  endif()
+
+  if(DD_QT_VERSION EQUAL 4)
+    find_package(Qt4 REQUIRED QtCore QtGui QtOpenGL QtScript)
+  elseif(DD_QT_VERSION EQUAL 5)
+    if(APPLE)
+      set(qt_homebrew_dir /usr/local/opt/qt/lib/cmake/)
+    endif()
+    find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets OpenGL
+      PATHS ${qt_homebrew_dir})
+  else()
+    message(FATAL_ERROR "DD_QT_VERSION is set to an unexpected value: ${DD_QT_VERSION}")
+  endif()
+
+
 endmacro()
 
+macro(qt_wrap_ui)
+  if(DD_QT_VERSION EQUAL 4)
+    qt4_wrap_ui(${ARGN})
+  else()
+    qt5_wrap_ui(${ARGN})
+  endif()
+endmacro()
+
+macro(qt_wrap_cpp)
+  if(DD_QT_VERSION EQUAL 4)
+    qt4_wrap_cpp(${ARGN})
+  else()
+    qt5_wrap_cpp(${ARGN})
+  endif()
+endmacro()
+
+macro(qt_add_resources)
+  if(DD_QT_VERSION EQUAL 4)
+    qt4_add_resources(${ARGN})
+  else()
+    qt5_add_resources(${ARGN})
+  endif()
+endmacro()
+
+macro(check_vtk_qt_version)
+  if(NOT (VTK_QT_VERSION VERSION_EQUAL DD_QT_VERSION))
+    message(FATAL_ERROR "VTK is compiled with a different version of Qt than "
+                        "the one requested.\n"
+                        "Expected Qt version Qt${DD_QT_VERSION} but "
+                        "VTK is compiled with Qt${VTK_QT_VERSION}.")
+  endif()
+endmacro()
 
 macro(use_cpp11)
   if (CMAKE_COMPILER_IS_GNUCC)
@@ -13,7 +69,7 @@ macro(use_cpp11)
     elseif(GCC_VERSION VERSION_LESS 4.7)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
     else()
-	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -47,8 +103,6 @@ macro(use_pkg target)
 
 endmacro()
 
-macro(setup_pods_pkg_config_path)
+macro(setup_pkg_config_path)
   set(ENV{PKG_CONFIG_PATH} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 endmacro()
-
-setup_pods_pkg_config_path()
