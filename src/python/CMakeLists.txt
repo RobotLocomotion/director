@@ -107,6 +107,7 @@ set(python_files
   director/robotsystem.py
   director/roboturdf.py
   director/robotviewbehaviors.py
+  director/sceneloader.py
   director/screengrabberpanel.py
   director/segmentation.py
   director/segmentationpanel.py
@@ -151,12 +152,6 @@ set(python_files
   director/kinectlcm.py
   director/plannerPublisher.py
 
-
-  director/macros/segmentation_view/ortho_x.py
-  director/macros/segmentation_view/ortho_y.py
-  director/macros/segmentation_view/ortho_z.py
-  director/macros/segmentation_view/perspective.py
-
   director/tasks/__init__.py
   director/tasks/robottasks.py
   director/tasks/taskmanagerwidget.py
@@ -176,8 +171,6 @@ set(python_files
   director/thirdparty/naming.py
   director/thirdparty/pysdf.py
   director/thirdparty/toposort.py
-
-  director/sceneloader.py
 
   urdf_parser_py/__init__.py
   urdf_parser_py/sdf.py
@@ -232,23 +225,6 @@ add_custom_command(
   )
 
 add_custom_target(python_byte_compile ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/compile_complete")
-
-# cleanup old python files if needed
-set(cleanup_files
-  director/macros/popout.py
-  director/macros/publish.py
-)
-foreach(file ${cleanup_files})
-  foreach(search_dir "${python_module_dir}" "${CMAKE_INSTALL_PREFIX}/${DD_INSTALL_PYTHON_DIR}")
-    if (EXISTS "${search_dir}/${file}")
-      file(REMOVE "${search_dir}/${file}")
-    endif()
-    if (EXISTS "${search_dir}/${file}c")
-      file(REMOVE "${search_dir}/${file}c")
-    endif()
-  endforeach()
-endforeach()
-
 
 add_subdirectory(extensions)
 add_subdirectory(tests)
