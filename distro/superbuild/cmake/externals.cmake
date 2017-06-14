@@ -324,6 +324,7 @@ elseif(USE_PRECOMPILED_VTK)
   set(url_base "http://patmarion.com/bottles")
 
   find_program(LSB_RELEASE lsb_release)
+  mark_as_advanced(LSB_RELEASE)
   set(ubuntu_version)
   if(LSB_RELEASE)
     execute_process(COMMAND ${LSB_RELEASE} -is
