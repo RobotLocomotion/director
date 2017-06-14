@@ -31,7 +31,7 @@ def to_lcm(data):
     msg.format = "treeviewer_json"
     msg.format_version_major = 1
     msg.format_version_minor = 0
-    msg.data = json.dumps(data)
+    msg.data = bytearray(json.dumps(data), encoding='utf-8')
     msg.num_bytes = len(msg.data)
     return msg
 
@@ -297,7 +297,7 @@ class CoreVisualizer(object):
 
     def _handle_response(self, channel, msgdata):
         msg = viewer2_comms_t.decode(msgdata)
-        data = json.loads(msg.data)
+        data = json.loads(msg.data.decode())
         if data["status"] == 0:
             pass
         elif data["status"] == 1:
@@ -306,7 +306,7 @@ class CoreVisualizer(object):
                 self.queue.settransform.add(path)
         else:
             raise ValueError(
-                "Unhandled response from viewer: {}".format(msg.data))
+                "Unhandled response from viewer: {}".format(msg.data.decode()))
 
     def setgeometry(self, path, geomdata):
         if isinstance(geomdata, BaseGeometry):

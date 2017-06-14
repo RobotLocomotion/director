@@ -16,9 +16,8 @@ def comms_msg(timestamp, data):
     msg.format = "treeviewer_json"
     msg.format_version_major = 1
     msg.format_version_minor = 0
-    encoded = json.dumps(data)
-    msg.num_bytes = len(encoded)
-    msg.data = encoded
+    msg.data = bytearray(json.dumps(data), encoding='utf-8')
+    msg.num_bytes = len(msg.data)
     return msg
 
 
@@ -78,7 +77,7 @@ class Visualizer:
 
     def onResponse(self, channel, raw_data):
         msg = lcmrl.viewer2_comms_t.decode(raw_data)
-        response = json.loads(msg.data)
+        response = json.loads(msg.data.decode())
         if response["status"] == 0:
             print("ok")
         elif response["status"] == 1:
