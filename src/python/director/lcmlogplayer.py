@@ -149,41 +149,59 @@ class LcmLogPlayerGui(object):
         stopButton = QtGui.QPushButton('Stop')
         slider = QtGui.QSlider(QtCore.Qt.Horizontal)
         slider.maximum = int(logPlayer.getEndTime()*100)
+        text = QtGui.QLineEdit()
+        text.text = '0.0'
         playButton.connect('clicked()', self.onPlay)
         stopButton.connect('clicked()', self.onStop)
         slider.connect('valueChanged(int)', self.onSlider)
+        text.connect('returnPressed()', self.onText)
 
         l = QtGui.QHBoxLayout(w)
         l.addWidget(slider)
+        l.addWidget(text)
         l.addWidget(playButton)
         l.addWidget(stopButton)
 
         self.slider = slider
+        self.text = text
         self.widget = w
         self.widget.show()
 
-    def _getTime(self, value=None):
+    def _getSliderTime(self, value=None):
         if value is None:
             value = self.slider.value
         t = self.logPlayer.getEndTime()*value/self.slider.maximum
         return t
 
-    def _getValue(self, t):
+    def _getSliderValue(self, t):
         value = t / self.logPlayer.getEndTime() * self.slider.maximum
         return int(round(value))
 
+    def _updateTime(self, t):
+        with BlockSignals(self.slider, self.text):
+            self.slider.value = self._getSliderValue(t)
+            self.text.text = str(t)
+
     def onPlay(self):
-        def onFrame(t):
-            with BlockSignals(self.slider):
-                self.slider.value = self._getValue(t)
-        self.logPlayer.playback(self._getTime(), self.logPlayer.getEndTime(), onFrame)
+        self.logPlayer.playback(self._getSliderTime(), self.logPlayer.getEndTime(), self._updateTime)
 
     def onStop(self):
         self.logPlayer.timer.stop()
 
-    def onSlider(self, value):
-        t = self._getTime(value)
+    def skipTo(self, t):
+        self._updateTime(t)
         self.logPlayer.skipToTime(t, playLength=0.0)
+
+    def onSlider(self, value):
+        t = self._getSliderTime(value)
+        self.skipTo(t)
+
+    def onText(self, *args):
+        try:
+            t = float(self.text.text)
+            self.skipTo(t)
+        except ValueError:
+            pass
 
 # @ref https://stackoverflow.com/a/35000974/7829525
 class BlockSignals(object):
