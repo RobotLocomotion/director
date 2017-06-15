@@ -30,7 +30,7 @@ class LcmLogPlayer(object):
         filepos = self.filePositions[self.nextEventIndex]
         self.log.seek(filepos)
 
-    def advanceTime(self, playLength):
+    def advanceTime(self, playLength, onFrame=None):
 
         numEvents = len(self.timestamps)
         if self.nextEventIndex >= numEvents:
@@ -50,6 +50,8 @@ class LcmLogPlayer(object):
 
             good = (self.nextEventIndex < numEvents
                     and self.timestamps[self.nextEventIndex] <= endTimestamp)
+            if onFrame and good:
+                onFrame(self.timestamps[self.nextEventIndex] / 1.e6)
 
     def skipToTime(self, timeRequest, playLength=0.0):
         self.resetPlayPosition(timeRequest)
@@ -62,7 +64,7 @@ class LcmLogPlayer(object):
     def stop(self):
         self.timer.stop()
 
-    def playback(self, startTime, playLength):
+    def playback(self, startTime, playLength, onFrame=None, onStop=None):
 
         self.resetPlayPosition(startTime)
 
@@ -71,10 +73,15 @@ class LcmLogPlayer(object):
 
         def onTick():
             elapsed = self.timer.elapsed * self.playbackFactor
-            self.advanceTime(elapsed)
+            self.advanceTime(elapsed, onFrame)
 
             good = (self.nextEventIndex < len(self.timestamps)
                     and self.timestamps[self.nextEventIndex] <= endTimestamp)
+
+            if onFrame and good:
+                onFrame(self.timestamps[self.nextEventIndex] / 1.e6)
+            if onStop and not good:
+                onStop()
 
             return bool(good) #convert numpy.bool to bool
 
@@ -155,16 +162,40 @@ class LcmLogPlayerGui(object):
         self.widget = w
         self.widget.show()
 
+    def _getTime(self, value=None):
+        if value is None:
+            value = self.slider.value
+        t = self.logPlayer.getEndTime()*value/self.slider.maximum
+        return t
+
+    def _getValue(self, t):
+        value = t / self.logPlayer.getEndTime() * self.slider.maximum
+        return int(round(value))
+
     def onPlay(self):
-        self.logPlayer.playback(0.0, self.logPlayer.getEndTime())
+        def onFrame(t):
+            with BlockSignals(self.slider):
+                self.slider.value = self._getValue(t)
+        self.logPlayer.playback(self._getTime(), self.logPlayer.getEndTime(), onFrame)
 
     def onStop(self):
         self.logPlayer.timer.stop()
 
     def onSlider(self, value):
-        t = self.logPlayer.getEndTime()*value/self.slider.maximum
+        t = self._getTime(value)
         self.logPlayer.skipToTime(t, playLength=0.0)
 
+# @ref https://stackoverflow.com/a/35000974/7829525
+class BlockSignals(object):
+    def __init__(self, *args):
+        self.widgets = args
+    def blockSignals(self, value):
+        for widget in self.widgets:
+            widget.blockSignals(value)
+    def __enter__(self, *args, **kwargs):
+        self.blockSignals(True)
+    def __exit__(self, *args, **kwargs):
+        self.blockSignals(False)
 
 if __name__ == '__main__':
 
