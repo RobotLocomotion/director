@@ -1,5 +1,6 @@
 from director import lcmUtils
 from director.timercallback import TimerCallback
+from director.qtutils import BlockSignals
 
 import lcm
 import numpy as np
@@ -202,18 +203,6 @@ class LcmLogPlayerGui(object):
             self.skipTo(t)
         except ValueError:
             pass
-
-# @ref https://stackoverflow.com/a/35000974/7829525
-class BlockSignals(object):
-    def __init__(self, *args):
-        self.widgets = args
-    def blockSignals(self, value):
-        for widget in self.widgets:
-            widget.blockSignals(value)
-    def __enter__(self, *args, **kwargs):
-        self.blockSignals(True)
-    def __exit__(self, *args, **kwargs):
-        self.blockSignals(False)
 
 if __name__ == '__main__':
 
