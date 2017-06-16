@@ -34,8 +34,19 @@ include_directories(${PYTHON_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
+if(DD_QT_VERSION EQUAL 4)
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/wrapped_methods_qvtk.txt
+    "QVTKWidget* ddQVTKWidgetView::vtkWidget() const;"
+    )
+else()
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/wrapped_methods_qvtk.txt
+    "QVTKOpenGLWidget* ddQVTKWidgetView::vtkWidget() const;"
+    )
+endif()
+
 set(wrap_files
   wrapped_methods.txt
+  ${CMAKE_CURRENT_BINARY_DIR}/wrapped_methods_qvtk.txt
   )
 
 qt_wrap_cpp(moc_srcs
