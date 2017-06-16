@@ -323,7 +323,8 @@ class MainWindowAppFactory(object):
                 globalsDict['__file__'] = filename
                 globalsDict['_argv'] = scriptArgs
                 try:
-                    execfile(filename, fields.globalsDict)
+                    code = compile(open(filename, 'r').read(), filename, 'exec')
+                    exec(code, fields.globalsDict)
                 finally:
                     globalsDict['__file__'] = prevFile
         fields.app.registerStartupCallback(loadScripts)
