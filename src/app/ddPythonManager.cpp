@@ -8,6 +8,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QShortcut>
+#include <QLibrary>
 
 //-----------------------------------------------------------------------------
 class ddPythonManager::ddInternal
@@ -120,6 +121,28 @@ ctkPythonConsole* ddPythonManager::consoleWidget() const
 void ddPythonManager::showConsole()
 {
   this->Internal->Console->show();
+}
+
+//-----------------------------------------------------------------------------
+void ddPythonManager::loadPlugin(const QString& filename, const QString& functionName)
+{
+  QLibrary myLib(filename);
+  if (!myLib.load())
+  {
+    printf("error loading library: %s\n", qPrintable(myLib.errorString()));
+    return;
+  }
+
+  typedef void (*initFunction)();
+  initFunction func = (initFunction) myLib.resolve(functionName.toLocal8Bit().data());
+  if (func)
+  {
+    func();
+  }
+  else
+  {
+    printf("could not resolve init function: %s\n", qPrintable(functionName));
+  }
 }
 
 //-----------------------------------------------------------------------------

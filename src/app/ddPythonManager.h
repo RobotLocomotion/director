@@ -29,6 +29,7 @@ public slots:
   void showConsole();
   void onExecuteFile(const QString& filename);
   void handleCommandLineArgs();
+  void loadPlugin(const QString& filename, const QString& functionName);
 
 protected:
 
