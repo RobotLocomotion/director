@@ -7,13 +7,20 @@
 # LIBBOT_INCLUDE_DIRS
 # LIBBOT_LIBRARIES
 
+find_package(GTK2 REQUIRED gtk)
+
+find_package(libbot QUIET)
+set(LIBBOT_FOUND ${libbot_FOUND})
+if(libbot_FOUND)
+  set(LIBBOT_INCLUDE_DIRS ${GTK2_GLIB_INCLUDE_DIR} ${GTK2_GLIBCONFIG_INCLUDE_DIR})
+  set(LIBBOT_LIBRARIES libbot::bot2-core libbot::bot2-frames libbot::bot2-param-client libbot::bot2-lcmgl-client)
+  return()
+endif()
 
 if(LIBBOT_ROOT)
   set(_include_dir_hint "${LIBBOT_ROOT}/include/bot_core")
   set(_lib_dir_hint "${LIBBOT_ROOT}/lib")
 endif()
-
-find_package(GTK2 REQUIRED gtk)
 
 find_path(LIBBOT_INCLUDE_DIR bot_core/bot_core.h HINTS ${_include_dir_hint} DOC "Path to the include directory containing bot_core")
 find_library(LIBBOT_CORE_LIBRARY bot2-core HINTS ${_lib_dir_hint} DOC "The bot-core library")
