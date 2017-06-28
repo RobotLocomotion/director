@@ -3,6 +3,7 @@
 
 #include "ddViewBase.h"
 #include "ddAppConfigure.h"
+#include "ddQVTKOpenGLWidgetConfigure.h"
 
 
 class vtkCamera;
@@ -10,12 +11,6 @@ class vtkOrientationMarkerWidget;
 class vtkRenderer;
 class vtkRenderWindow;
 class vtkLightKit;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-  class QVTKOpenGLWidget;
-#else
-  class QVTKWidget;
-  using QVTKOpenGLWidget = QVTKWidget;
-#endif
 
 class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
 {

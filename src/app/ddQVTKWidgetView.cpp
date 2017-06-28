@@ -29,12 +29,6 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-  #include <QVTKOpenGLWidget.h>
-#else
-  #include <QVTKWidget.h>
-#endif
-
 //-----------------------------------------------------------------------------
 class vtkCustomRubberBandStyle : public vtkInteractorStyleRubberBand3D
 {
