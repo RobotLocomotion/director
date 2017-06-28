@@ -1,6 +1,7 @@
 #include <QApplication>
 #include "ddMainWindow.h"
 #include "ddPythonManager.h"
+#include "QVTKOpenGLInit.h"
 
 #define USE_TDX 0
 #if USE_TDX
@@ -9,6 +10,7 @@
 
 int main(int argc, char **argv)
 {
+  QVTKOpenGLInit init;
 #if USE_TDX
   QVTKApplication app(argc, argv);
 #else

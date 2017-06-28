@@ -37,7 +37,8 @@ set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 # Configure whether to use the QVTKWidget or the QVTKOpenGLWidget
 set(USE_QVTKWIDGET TRUE)
 if((${Qt5Core_VERSION} VERSION_GREATER "5.4.0") AND
-    (${VTK_VERSION} VERSION_GREATER "7.1.0"))
+   (NOT ${VTK_VERSION} VERSION_LESS "8.0.0") AND
+   (${VTK_RENDERING_BACKEND} STREQUAL "OpenGL2"))
   set(USE_QVTKWIDGET FALSE)
 endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ddQVTKOpenGLWidgetConfigure.h.in
@@ -94,8 +95,9 @@ set(srcs
   ${ui_srcs}
   ${resource_srcs}
 
-  ddLumberSelection.cpp
+  QVTKOpenGLInit.cpp
   ddGLWidgetView.cpp
+  ddLumberSelection.cpp
   ddMacrosManager.cpp
   ddMainWindow.cpp
   ddObjectTree.cpp
