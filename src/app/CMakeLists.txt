@@ -34,8 +34,29 @@ include_directories(${PYTHON_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
+# Configure whether to use the QVTKWidget or the QVTKOpenGLWidget
+set(USE_QVTKWIDGET TRUE)
+if((${Qt5Core_VERSION} VERSION_GREATER "5.4.0") AND
+   (NOT ${VTK_VERSION} VERSION_LESS "8.0.0") AND
+   (${VTK_RENDERING_BACKEND} STREQUAL "OpenGL2"))
+  set(USE_QVTKWIDGET FALSE)
+endif()
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ddQVTKOpenGLWidgetConfigure.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/ddQVTKOpenGLWidgetConfigure.h)
+
+if(USE_QVTKWIDGET)
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/wrapped_methods_qvtk.txt
+    "QVTKWidget* ddQVTKWidgetView::vtkWidget() const;"
+    )
+else()
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/wrapped_methods_qvtk.txt
+    "QVTKOpenGLWidget* ddQVTKWidgetView::vtkWidget() const;"
+    )
+endif()
+
 set(wrap_files
   wrapped_methods.txt
+  ${CMAKE_CURRENT_BINARY_DIR}/wrapped_methods_qvtk.txt
   )
 
 qt_wrap_cpp(moc_srcs
@@ -74,8 +95,9 @@ set(srcs
   ${ui_srcs}
   ${resource_srcs}
 
-  ddLumberSelection.cpp
+  QVTKOpenGLInit.cpp
   ddGLWidgetView.cpp
+  ddLumberSelection.cpp
   ddMacrosManager.cpp
   ddMainWindow.cpp
   ddObjectTree.cpp

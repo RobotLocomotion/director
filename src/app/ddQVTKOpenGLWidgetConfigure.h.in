@@ -1,0 +1,22 @@
+#ifndef __ddQVTKOpenGLWidgetConfigure_h
+#define __ddQVTKOpenGLWidgetConfigure_h
+
+/*
+ * Including QVTKOpenGLWidgetConfigure.h before using QVTKOpenGLWidget
+ * would automatically decide whether to use the old QVTKWidget or the
+ * QVTKOpenGLWidget based on the Qt and VTK versions used.
+ * It typedefs QVTKWidget as QVTKOpenGLWidget if the
+ * former is used so that the application code can keep using
+ * QVTKOpenGLWidget.
+ */
+
+#cmakedefine01 USE_QVTKWIDGET
+
+#if USE_QVTKWIDGET
+  #include <QVTKWidget.h>
+  using QVTKOpenGLWidget = QVTKWidget;
+#else
+  #include <QVTKOpenGLWidget.h>
+#endif
+
+#endif

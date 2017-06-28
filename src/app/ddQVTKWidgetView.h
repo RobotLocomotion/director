@@ -3,6 +3,7 @@
 
 #include "ddViewBase.h"
 #include "ddAppConfigure.h"
+#include "ddQVTKOpenGLWidgetConfigure.h"
 
 
 class vtkCamera;
@@ -10,7 +11,6 @@ class vtkOrientationMarkerWidget;
 class vtkRenderer;
 class vtkRenderWindow;
 class vtkLightKit;
-class QVTKWidget;
 
 class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
 {
@@ -29,7 +29,7 @@ public:
 
   QList<double> lastTDxMotion() const;
 
-  QVTKWidget* vtkWidget() const;
+  QVTKOpenGLWidget* vtkWidget() const;
   vtkOrientationMarkerWidget* orientationMarkerWidget() const;
 
   void installImageInteractor();

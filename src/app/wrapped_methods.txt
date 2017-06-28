@@ -9,7 +9,6 @@ vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
 vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const;
 vtkLightKit* ddQVTKWidgetView::lightKit() const;
-QVTKWidget* ddQVTKWidgetView::vtkWidget() const;
 vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const;
 QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 void ddQVTKWidgetView::installImageInteractor();

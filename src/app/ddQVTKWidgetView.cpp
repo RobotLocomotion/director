@@ -1,33 +1,33 @@
 #include "ddQVTKWidgetView.h"
 #include "ddFPSCounter.h"
 
-#include "vtkTDxInteractorStyleCallback.h"
 #include "vtkSimpleActorInteractor.h"
+#include "vtkTDxInteractorStyleCallback.h"
 
-#include <vtkBoundingBox.h>
-#include <vtkSmartPointer.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkInteractorStyle.h>
-#include <vtkLight.h>
-#include <vtkLightKit.h>
-#include <vtkLightCollection.h>
-#include <vtkObjectFactory.h>
 #include <vtkActor.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkConeSource.h>
-#include <vtkOrientationMarkerWidget.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkInteractorStyleRubberBand3D.h>
-#include <vtkRenderWindowInteractor.h>
 #include <vtkAxesActor.h>
-#include <vtkEventQtSlotConnect.h>
+#include <vtkBoundingBox.h>
 #include <vtkCaptionActor2D.h>
+#include <vtkConeSource.h>
+#include <vtkEventQtSlotConnect.h>
+#include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkInteractorStyle.h>
+#include <vtkInteractorStyleRubberBand3D.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkLight.h>
+#include <vtkLightCollection.h>
+#include <vtkLightKit.h>
+#include <vtkObjectFactory.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkRenderer.h>
+#include <vtkSmartPointer.h>
 #include <vtkTextProperty.h>
 
-#include <QVTKWidget.h>
-#include <QVBoxLayout>
 #include <QTimer>
+#include <QVBoxLayout>
 
 //-----------------------------------------------------------------------------
 class vtkCustomRubberBandStyle : public vtkInteractorStyleRubberBand3D
@@ -43,7 +43,7 @@ public:
       {
       this->Interaction = ZOOMING;
       this->FindPokedRenderer(
-        this->Interactor->GetEventPosition()[0], 
+        this->Interactor->GetEventPosition()[0],
         this->Interactor->GetEventPosition()[1]);
       this->InvokeEvent(vtkCommand::StartInteractionEvent);
       }
@@ -69,7 +69,7 @@ public:
     this->RenderTimer.setInterval(1000/timerFramesPerSeconds);
   }
 
-  QVTKWidget* VTKWidget;
+  QVTKOpenGLWidget* VTKWidget;
 
   vtkSmartPointer<vtkRenderer> Renderer;
   vtkSmartPointer<vtkRenderer> RendererBase;
@@ -98,25 +98,32 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
 
   QVBoxLayout* layout = new QVBoxLayout(this);
   layout->setMargin(0);
-  this->Internal->VTKWidget = new QVTKWidget;
+  this->Internal->VTKWidget = new QVTKOpenGLWidget;
   layout->addWidget(this->Internal->VTKWidget);
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  this->Internal->RenderWindow =
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+#else
   this->Internal->VTKWidget->SetUseTDx(true);
-
   this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
+#endif
+  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
   this->Internal->RenderWindow->SetMultiSamples(8);
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
   this->Internal->RenderWindow->StereoRenderOff();
   this->Internal->RenderWindow->StereoUpdate();
-  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 
   this->Internal->LightKit = vtkSmartPointer<vtkLightKit>::New();
   this->Internal->LightKit->SetKeyLightWarmth(0.5);
   this->Internal->LightKit->SetFillLightWarmth(0.5);
 
-  this->Internal->TDxInteractor = vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
-  vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor()->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
+  this->Internal->TDxInteractor =
+    vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
+  vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor(
+    )->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
 
   //this->Internal->RenderWindow->SetNumberOfLayers(2);
 
@@ -192,7 +199,7 @@ vtkLightKit* ddQVTKWidgetView::lightKit() const
 }
 
 //-----------------------------------------------------------------------------
-QVTKWidget* ddQVTKWidgetView::vtkWidget() const
+QVTKOpenGLWidget* ddQVTKWidgetView::vtkWidget() const
 {
   return this->Internal->VTKWidget;
 }
