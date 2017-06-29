@@ -36,6 +36,10 @@ set(default_cmake_args
   "-DBUILD_SHARED_LIBS:BOOL=ON"
   "-DBUILD_DOCUMENTATION:BOOL=OFF"
   "-DENABLE_TESTING:BOOL=OFF"
+  "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}"
+  "-DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}"
+  "-DCMAKE_CXX_COMPILER:FILEPATH=${CMAKE_CXX_COMPILER}"
+  "-DCMAKE_C_COMPILER:FILEPATH=${CMAKE_C_COMPILER}"
   )
 
 # Find required external dependencies
@@ -433,6 +437,11 @@ if(USE_PCL AND NOT USE_SYSTEM_PCL)
     -DFLANN_LIBRARY_DEBUG:PATH=${install_prefix}/${flann_lib_dir}/libflann_cpp-gd.${so_extension}
     )
 
+  # Requires build-in suffixes. Otherwise, will get the following error:
+  # error: unable to find numeric literal operator ‘operator""Q’
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    set(gxx_extra_flags -fext-numeric-literals)
+  endif()
 
   ExternalProject_Add(
     pcl
@@ -451,7 +460,7 @@ if(USE_PCL AND NOT USE_SYSTEM_PCL)
       -DBUILD_tools:BOOL=OFF
       -DBUILD_apps:BOOL=OFF
       -DBUILD_visualization:BOOL=OFF
-      -DCMAKE_CXX_FLAGS:STRING=-std=c++11
+      "-DCMAKE_CXX_FLAGS:STRING=-std=c++11 ${gxx_extra_flags}"
 
     DEPENDS
       ${vtk_depends}
@@ -471,7 +480,7 @@ if(USE_PCL)
 
 ExternalProject_Add(PointCloudLibraryPlugin
   GIT_REPOSITORY https://github.com/patmarion/PointCloudLibraryPlugin.git
-  GIT_TAG cb119b0
+  GIT_TAG efd8eaf
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${eigen_args}
@@ -494,7 +503,7 @@ if(USE_KINECT)
 
   ExternalProject_Add(openni2-camera-lcm
     GIT_REPOSITORY https://github.com/openhumanoids/openni2-camera-lcm
-    GIT_TAG 6b1fe91
+    GIT_TAG 576f0fa
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       -DINSTALL_BOT_SPY:BOOL=OFF
@@ -505,7 +514,7 @@ if(USE_KINECT)
 
   ExternalProject_Add(cv-utils
     GIT_REPOSITORY https://github.com/patmarion/cv-utils
-    GIT_TAG 1d1465d
+    GIT_TAG 6671b92
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
@@ -540,7 +549,7 @@ if(USE_APRILTAGS)
 
   ExternalProject_Add(apriltags_driver
     GIT_REPOSITORY https://github.com/patmarion/apriltags_driver.git
-    GIT_TAG 3d84ae4
+    GIT_TAG ad7db82
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
