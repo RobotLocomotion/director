@@ -14,22 +14,25 @@ ARG TRAVIS_BUILD_DIR
 ARG encrypted_444f3458e047_key
 ARG encrypted_444f3458e047_iv
 ARG encrypted_copyfiles_host
+ARG encrypted_bintray_api_key
 
-ENV DISPLAY :99.0
-ENV USE_LCM ${USE_LCM}
-ENV USE_LCMGL ${USE_LCMGL}
-ENV USE_LIBBOT ${USE_LIBBOT}
-ENV MAKE_DOCS ${MAKE_DOCS}
-ENV MAKE_PACKAGE ${MAKE_PACKAGE}
-ENV TRAVIS_OS_NAME ${TRAVIS_OS_NAME}
-ENV TRAVIS_BRANCH ${TRAVIS_BRANCH}
-ENV TRAVIS_PULL_REQUEST ${TRAVIS_PULL_REQUEST}
-ENV TRAVIS_PULL_REQUEST_BRANCH ${TRAVIS_PULL_REQUEST_BRANCH}
-ENV TRAVIS_PULL_REQUEST_SHA ${TRAVIS_PULL_REQUEST_SHA}
-ENV TRAVIS_BUILD_DIR ${TRAVIS_BUILD_DIR}
-ENV encrypted_444f3458e047_key ${encrypted_444f3458e047_key}
-ENV encrypted_444f3458e047_iv ${encrypted_444f3458e047_iv}
-ENV encrypted_copyfiles_host ${encrypted_copyfiles_host}
+ENV \
+    DISPLAY=":99.0" \
+    USE_LCM="${USE_LCM}" \
+    USE_LCMGL="${USE_LCMGL}" \
+    USE_LIBBOT="${USE_LIBBOT}" \
+    MAKE_DOCS="${MAKE_DOCS}" \
+    MAKE_PACKAGE="${MAKE_PACKAGE}" \
+    TRAVIS_OS_NAME="${TRAVIS_OS_NAME}" \
+    TRAVIS_BRANCH="${TRAVIS_BRANCH}" \
+    TRAVIS_PULL_REQUEST="${TRAVIS_PULL_REQUEST}" \
+    TRAVIS_PULL_REQUEST_BRANCH="${TRAVIS_PULL_REQUEST_BRANCH}" \
+    TRAVIS_PULL_REQUEST_SHA="${TRAVIS_PULL_REQUEST_SHA}" \
+    TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR}" \
+    encrypted_444f3458e047_key="${encrypted_444f3458e047_key}" \
+    encrypted_444f3458e047_iv="${encrypted_444f3458e047_iv}" \
+    encrypted_copyfiles_host="${encrypted_copyfiles_host}" \
+    encrypted_bintray_api_key="${encrypted_bintray_api_key}"
 
 
 COPY . ${TRAVIS_BUILD_DIR}
