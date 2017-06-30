@@ -28,4 +28,5 @@ docker build -f $root_dir/distro/travis/ubuntu${UBUNTU_TEST_VERSION}.dockerfile 
   --build-arg encrypted_444f3458e047_key="$encrypted_444f3458e047_key" \
   --build-arg encrypted_444f3458e047_iv="$encrypted_444f3458e047_iv" \
   --build-arg encrypted_copyfiles_host="$encrypted_copyfiles_host" \
+  --build-arg encrypted_bintray_api_key="$encrypted_bintray_api_key" \
   $root_dir
