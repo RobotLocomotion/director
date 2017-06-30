@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 scriptDir=$(cd $(dirname $0) && pwd)
 
 if [ -z "$encrypted_444f3458e047_key" ]; then

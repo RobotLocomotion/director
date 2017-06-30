@@ -22,21 +22,21 @@ make_docs()
   tar -czf doxygen_docs.tar.gz doxygen_docs
   tar -czf python_coverage.tar.gz python_coverage
 
-  $scriptDir/copy_files.sh $TRAVIS_BUILD_DIR/docs/*.tar.gz
+  $scriptDir/bintray_upload.sh $TRAVIS_BUILD_DIR/docs/*.tar.gz
 }
 
 make_linux_package()
 {
   cd $TRAVIS_BUILD_DIR/distro/package
   ./make_linux_package.sh 2>&1 > log.txt || cat log.txt
-  $scriptDir/copy_files.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
+  $scriptDir/bintray_upload.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
 
 make_mac_package()
 {
   cd $TRAVIS_BUILD_DIR/distro/package
   ./make_mac_package.sh 2>&1 > log.txt || cat log.txt
-  $scriptDir/copy_files.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
+  $scriptDir/bintray_upload.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
 
 make_package()

@@ -7,6 +7,7 @@ install_ubuntu_deps_common()
   apt-get install -y \
     build-essential \
     cmake \
+    curl \
     doxygen \
     freeglut3-dev \
     git \
