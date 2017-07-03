@@ -7,11 +7,8 @@ install_ubuntu_deps_common()
   apt-get install -y \
     build-essential \
     cmake \
-    curl \
-    doxygen \
     freeglut3-dev \
     git \
-    graphviz \
     libglib2.0-dev \
     libqt4-dev \
     lsb-release \
@@ -19,13 +16,24 @@ install_ubuntu_deps_common()
     python-dev \
     python-lxml \
     python-numpy \
-    python-pip \
-    python-sphinx \
     python-yaml \
     wget \
     xvfb
 
-  pip install sphinx-rtd-theme
+  if [ "$MAKE_DOCS" = "ON" ]; then
+    apt-get install -y \
+      doxygen \
+      graphviz \
+      python-pip \
+      python-sphinx
+    pip install sphinx-rtd-theme
+  fi
+
+  if [ "$MAKE_PACKAGE" = "ON" ]; then
+    apt-get install -y \
+      curl
+  fi
+
 }
 
 install_ubuntu_deps()
@@ -38,6 +46,9 @@ install_ubuntu_deps()
   else
    :
   fi
+
+  # cleanup to make the docker image smaller
+  rm -rf /var/lib/apt/lists/*
 }
 
 install_osx_deps()
