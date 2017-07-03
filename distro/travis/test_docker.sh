@@ -9,16 +9,21 @@ MAKE_DOCS=${MAKE_DOCS:-OFF}
 USE_LCM=${USE_LCM:-OFF}
 USE_LIBBOT=${USE_LIBBOT:-OFF}
 USE_LCMGL=${USE_LCMGL:-OFF}
+TRAVIS_BRANCH=${TRAVIS_BRANCH:-$(cd "$root_dir" && git rev-parse --abbrev-ref HEAD)}
 TRAVIS_OS_NAME=${TRAVIS_OS_NAME:-linux}
 TRAVIS_BUILD_DIR=${TRAVIS_BUILD_DIR:-/root}
 TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
+DOCKER_DEPLOY=${DOCKER_DEPLOY:-false}
+DOCKER_TAG_NAME=${DOCKER_TAG_NAME:-director/test}
 
 docker build -f $root_dir/distro/travis/ubuntu${UBUNTU_TEST_VERSION}.dockerfile \
+  -t ${DOCKER_TAG_NAME} \
   --build-arg MAKE_PACKAGE=${MAKE_PACKAGE} \
   --build-arg MAKE_DOCS=${MAKE_DOCS} \
   --build-arg USE_LCM=${USE_LCM} \
   --build-arg USE_LIBBOT=${USE_LIBBOT} \
   --build-arg USE_LCMGL=${USE_LCMGL} \
+  --build-arg DOCKER_DEPLOY=${DOCKER_DEPLOY} \
   --build-arg TRAVIS_OS_NAME="$TRAVIS_OS_NAME" \
   --build-arg TRAVIS_BRANCH="$TRAVIS_BRANCH" \
   --build-arg TRAVIS_BUILD_DIR="$TRAVIS_BUILD_DIR" \

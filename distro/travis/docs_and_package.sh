@@ -48,9 +48,21 @@ make_package()
   fi
 }
 
-run_master_commands()
+run_docker_deploy()
 {
+  cd $TRAVIS_BUILD_DIR/distro/package
+  tar_name=$(ls director*.tar.gz)
+  package_name=$(echo ${tar_name} | sed s/\.tar\.gz//)
+  cp ${tar_name} /tmp
+  cd $TRAVIS_BUILD_DIR
+  rm -rf *
+  tar -zxf /tmp/${tar_name}
+  rm /tmp/${tar_name}
+  ln -s $PWD/${package_name} ./install
+}
 
+run_branch_commands()
+{
   if [ "$MAKE_DOCS" = "ON" ]; then
     make_docs
   fi
@@ -59,9 +71,12 @@ run_master_commands()
     make_package
   fi
 
+  if [ "$DOCKER_DEPLOY" = "true" ]; then
+    run_docker_deploy
+  fi
 }
 
-# build docs and packages only on master, not for pull requests
+# these commands run for branches but not for pull requests
 if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-  run_master_commands
+  run_branch_commands
 fi
