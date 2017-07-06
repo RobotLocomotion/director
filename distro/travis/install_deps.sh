@@ -53,8 +53,6 @@ install_ubuntu_deps()
 
 install_osx_deps()
 {
-  brew tap homebrew/python
-  brew tap homebrew/science
   brew tap patmarion/director
   brew tap-pin patmarion/director
 
