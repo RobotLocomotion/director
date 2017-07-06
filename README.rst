@@ -74,7 +74,6 @@ The dependencies can be installed on Mac using `Homebrew <http://brew.sh/>`_:
 
 ::
 
-    brew tap homebrew/python
     brew tap patmarion/director && brew tap-pin patmarion/director
     brew install cmake python numpy qt vtk7 eigen
 
