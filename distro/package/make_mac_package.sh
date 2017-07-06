@@ -48,10 +48,10 @@ cd $scriptDir
 mkdir $packageName
 mv $bundleDir $packageName/
 cd $packageName
-ln -s $appName.app/Contents/MacOs/bin
-ln -s $appName.app/Contents/MacOs/lib
-ln -s $appName.app/Contents/MacOs/include
-ln -s $appName.app/Contents/MacOs/share
+ln -s $appName.app/Contents/MacOS/bin
+ln -s $appName.app/Contents/MacOS/lib
+ln -s $appName.app/Contents/MacOS/include
+ln -s $appName.app/Contents/MacOS/share
 
 # remove headers
 #find $appName.app -name \*.h | xargs rm
