@@ -3,6 +3,9 @@ set -xe
 
 scriptDir=$(cd $(dirname $0) && pwd)
 
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+  export PATH=/usr/local/opt/python/libexec/bin:$PATH
+fi
 
 $scriptDir/install_deps.sh
 
