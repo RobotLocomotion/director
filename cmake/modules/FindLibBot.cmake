@@ -9,7 +9,7 @@
 
 find_package(GTK2 REQUIRED gtk)
 
-find_package(libbot QUIET)
+find_package(libbot QUIET CONFIG)
 set(LIBBOT_FOUND ${libbot_FOUND})
 if(libbot_FOUND)
   set(LIBBOT_INCLUDE_DIRS ${GTK2_GLIB_INCLUDE_DIR} ${GTK2_GLIBCONFIG_INCLUDE_DIR})

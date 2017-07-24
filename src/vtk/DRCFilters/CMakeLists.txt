@@ -79,7 +79,7 @@ if (USE_DRC)
 
   # requires libbot, lcm, eigen, drc lcmtypes
 
-  find_package(LibBot REQUIRED)
+  find_package(LibBot REQUIRED MODULE)
   include_directories(${LIBBOT_INCLUDE_DIRS})
 
   find_package(Eigen REQUIRED)
@@ -131,7 +131,7 @@ endif()
 
 if(USE_LCMGL)
 
-  find_package(LibBot REQUIRED)
+  find_package(LibBot REQUIRED MODULE)
   include_directories(${LIBBOT_INCLUDE_DIRS})
   list(APPEND sources vtkLCMGLProp.cxx)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})

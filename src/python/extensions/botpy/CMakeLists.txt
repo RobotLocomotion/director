@@ -1,7 +1,7 @@
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
-find_package(LibBot REQUIRED)
+find_package(LibBot REQUIRED MODULE)
 include_directories(${LIBBOT_INCLUDE_DIRS})
 
 add_library(botpy SHARED botpy.c)
