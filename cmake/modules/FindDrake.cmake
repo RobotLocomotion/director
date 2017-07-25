@@ -1,4 +1,4 @@
-find_package(drake QUIET)
+find_package(drake QUIET CONFIG)
 if(drake_FOUND)
   set(DRAKE_LIBRARIES drake::drake)
   return()

@@ -134,7 +134,7 @@ set(pkg_deps)
 
 if (USE_DRAKE)
 
-  find_package(Drake REQUIRED)
+  find_package(Drake REQUIRED MODULE)
   find_package(Eigen REQUIRED)
 
   include_directories(
@@ -203,7 +203,7 @@ endif()
 
 if (USE_DRC)
 
-  find_package(LibBot REQUIRED)
+  find_package(LibBot REQUIRED MODULE)
   include_directories(${LIBBOT_INCLUDE_DIRS})
 
   find_package(PCL REQUIRED)
