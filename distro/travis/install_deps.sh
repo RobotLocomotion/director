@@ -57,6 +57,10 @@ install_osx_deps()
   brew tap-pin patmarion/director
 
   brew update > brew_update_log.txt
+
+  # checkout a fixed version of homebrew/core formula
+  export HOMEBREW_NO_AUTO_UPDATE=1
+  cd $(brew --repository homebrew/core) && git reset --hard 97650f8940da3fbe259077b45d37d42cd7742a54
   #brew upgrade
 
   brew install qt vtk7
