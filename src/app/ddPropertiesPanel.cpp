@@ -4,7 +4,7 @@
 #include <QtTreePropertyBrowser>
 #include <QtGroupBoxPropertyBrowser>
 #include <QtVariantEditorFactory>
-
+#include <QDebug>
 
 #include <QVBoxLayout>
 
@@ -118,6 +118,11 @@ QtVariantProperty* ddPropertiesPanel::addProperty(const QString& name, const QVa
   }
 
   QtVariantProperty* property = this->Internal->Manager->addProperty(propertyType, name);
+  if (!property)
+  {
+    qWarning() << "Unsupported property type " << value.typeName() << " given for property " << name;
+    property = this->Internal->Manager->addProperty(QVariant::String, name);
+  }
   property->setValue(value);
 
   this->Internal->Browser->addProperty(property);
@@ -174,6 +179,11 @@ QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString& name, const 
   }
 
   QtVariantProperty* property = this->Internal->Manager->addProperty(propertyType, subName);
+  if (!property)
+  {
+    qWarning() << "Unsupported property type " << value.typeName() << " given for property " << name;
+    property = this->Internal->Manager->addProperty(QVariant::String, name);
+  }
   property->setValue(value);
 
   parent->addSubProperty(property);
