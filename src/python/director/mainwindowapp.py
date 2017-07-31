@@ -340,6 +340,7 @@ class MainWindowPanelFactory(object):
             'CameraControlPanel' : ['MainWindow'],
             'MeasurementPanel' : ['MainWindow'],
             'OutputConsole' : ['MainWindow'],
+            'UndoRedo' : ['MainWindow'],
             'DrakeVisualizer' : ['MainWindow'],
             'TreeViewer' : ['MainWindow'],
             'LCMGLRenderer' : ['MainWindow']}
@@ -415,6 +416,30 @@ class MainWindowPanelFactory(object):
           cameraControlPanel=cameraControlPanel,
           cameraControlDock=cameraControlDock
           )
+
+    def initUndoRedo(self, fields):
+
+      undoStack = QtGui.QUndoStack()
+      undoView = QtGui.QUndoView(undoStack)
+      undoView.setEmptyLabel('Start')
+      undoView.setWindowTitle('History')
+      undoDock = fields.app.addWidgetToDock(undoView, QtCore.Qt.LeftDockWidgetArea, visible=False)
+
+      undoAction = undoStack.createUndoAction(undoStack)
+      redoAction = undoStack.createRedoAction(undoStack)
+      undoAction.setShortcut(QtGui.QKeySequence('Ctrl+Z'))
+      redoAction.setShortcut(QtGui.QKeySequence('Ctrl+Shift+Z'))
+
+      fields.app.editMenu.addAction(undoAction)
+      fields.app.editMenu.addAction(redoAction)
+
+      return FieldContainer(
+        undoDock=undoDock,
+        undoStack=undoStack,
+        undoView=undoView,
+        undoAction=undoAction,
+        redoAction=redoAction
+        )
 
     def initDrakeVisualizer(self, fields):
 

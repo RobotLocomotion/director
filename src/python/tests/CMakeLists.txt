@@ -19,6 +19,7 @@ set(python_tests_core
   testPythonConsole.py
   testTaskQueue.py
   testTransformations.py
+  testUndoRedo.py
 )
 
 set(python_tests_lcm

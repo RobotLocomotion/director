@@ -135,6 +135,7 @@ set(python_files
   director/trackers.py
   director/treeviewer.py
   director/uipanel.py
+  director/undoredo.py
   director/utime.py
   director/uuidutil.py
   director/valvedemo.py
