@@ -18,6 +18,8 @@ if(NOT USE_SYSTEM_VTK AND NOT APPLE)
   option(USE_PRECOMPILED_VTK "Download and use precompiled VTK.  If off, VTK will be compiled from source." ON)
 endif()
 
+option(BUILD_SHARED_LIBS "Build director and externals with shared libraries." ON)
+
 if(USE_DRAKE)
   set(DRAKE_SOURCE_DIR CACHE PATH "")
   set(DRAKE_SUPERBUILD_PREFIX_PATH "")
@@ -33,7 +35,7 @@ set(default_cmake_args
   "-DCMAKE_PREFIX_PATH:PATH=${install_prefix};${DRAKE_SUPERBUILD_PREFIX_PATH};${CMAKE_PREFIX_PATH}"
   "-DCMAKE_INSTALL_PREFIX:PATH=${install_prefix}"
   "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
-  "-DBUILD_SHARED_LIBS:BOOL=ON"
+  "-DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}"
   "-DBUILD_DOCUMENTATION:BOOL=OFF"
   "-DENABLE_TESTING:BOOL=OFF"
   "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}"
@@ -154,7 +156,7 @@ if(USE_LIBBOT AND NOT USE_SYSTEM_LIBBOT)
 
   ExternalProject_Add(libbot
     GIT_REPOSITORY https://github.com/RobotLocomotion/libbot2.git
-    GIT_TAG bc73f60
+    GIT_TAG 4835477
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       -DWITH_BOT_VIS:BOOL=OFF

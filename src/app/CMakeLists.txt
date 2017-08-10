@@ -191,6 +191,10 @@ if (USE_LCM)
     ddLCMThread.cpp
   )
 
+  if(NOT BUILD_SHARED_LIBS AND LCM_STATIC_LIBRARIES)
+    set(LCM_LIBRARIES ${LCM_STATIC_LIBRARIES})
+  endif()
+
   list(APPEND deps
     ${LCM_LIBRARIES}
   )
@@ -242,7 +246,7 @@ endif()
 
 
 
-add_library(ddApp ${srcs})
+add_library(ddApp SHARED ${srcs})
 target_link_libraries(ddApp ${deps})
 
 if(pkg_deps)
