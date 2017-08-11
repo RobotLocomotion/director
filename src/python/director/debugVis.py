@@ -131,6 +131,17 @@ class DebugData(object):
         cube.Update()
         self.addPolyData(cube.GetOutput(), color)
 
+    def addPlane(self, origin, normal, width, height, resolution=1, color=[1,1,1]):
+        plane = vtk.vtkPlaneSource()
+        plane.SetOrigin(-width/2.0, -height/2.0, 0.0)
+        plane.SetPoint1(width/2.0, -height/2.0, 0.0)
+        plane.SetPoint2(-width/2.0, height/2.0, 0.0)
+        plane.SetCenter(origin)
+        plane.SetNormal(normal)
+        plane.SetResolution(resolution, resolution)
+        plane.Update()
+        self.addPolyData(plane.GetOutput(), color)
+
     def addCylinder(self, center, axis, length, radius, color=[1,1,1]):
         axis = np.asarray(axis) / np.linalg.norm(axis)
         center = np.array(center)
