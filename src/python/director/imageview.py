@@ -1,6 +1,8 @@
 from director import vtkAll as vtk
 import PythonQt
 from PythonQt import QtGui, QtCore
+from director import pointpicker
+
 
 class ImageView(object):
 
@@ -13,7 +15,7 @@ class ImageView(object):
         self.view.renderer().AddActor(self.imageActor)
         self.view.orientationMarkerWidget().Off()
         self.setBackgroundColor([0,0,0])
-        self.view.installImageInteractor()
+        self.initInteractor()
         self.installEventFilter()
         self.resetCamera()
 
@@ -25,6 +27,22 @@ class ImageView(object):
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.Resize)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+
+    def initInteractor(self):
+        self.view.installImageInteractor()
+        self.interactorStyle = self.view.renderWindow().GetInteractor().GetInteractorStyle()
+        self.interactorStyle.AddObserver('SelectionChangedEvent', self.onRubberBandPick)
+
+    def initPointPicker(self):
+        self.pointPicker = pointpicker.ImagePointPicker(self, callback=self.onPickedPoints)
+        self.pointPicker.start()
+
+    def onPickedPoints(self, *points):
+        self.pickedPoints = points
+
+    def onRubberBandPick(self, obj, event):
+        displayPoints = self.interactorStyle.GetStartPosition(), self.interactorStyle.GetEndPosition()
+        self.rubberBandPickPoints = [self.getImagePixel(p) for p in displayPoints]
 
     def setBackgroundColor(self, color):
         self.view.renderer().SetBackground(color)
