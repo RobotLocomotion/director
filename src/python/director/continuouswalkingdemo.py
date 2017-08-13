@@ -5,7 +5,10 @@ import operator
 import vtkAll as vtk
 import vtkNumpy
 import functools
-import ihmc
+try:
+    import ihmc
+except ImportError:
+    pass
 
 from director import lcmUtils
 from director import ioUtils
@@ -26,7 +29,10 @@ import director.tasks.robottasks as rt
 
 import drc as lcmdrc
 import bot_core
-import atlas
+try:
+    import atlas
+except ImportError:
+    pass
 
 from thirdparty import qhull_2d
 from thirdparty import min_bounding_rect

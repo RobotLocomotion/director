@@ -103,7 +103,10 @@ from director.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
 import bot_core as lcmbotcore
 import maps as lcmmaps
-import atlas
+try:
+    import atlas
+except ImportError:
+    pass
 
 from collections import OrderedDict
 import functools
