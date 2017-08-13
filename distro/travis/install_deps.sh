@@ -14,12 +14,12 @@ install_ubuntu_deps_common()
     libxext-dev \
     libxt-dev \
     lsb-release \
-    python-coverage \
-    python-dev \
-    python-lxml \
-    python-numpy \
-    python-scipy \
-    python-yaml \
+    python3-coverage \
+    python3-dev \
+    python3-lxml \
+    python3-numpy \
+    python3-scipy \
+    python3-yaml \
     wget \
     xvfb
 
@@ -27,16 +27,15 @@ install_ubuntu_deps_common()
     apt-get install -y \
       doxygen \
       graphviz \
-      python-pip \
-      python-sphinx
-    pip install sphinx_rtd_theme
+      python3-pip \
+      python3-sphinx
+    pip3 install sphinx-rtd-theme
   fi
 
   if [ "$MAKE_PACKAGE" = "ON" ]; then
     apt-get install -y \
       curl
   fi
-
 }
 
 install_ubuntu_deps()
@@ -67,12 +66,12 @@ install_osx_deps()
   # checkout a fixed version of homebrew/core formula from August 12th 2017
   cd $(brew --repository homebrew/core) && git fetch && git reset --hard 543d8e9b27b9bb25ce4491773684c30c8cb66dcc
 
-  brew install doxygen graphviz libyaml vtk7 || echo "error on brew install"
+  brew install qt vtk7python3
+  brew install doxygen graphviz libyaml
   brew install glib # for lcm
-  brew ls --versions python || brew install python
-  brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
-
-  pip install coverage lxml PyYAML Sphinx sphinx_rtd_theme
+  brew ls --versions python3 || brew install python3
+  #brew ls --versions numpy || brew install numpy --with-python3 || echo "error on brew install numpy"
+  pip3 install coverage lxml pyyaml Sphinx sphinx-rtd-theme numpy
 }
 
 
