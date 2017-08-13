@@ -7,6 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 # set project variables
 set(DD_INSTALL_BIN_DIR bin)
+set(DD_INSTALL_DOC_DIR share/doc/director)
 set(DD_INSTALL_LIB_DIR lib)
 set(DD_INSTALL_INCLUDE_DIR include/director)
 set(DD_INSTALL_PYTHON_DIR ${DD_INSTALL_LIB_DIR}/python2.7/dist-packages)
@@ -48,3 +49,5 @@ add_subdirectory(src)
 
 # documentation
 add_subdirectory(docs)
+
+install(FILES LICENSE.txt DESTINATION ${DD_INSTALL_DOC_DIR})
