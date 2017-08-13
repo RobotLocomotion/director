@@ -18,6 +18,10 @@ class TestCommand(UndoCommand):
 
 class MergeableTestCommand(UndoCommand):
 
+    deleteCounter = 0
+    def __del__(self):
+        MergeableTestCommand.deleteCounter += 1
+
     def id(self):
         return 1
 
@@ -38,17 +42,21 @@ class MergeableTestCommand(UndoCommand):
 
 app = mainwindowapp.construct()
 
-def test():
+def test(skipClearTest=False):
 
-    cmd = MergeableTestCommand()
-    cmd.push(app.undoStack)
+    MergeableTestCommand.deleteCounter = 0
+    MergeableTestCommand().push(app.undoStack)
+    MergeableTestCommand().push(app.undoStack)
 
-    cmd2 = MergeableTestCommand()
-    cmd2.push(app.undoStack)
+    # the two commands should merge and only one should be kept
+    assert app.undoStack.count() == 1
+    assert MergeableTestCommand.deleteCounter == 1
 
     app.undoStack.undo()
     app.undoStack.redo()
 
+    assert app.undoStack.count() == 1
+    assert MergeableTestCommand.deleteCounter == 1
 
     app.undoStack.beginMacro('my command macro')
     TestCommand().push(app.undoStack)
@@ -56,6 +64,22 @@ def test():
     TestCommand().push(app.undoStack)
     app.undoStack.endMacro()
 
-test()
+    # the macro should result in the stack growing by 1
+    assert app.undoStack.count() == 2
+
+    app.undoStack.undo()
+    app.undoStack.redo()
+
+    if skipClearTest:
+        return
+
+    # after clearing, the stack should be empty and
+    # all commands should be deleted
+    app.undoStack.clear()
+    assert app.undoStack.count() == 0
+    assert MergeableTestCommand.deleteCounter == 2
+
+
+test(skipClearTest=True)
 
 app.app.start()

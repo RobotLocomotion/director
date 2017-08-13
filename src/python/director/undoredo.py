@@ -11,6 +11,7 @@ class UndoCommand(object):
 
     def push(self, undoStack):
         self._command = PythonQt.dd.ddPythonUndoCommand(self.text(), self.undo, self.redo, self, self.merge, self.id())
+        self._command.setParent(undoStack)
         self._command.push(undoStack)
 
     def undo(self):
