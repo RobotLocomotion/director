@@ -1225,7 +1225,7 @@ class JointTeleopPanel(object):
 
     def computeBaseJointOffsets(self):
 
-        if self.panel.ikPlanner.robotNoFeet:
+        if True or self.panel.ikPlanner.robotNoFeet:
             baseReferenceFrame = vtk.vtkTransform()
         else:
             from director import footstepsdriver
