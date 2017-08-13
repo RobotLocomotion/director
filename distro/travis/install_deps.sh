@@ -58,9 +58,9 @@ install_osx_deps()
 
   brew update > brew_update_log.txt
 
-  # checkout a fixed version of homebrew/core formula
+  # checkout a fixed version of homebrew/core formula from August 12th 2017
   export HOMEBREW_NO_AUTO_UPDATE=1
-  cd $(brew --repository homebrew/core) && git reset --hard 97650f8940da3fbe259077b45d37d42cd7742a54
+  cd $(brew --repository homebrew/core) && git reset --hard 543d8e9b27b9bb25ce4491773684c30c8cb66dcc
   #brew upgrade
 
   brew install qt vtk7
