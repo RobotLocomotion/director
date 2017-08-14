@@ -216,7 +216,7 @@ class Geometry(object):
             polyDataList = ioUtils.readMultiBlock(filename)
         else:
             if filename.endswith('obj'):
-                polyDataList, actors = ioUtils.readObjMtl(geom.string_data)
+                polyDataList, actors = ioUtils.readObjMtl(filename)
                 if actors:
                     visInfo = Geometry.makeVisInfoFromActors(actors)
             else:
