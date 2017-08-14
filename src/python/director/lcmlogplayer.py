@@ -31,7 +31,7 @@ class LcmLogPlayer(object):
         filepos = self.filePositions[self.nextEventIndex]
         self.log.seek(filepos)
 
-    def advanceTime(self, playLength, onFrame=None):
+    def advanceTime(self, playLength, onFrame=None, fixedRate=None):
 
         numEvents = len(self.timestamps)
         if self.nextEventIndex >= numEvents:
@@ -39,6 +39,7 @@ class LcmLogPlayer(object):
 
         startTimestamp = self.timestamps[self.nextEventIndex]
         endTimestamp = startTimestamp + playLength*1e6
+        nextHit = startTimestamp # startTimestamp
 
         good = True
 
@@ -52,7 +53,16 @@ class LcmLogPlayer(object):
             good = (self.nextEventIndex < numEvents
                     and self.timestamps[self.nextEventIndex] <= endTimestamp)
             if onFrame and good:
-                onFrame(self.timestamps[self.nextEventIndex] / 1.e6)
+                doFrame = False
+                currentTimestamp = self.timestamps[self.nextEventIndex]
+                if fixedRate is None:
+                    doFrame = True
+                else:
+                    if currentTimestamp >= nextHit:
+                        doFrame = True
+                        nextHit += fixedRate * 1e6
+                if doFrame:
+                    onFrame(currentTimestamp / 1.e6)
 
     def skipToTime(self, timeRequest, playLength=0.0):
         self.resetPlayPosition(timeRequest)
@@ -65,7 +75,7 @@ class LcmLogPlayer(object):
     def stop(self):
         self.timer.stop()
 
-    def playback(self, startTime, playLength, onFrame=None, onStop=None):
+    def playback(self, startTime, playLength, onFrame=None, onStop=None, fixedRate=None):
 
         self.resetPlayPosition(startTime)
 
@@ -74,12 +84,16 @@ class LcmLogPlayer(object):
 
         def onTick():
             elapsed = self.timer.elapsed * self.playbackFactor
-            self.advanceTime(elapsed, onFrame)
+            if fixedRate != None:
+                dt = fixedRate * self.playbackFactor
+            else:
+                dt = elapsed
+            self.advanceTime(dt, onFrame, fixedRate)
 
             good = (self.nextEventIndex < len(self.timestamps)
                     and self.timestamps[self.nextEventIndex] <= endTimestamp)
 
-            if onFrame and good:
+            if onFrame and good and fixedRate is not None:
                 onFrame(self.timestamps[self.nextEventIndex] / 1.e6)
             if onStop and not good:
                 onStop()
@@ -147,12 +161,14 @@ class LcmLogPlayerGui(object):
         w.windowTitle = 'LCM Log Playback'
 
         playButton = QtGui.QPushButton('Play')
+        playAndRecordButton = QtGui.QPushButton('Play + Record')
         stopButton = QtGui.QPushButton('Stop')
         slider = QtGui.QSlider(QtCore.Qt.Horizontal)
         slider.maximum = int(logPlayer.getEndTime()*100)
         text = QtGui.QLineEdit()
         text.text = '0.0'
         playButton.connect('clicked()', self.onPlay)
+        playAndRecordButton.connect('clicked()', self.onPlayAndRecord)
         stopButton.connect('clicked()', self.onStop)
         slider.connect('valueChanged(int)', self.onSlider)
         text.connect('returnPressed()', self.onText)
@@ -161,6 +177,7 @@ class LcmLogPlayerGui(object):
         l.addWidget(slider)
         l.addWidget(text)
         l.addWidget(playButton)
+        l.addWidget(playAndRecordButton)
         l.addWidget(stopButton)
 
         self.slider = slider
@@ -183,8 +200,31 @@ class LcmLogPlayerGui(object):
             self.slider.value = self._getSliderValue(t)
             self.text.text = str(t)
 
-    def onPlay(self):
-        self.logPlayer.playback(self._getSliderTime(), self.logPlayer.getEndTime(), self._updateTime)
+    def onPlay(self, onStop=None, onFrame=None, fixedRate=None):
+        def onFrameExt(t):
+            self._updateTime(t)
+            if onFrame:
+                onFrame(t)
+        self.logPlayer.playback(self._getSliderTime(),
+            self.logPlayer.getEndTime(), onFrame=onFrameExt, onStop=onStop, fixedRate=fixedRate)
+
+    def onPlayAndRecord(self):
+        from director.screengrabberpanel import ScreenGrabberPanel
+        recorder = getattr(ScreenGrabberPanel, 'instance', None)
+        if recorder is not None:
+            fixedRate = 2 * 1. / recorder.captureRate()
+            # HACK(eric.cousineau): Tunnel directly through.
+            with BlockSignals(recorder.ui.recordMovieButton):
+                recorder.ui.recordMovieButton.click()
+            # This should block the thread if needed.
+            recorder.startRecording(useTimer=False)
+            def onFrame(t):
+                recorder.onRecordTimer()
+            def onStop():
+                recorder.stopRecording(useTimer=False)
+            self.onPlay(onFrame = onFrame, onStop = onStop, fixedRate = fixedRate)
+        else:
+            print "No screen grabber found"
 
     def onStop(self):
         self.logPlayer.timer.stop()
