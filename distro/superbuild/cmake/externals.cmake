@@ -35,6 +35,7 @@ set(default_cmake_args
   "-DCMAKE_PREFIX_PATH:PATH=${install_prefix};${DRAKE_SUPERBUILD_PREFIX_PATH};${CMAKE_PREFIX_PATH}"
   "-DCMAKE_INSTALL_PREFIX:PATH=${install_prefix}"
   "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
+  "-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON"
   "-DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}"
   "-DBUILD_DOCUMENTATION:BOOL=OFF"
   "-DENABLE_TESTING:BOOL=OFF"
@@ -378,7 +379,6 @@ else()
       ${default_cmake_args}
       ${python_args}
       ${qt_args}
-      -DBUILD_SHARED_LIBS:BOOL=ON
       -DBUILD_TESTING:BOOL=OFF
       -DBUILD_EXAMPLES:BOOL=OFF
       -DVTK_RENDERING_BACKEND:STRING=OpenGL2
@@ -455,7 +455,7 @@ if(USE_PCL AND NOT USE_SYSTEM_PCL)
       ${boost_args}
       ${flann_args}
       ${vtk_args}
-      -DPCL_SHARED_LIBS:BOOL=ON
+      -DPCL_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
       -DBUILD_TESTS:BOOL=OFF
       -DBUILD_global_tests:BOOL=OFF
       -DBUILD_examples:BOOL=OFF
