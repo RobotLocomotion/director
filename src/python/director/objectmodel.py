@@ -2,7 +2,7 @@ import os
 import re
 import PythonQt
 from PythonQt import QtCore, QtGui
-from director.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper
+from director.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper, PropertyPanelConnector
 from director import callbacks
 
 class Icons(object):
@@ -182,6 +182,7 @@ class ObjectModelTree(object):
         self._propertiesPanel = None
         self._objects = {}
         self._blockSignals = False
+        self._propertyConnector = None
         self.actions = []
         self.callbacks = callbacks.CallbackRegistry([
                             self.ACTION_SELECTED,
@@ -252,29 +253,18 @@ class ObjectModelTree(object):
             if child.getProperty('Name') == name:
                 return child
 
-    def onPropertyChanged(self, prop):
-
-        if self._blockSignals:
-            return
-
-        propertiesPanel = self.getPropertiesPanel()
-        propertySet = self.getActiveObject().properties
-
-        PropertyPanelHelper.setPropertyFromPanel(prop, propertiesPanel, propertySet)
-
-
     def _onTreeSelectionChanged(self):
 
+        if self._propertyConnector:
+          self._propertyConnector.cleanup()
+          self._propertyConnector = None
+
         panel = self.getPropertiesPanel()
-        self._blockSignals = True
         panel.clear()
-        self._blockSignals = False
 
         obj = self.getActiveObject()
         if obj:
-            self._blockSignals = True
-            PropertyPanelHelper.addPropertiesToPanel(obj.properties, panel)
-            self._blockSignals = False
+            self._propertyConnector = PropertyPanelConnector(obj.properties, panel)
 
         self.callbacks.process(self.SELECTION_CHANGED, self)
 
@@ -303,11 +293,6 @@ class ObjectModelTree(object):
             self.updateObjectName(obj)
         elif propertyName == 'Icon':
             self.updateObjectIcon(obj)
-
-        if obj == self.getActiveObject():
-            self._blockSignals = True
-            PropertyPanelHelper.onPropertyValueChanged(self.getPropertiesPanel(), obj.properties, propertyName)
-            self._blockSignals = False
 
     def _onItemClicked(self, item, column):
 
@@ -491,7 +476,6 @@ class ObjectModelTree(object):
         self._propertiesPanel = propertiesPanel
         propertiesPanel.clear()
         propertiesPanel.setBrowserModeToWidget()
-        propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
 
         treeWidget.setColumnCount(2)
         treeWidget.setHeaderLabels(['Name', ''])
