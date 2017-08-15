@@ -28,7 +28,7 @@ cp -r $scriptDir/bundle_template.app $bundleDir
 mkdir -p $superbuildInstallDir/share
 
 cp -r $superbuildInstallDir/{bin,lib,include,share} $bundleDir/Contents/MacOS/
-cp /usr/local/bin/python $binDir/
+cp $(which python) $binDir/
 touch $binDir/qt.conf
 
 mkdir -p $sitePackagesDir
