@@ -45,6 +45,13 @@ set(default_cmake_args
   "-DCMAKE_C_COMPILER:FILEPATH=${CMAKE_C_COMPILER}"
   )
 
+if(APPLE)
+  list(APPEND default_cmake_args -DCMAKE_MACOSX_RPATH:BOOL=ON)
+  if(CMAKE_INSTALL_RPATH)
+    list(APPEND default_cmake_args "-DCMAKE_INSTALL_RPATH:STRING=${CMAKE_INSTALL_RPATH}")
+  endif()
+endif()
+
 # Find required external dependencies
 setup_qt()
 if (DD_QT_VERSION EQUAL 4)
@@ -247,7 +254,7 @@ endif()
 if(DD_QT_VERSION EQUAL 4)
   set(PythonQt_TAG patched-6)
 else()
-  set(PythonQt_TAG patched-7)
+  set(PythonQt_TAG patched-8)
 endif()
 
 ExternalProject_Add(PythonQt
@@ -266,7 +273,7 @@ ExternalProject_Add(PythonQt
 # ctkPythonConsole
 
 if(DD_QT_VERSION EQUAL 4)
-  set(ctkPythonConsole_TAG 15988c5)
+  set(ctkPythonConsole_TAG 495ae0f)
 else()
   set(ctkPythonConsole_TAG add-qt5-support)
 endif()
@@ -297,7 +304,6 @@ ExternalProject_Add(QtPropertyBrowser
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
-    -DCMAKE_MACOSX_RPATH:BOOL=ON
   )
 
 
@@ -385,7 +391,6 @@ else()
       -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
       -DVTK_PYTHON_VERSION=2
       -DModule_vtkGUISupportQt:BOOL=ON
-      -DCMAKE_MACOSX_RPATH:BOOL=ON
       -DVTK_WRAP_PYTHON:BOOL=ON
     )
 
@@ -505,7 +510,7 @@ if(USE_KINECT)
 
   ExternalProject_Add(openni2-camera-lcm
     GIT_REPOSITORY https://github.com/openhumanoids/openni2-camera-lcm
-    GIT_TAG 576f0fa
+    GIT_TAG 6bd5573
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       -DINSTALL_BOT_SPY:BOOL=OFF
@@ -544,7 +549,7 @@ if(USE_APRILTAGS)
 
   ExternalProject_Add(apriltags
     GIT_REPOSITORY https://github.com/psiorx/apriltags-pod.git
-    GIT_TAG ed2972f
+    GIT_TAG 8534e91
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     )
@@ -576,7 +581,6 @@ ExternalProject_Add(director
     -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_DRAKE:BOOL=${USE_DRAKE}
     -DDD_QT_VERSION:STRING=${DD_QT_VERSION}
-
     ${default_cmake_args}
     ${eigen_args}
     ${boost_args}
