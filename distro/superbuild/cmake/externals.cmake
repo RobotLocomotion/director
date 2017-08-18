@@ -551,7 +551,7 @@ if(USE_APRILTAGS)
 
   ExternalProject_Add(apriltags_driver
     GIT_REPOSITORY https://github.com/patmarion/apriltags_driver.git
-    GIT_TAG ad7db82
+    GIT_TAG fb0eff3
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
