@@ -240,8 +240,8 @@ class ActionToggleHelper(object):
 class MenuActionToggleHelper(ActionToggleHelper):
 
     def __init__(self, menuName, actionName, getEnabledFunc, setEnabledFunc):
-        action = addMenuAction(menuName, actionName)
-        ActionToggleHelper.__init__(self, action, getEnabledFunc, setEnabledFunc)
+        self.action = addMenuAction(menuName, actionName)
+        ActionToggleHelper.__init__(self, self.action, getEnabledFunc, setEnabledFunc)
 
 
 def onCurrentViewChanged(previousView, currentView):
