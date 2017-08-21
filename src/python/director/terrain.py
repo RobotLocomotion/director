@@ -1,4 +1,4 @@
-from __future__ import division
+
 
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -85,8 +85,8 @@ class PolygonSegmentationNonIRIS():
         k = ConvexHull(self.bot_pts.T).vertices
         k = np.hstack((k, k[0]))
         n = self.planar_polyhedron.generators.shape[0]
-        plt.plot(self.planar_polyhedron.generators.T[0,range(n) + [0]],
-                 self.planar_polyhedron.generators.T[1,range(n) + [0]], 'r.-')
+        plt.plot(self.planar_polyhedron.generators.T[0,list(range(n)) + [0]],
+                 self.planar_polyhedron.generators.T[1,list(range(n)) + [0]], 'r.-')
         samples = sample_convex_polytope(self.c_space_polyhedron.A,
                                          self.c_space_polyhedron.b,
                                          500)

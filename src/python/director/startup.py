@@ -1,7 +1,7 @@
 # This script is executed in the main console namespace so
 # that all the variables defined here become console variables.
 
-from __future__ import division
+
 
 import director
 from director import irisdriver
@@ -182,12 +182,12 @@ if 'userConfig' in drcargs.getDirectorConfig():
 
 if 'disableComponents' in drcargs.getDirectorConfig():
     for component in drcargs.getDirectorConfig()['disableComponents']:
-        print "Disabling", component
+        print("Disabling", component)
         locals()[component] = False
 
 if 'enableComponents' in drcargs.getDirectorConfig():
     for component in drcargs.getDirectorConfig()['enableComponents']:
-        print "Enabling", component
+        print("Enabling", component)
         locals()[component] = True
 
 
@@ -1063,7 +1063,7 @@ if useCourseModel:
     courseModel = coursemodel.CourseModel()
 
 if useKinect:
-    import kinectlcm
+    from . import kinectlcm
     imageOverlayManager.viewName = "KINECT_RGB"
     #kinectlcm.startButton()
 
@@ -1071,4 +1071,4 @@ if useFeetlessRobot:
     ikPlanner.robotNoFeet = True
 
 for scriptArgs in drcargs.args().scripts:
-    execfile(scriptArgs[0])
+    exec(compile(open(scriptArgs[0]).read(), scriptArgs[0], 'exec'))

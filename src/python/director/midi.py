@@ -5,9 +5,9 @@ import array
 import time
 
 class TriggerFinger(object):
-    pads = range(1,17)
-    faders = range(17, 21)
-    dials = range(21, 29)
+    pads = list(range(1,17))
+    faders = list(range(17, 21))
+    dials = list(range(21, 29))
 
 
 _initialized = False
@@ -21,7 +21,7 @@ def init():
 
 def printDevices():
     init()
-    for deviceId in xrange(pypm.CountDevices()):
+    for deviceId in range(pypm.CountDevices()):
         interf, name, inp, outp, opened = pypm.GetDeviceInfo(deviceId)
 
         if inp:
@@ -33,19 +33,19 @@ def printDevices():
 
         status = '(opened)' if opened == 1 else '(unopened)'
 
-        print deviceId, name, inOutType, status
+        print(deviceId, name, inOutType, status)
 
 
 def findInputDevice(deviceName):
     init()
-    for deviceId in xrange(pypm.CountDevices()):
+    for deviceId in range(pypm.CountDevices()):
         interf, name, inp, outp, opened = pypm.GetDeviceInfo(deviceId)
         if inp and (deviceName in name):
                 return deviceId
 
 def findOutputDevice(deviceName):
     init()
-    for deviceId in xrange(pypm.CountDevices()):
+    for deviceId in range(pypm.CountDevices()):
         interf, name, inp, outp, opened = pypm.GetDeviceInfo(deviceId)
         if outp and (deviceName in name):
                 return deviceId

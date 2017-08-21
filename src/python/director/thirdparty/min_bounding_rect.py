@@ -39,7 +39,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import division
+
 from numpy import *
 import sys  # maxint
 
@@ -71,7 +71,7 @@ def minBoundingRect(hull_points_2d):
     #print "Unique edge angles: \n", edge_angles
 
     # Test each angle to find bounding box with smallest area
-    min_bbox = (0, sys.maxint, 0, 0, 0, 0, 0, 0) # rot_angle, area, width, height, min_x, max_x, min_y, max_y
+    min_bbox = (0, sys.maxsize, 0, 0, 0, 0, 0, 0) # rot_angle, area, width, height, min_x, max_x, min_y, max_y
     #print "Testing", len(edge_angles), "possible rotations for bounding box... \n"
     for i in range( len(edge_angles) ):
 

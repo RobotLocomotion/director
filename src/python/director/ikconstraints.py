@@ -28,7 +28,7 @@ class ConstraintBase(FieldContainer):
 
     def printCommands(self):
         for command in self.getCommands()[0]:
-            print command
+            print(command)
 
     @staticmethod
     def toRowVectorString(vec):
@@ -43,7 +43,7 @@ class ConstraintBase(FieldContainer):
     @staticmethod
     def toMatrixString(mat):
         if isinstance(mat, vtk.vtkTransform):
-            mat = np.array([[mat.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)])
+            mat = np.array([[mat.GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
         assert len(mat.shape) == 2
         return '[%s]' % '; '.join([', '.join([repr(x) for x in row]) for row in mat])
 

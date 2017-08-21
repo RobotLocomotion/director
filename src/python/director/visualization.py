@@ -1,6 +1,6 @@
 import director.objectmodel as om
 import director.applogic as app
-from shallowCopy import shallowCopy
+from .shallowCopy import shallowCopy
 import director.vtkAll as vtk
 from director import filterUtils
 from director import transformUtils
@@ -89,7 +89,7 @@ class PolyDataItem(om.ObjectModelItem):
 
     def getArrayNames(self):
         pointData = self.polyData.GetPointData()
-        return [pointData.GetArrayName(i) for i in xrange(pointData.GetNumberOfArrays())]
+        return [pointData.GetArrayName(i) for i in range(pointData.GetNumberOfArrays())]
 
     def setSolidColor(self, color):
         self.setProperty('Color', [float(c) for c in color])
@@ -108,7 +108,7 @@ class PolyDataItem(om.ObjectModelItem):
 
         array = self.polyData.GetPointData().GetArray(arrayName)
         if not array:
-            print 'colorBy(%s): array not found' % arrayName
+            print(('colorBy(%s): array not found' % arrayName))
             self.mapper.ScalarVisibilityOff()
             self.polyData.GetPointData().SetActiveScalars(None)
             return
@@ -777,7 +777,7 @@ class FrameSync(object):
         if self._findFrameId(frame) is not None:
             return
 
-        frameId = self._ids.next()
+        frameId = next(self._ids)
         callbackId = frame.connectFrameModified(self._onFrameModified)
 
         self.frames[frameId] = FrameSync.FrameData(
@@ -798,7 +798,7 @@ class FrameSync(object):
     def _computeBaseTransform(self, frame):
 
         currentDelta = None
-        for frameId, frameData in self.frames.items():
+        for frameId, frameData in list(self.frames.items()):
 
             if frameData.ref() is None:
                 self._removeFrameId(frameId)
@@ -821,7 +821,7 @@ class FrameSync(object):
 
     def _findFrameId(self, frame):
 
-        for frameId, frameData in self.frames.items():
+        for frameId, frameData in list(self.frames.items()):
 
             if frameData.ref() is None:
                 self._removeFrameId(frameId)
@@ -856,7 +856,7 @@ class FrameSync(object):
 
         self._blockCallbacks = True
 
-        for frameId, frameData in self.frames.items():
+        for frameId, frameData in list(self.frames.items()):
             if frameData.ref() is None:
                 self._removeFrameId(frameId)
             elif frameId != modifiedFrameId:
@@ -1204,7 +1204,7 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     item.setProperty('Alpha', alpha)
 
     if colorByName and colorByName not in item.getArrayNames():
-        print 'showPolyData(colorByName=%s): array not found' % colorByName
+        print(('showPolyData(colorByName=%s): array not found' % colorByName))
         colorByName = None
 
     if colorByName:

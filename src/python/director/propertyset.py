@@ -62,7 +62,7 @@ class PropertySet(object):
     def __setstate__(self, state):
         self.__init__()
         attrs = state['_attributes']
-        for propName, propValue in state['_properties'].iteritems():
+        for propName, propValue in list(state['_properties'].items()):
             self.addProperty(propName, propValue, attributes=attrs.get(propName))
 
 
@@ -77,7 +77,7 @@ class PropertySet(object):
         self._alternateNames = {}
 
     def propertyNames(self):
-        return self._properties.keys()
+        return list(self._properties.keys())
 
     def hasProperty(self, propertyName):
         return propertyName in self._properties
@@ -126,11 +126,11 @@ class PropertySet(object):
 
     def setPropertyIndex(self, propertyName, newIndex):
         assert self.hasProperty(propertyName)
-        currentIndex = self._properties.keys().index(propertyName)
-        inds = range(len(self._properties))
+        currentIndex = list(self._properties.keys()).index(propertyName)
+        inds = list(range(len(self._properties)))
         inds.remove(currentIndex)
         inds.insert(newIndex, currentIndex)
-        items = self._properties.items()
+        items = list(self._properties.items())
         self._properties = OrderedDict([items[i] for i in inds])
 
     def setProperty(self, propertyName, propertyValue):

@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -195,7 +195,7 @@ class TerrainTask(object):
         # load file
         configFile = os.path.join(self.terrainConfigDir, terrainType+'.py')
         self.terrainConfig = {}
-        execfile(configFile, self.terrainConfig)
+        exec(compile(open(configFile).read(), configFile, 'exec'), self.terrainConfig)
 
     def getAllBlockAffordances(self):
         return [obj for obj in om.getObjects() if obj.getProperty('Name').startswith(self.terrainConfig['blockName'])]
@@ -236,7 +236,7 @@ class TerrainTask(object):
             goalFrame = startingFrame
             footstepsdriverpanel.panel.onNewWalkingGoal(goalFrame)
         else:
-            print 'error: no blocks defined; use Spawn Terrain button'
+            print('error: no blocks defined; use Spawn Terrain button')
             return
 
     def correctFrameYaw(self, t1, t2):
@@ -253,7 +253,7 @@ class TerrainTask(object):
         # check that we have required data
         blockObjectTable = self.createBlockObjectTable()
         if len(blockObjectTable) == 0:
-            print 'error: no blocks available for footsteps'
+            print('error: no blocks available for footsteps')
             return
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
@@ -280,7 +280,7 @@ class TerrainTask(object):
         for foot, blockIndex, offset, supportType in footstepData:
             block = blockObjectTable[blockIndex[0]][blockIndex[1]]
             if block is None:
-                print 'error: no block for footstep (%d,%d)' % blockIndex
+                print('error: no block for footstep (%d,%d)' % blockIndex)
                 return
             z = np.array(block.getProperty('Dimensions'))[2]/2.0
             pt = np.array([offset[0], offset[1], z])
@@ -340,7 +340,7 @@ class TerrainTask(object):
         if len(steps) > 0:
             leadingFoot = steps[0]['foot']
         else:
-            print 'error: no footsteps'
+            print('error: no footsteps')
             return
         startPose = self.getPlanningStartPose()
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
@@ -375,7 +375,7 @@ class TerrainTask(object):
         blockSize = self.terrainConfig['blockSize']
 
         if len(cols) == 0:
-            cols = range(len(blockTypes[0]))
+            cols = list(range(len(blockTypes[0])))
 
         # create frame for starting position
         yaw = self.terrainConfig['startingYaw']
@@ -443,10 +443,10 @@ class TerrainTask(object):
 
         # check that we have both spawned and detected blocks
         if len(detectedBlocks) == 0:
-            print 'error: no blocks detected; use Fit Blocks button'
+            print('error: no blocks detected; use Fit Blocks button')
             return
         elif len(idealBlocks) == 0:
-            print 'error: no blocks spawned; use Spawn Terrain button'
+            print('error: no blocks spawned; use Spawn Terrain button')
             return
 
         # hide ideal blocks, show detected blocks
@@ -471,7 +471,7 @@ class TerrainTask(object):
 
         # TODO: make an abort function
         if not proceed:
-            print 'cannot proceed: no spawned block was clicked'
+            print('cannot proceed: no spawned block was clicked')
             return
 
         # pick point in ideal blocks
@@ -548,7 +548,7 @@ class TerrainTask(object):
                 t2 = bestMatch.getChildFrame().transform
                 normal2 = np.array(transformUtils.getAxesFromTransform(t2)[2])
                 if np.arccos(np.dot(normal1,normal2)) > np.radians(20):
-                    print 'warning: normal mismatch between %s and %s' % (b.getProperty('Name'), bestMatch.getProperty('Name'))
+                    print('warning: normal mismatch between %s and %s' % (b.getProperty('Name'), bestMatch.getProperty('Name')))
                     continue
                 matches.append((b,bestMatch))
                 bestMatch.setProperty('Color', self.terrainConfig['blockColorMatched'])
@@ -861,7 +861,7 @@ class TerrainTask(object):
         blockRow, blockColumn = self.getBlockRowColumn(block)
 
         if blockColumn != self.sideToColumn(side):
-            print 'matched wrong block for side %s %s' % (side, block.getProperty('Name'))
+            print('matched wrong block for side %s %s' % (side, block.getProperty('Name')))
             return False
 
         if blockRow > self.currentRow[side]:
@@ -963,7 +963,7 @@ class TerrainTask(object):
 
         for side in ['left', 'right']:
             block = self.getCinderblockUnderFoot(blocks, side)
-            print side, block.getProperty('Name') if block else None
+            print(side, block.getProperty('Name') if block else None)
 
 
     def getFootstepObjects(self):
@@ -986,7 +986,7 @@ class TerrainTask(object):
             stepFrame = step.getChildFrame().transform
 
             block = self.sortAffordancesByDistanceToFrame(blocks, stepFrame)[0]
-            print '%s  --> %s' % (step.getProperty('Name'), block.getProperty('Name'))
+            print('%s  --> %s' % (step.getProperty('Name'), block.getProperty('Name')))
 
 
     def resetCinderblockVisualizationProperties(self):
@@ -1079,31 +1079,31 @@ class TerrainTask(object):
         for i, block in enumerate(blocks):
             row = int(round((blockXYZInStance[i,0] - minBlockX) / blockLength))
             rowToBlocks[row].append(block)
-            print 'block %s row bin: %d' % (block.getProperty('Name'), row)
+            print('block %s row bin: %d' % (block.getProperty('Name'), row))
 
         # Then sort by y (in stance frame)
-        for row, rowBlocks in rowToBlocks.iteritems():
-            print '---------'
-            print 'sorting row', row
+        for row, rowBlocks in rowToBlocks.items():
+            print('---------')
+            print('sorting row', row)
             for block in rowBlocks:
-                print '  %s' % block.getProperty('Name')
+                print('  %s' % block.getProperty('Name'))
 
             yInLocal = [blockXYZInStance[blocks.index(block), 1] for block in rowBlocks]
-            print yInLocal
+            print(yInLocal)
 
             rowBlocks = [rowBlocks[i] for i in np.argsort(yInLocal)]
 
-            print rowBlocks
+            print(rowBlocks)
             rowToBlocks[row] = rowBlocks
-            print rowToBlocks[row]
+            print(rowToBlocks[row])
 
 
         for row in sorted(rowToBlocks.keys()):
-            print 'renaming by row,col for row:', row
-            print rowToBlocks[row]
+            print('renaming by row,col for row:', row)
+            print(rowToBlocks[row])
             for col, block in enumerate(rowToBlocks[row]):
                 newName = '%s (%d,%d)' % (self.cinderblockPrefix, row, col)
-                print 'renaming %s to: %s' % (block.getProperty('Name'), newName)
+                print('renaming %s to: %s' % (block.getProperty('Name'), newName))
                 block.rename(newName)
 
 
@@ -1218,7 +1218,7 @@ class TerrainTask(object):
         for side in ['left', 'right']:
             block = self.getCinderblockUnderFoot(blocks, side)
 
-            print '%s block: %s' % (side, block.getProperty('Name') if block else None)
+            print('%s block: %s' % (side, block.getProperty('Name') if block else None))
             if not block:
                 continue
 
@@ -1269,7 +1269,7 @@ class TerrainTask(object):
         offset = np.array([0.0, 0.0, 0.0])
 
         footFrames = []
-        for i in xrange(numberOfBlocks):
+        for i in range(numberOfBlocks):
 
             if i == 2:
                 verticalOffset = blockHeight

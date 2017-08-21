@@ -23,7 +23,7 @@ def _fields_repr(self, indent=4):
 
 def _dict_repr(self, indent=4):
     indent_str = ' '*indent
-    field_names = self.keys()
+    field_names = list(self.keys())
     field_names.sort()
     fill_length = _max_length(field_names) + 3
 
@@ -43,7 +43,7 @@ def _list_repr(self, indent=4):
 
 
 def _transform_repr(mat, indent=4):
-    mat = np.array([[mat.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)])
+    mat = np.array([[mat.GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
     indent_str = ' '*indent
     return '\n' + indent_str + repr(mat)
 
@@ -74,17 +74,17 @@ class FieldContainer(object):
 
     def _add_fields(self, **fields):
         if not hasattr(self, '_fields'):
-            object.__setattr__(self, '_fields', fields.keys())
+            object.__setattr__(self, '_fields', list(fields.keys()))
         else:
-            object.__setattr__(self, '_fields', list(set(self._fields + fields.keys())))
-        for name, value in fields.iteritems():
+            object.__setattr__(self, '_fields', list(set(self._fields + list(fields.keys()))))
+        for name, value in list(fields.items()):
             object.__setattr__(self, name, value)
 
     def _set_fields(self, **fields):
         if not hasattr(self, '_fields'):
             self._add_fields(**fields)
         else:
-            for name, value in fields.iteritems():
+            for name, value in list(fields.items()):
                 self.__setattr__(name, value)
 
     def __getitem__(self, name):

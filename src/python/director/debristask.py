@@ -1,4 +1,4 @@
-from segmentation import getFootFramesFromReferenceFrame
+from .segmentation import getFootFramesFromReferenceFrame
 import math
 
 from director.debugVis import DebugData
@@ -7,7 +7,7 @@ from director.debugVis import DebugData
 def getBoardCorners(params):
     axes = [np.array(params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
     widths = [np.array(params[axis])/2.0 for axis in ['xwidth', 'ywidth', 'zwidth']]
-    edges = [axes[i] * widths[i] for i in xrange(3)]
+    edges = [axes[i] * widths[i] for i in range(3)]
     origin = np.array(params['origin'])
     return [
             origin + edges[0] + edges[1] + edges[2],
@@ -140,7 +140,7 @@ def generateFeetForDebris(affs=None):
     for aff in affs:
         name = aff.getProperty('Name')
         if name not in nameMap:
-            print 'name not found:', name
+            print('name not found:', name)
             continue
 
         affGroundFrame = computeGroundFrame(aff, referenceFrame)

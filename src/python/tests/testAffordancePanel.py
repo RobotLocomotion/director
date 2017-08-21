@@ -42,8 +42,8 @@ def newMesh():
 
 def testAffordanceToUrdf():
 
-    affs = [func() for func in newSphere, newBox, newCylinder, newCapsule, newMesh]
-    print affordanceurdf.urdfStringFromAffordances(affs)
+    affs = [func() for func in (newSphere, newBox, newCylinder, newCapsule, newMesh)]
+    print(affordanceurdf.urdfStringFromAffordances(affs))
 
     #for aff in affs:
     #    om.removeFromObjectModel(aff)
@@ -51,7 +51,7 @@ def testAffordanceToUrdf():
 
 def printAffordanceUrdf():
     affs = affordanceManager.getAffordances()
-    print affordanceurdf.urdfStringFromAffordances(affs)
+    print(affordanceurdf.urdfStringFromAffordances(affs))
 
 
 def onAffordancePick(objs):
@@ -61,8 +61,8 @@ def onAffordancePick(objs):
     if obj == affordanceToAdd:
         return
 
-    print affordanceToAdd.getProperty('Name')
-    print obj.getProperty('Name')
+    print(affordanceToAdd.getProperty('Name'))
+    print(obj.getProperty('Name'))
 
 
     frameSync = obj.getChildFrame().getFrameSync()

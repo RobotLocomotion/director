@@ -21,7 +21,7 @@ from director.robotlinkselector import RobotLinkSelector
 from director.vieweventfilter import ViewEventFilter
 from director import viewbehaviors
 import numpy as np
-import ioUtils
+from . import ioUtils
 import os
 import re
 import random

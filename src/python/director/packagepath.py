@@ -13,15 +13,15 @@ class PackageMap(object):
     def addPackage(self, packageName, path):
 
         if packageName in self.map:
-            print 'warning, skipping package path:', path
-            print 'existing package path:', packageName, self.map[packageName]
+            print('warning, skipping package path:', path)
+            print('existing package path:', packageName, self.map[packageName])
             return
 
         self.map[packageName] = path
 
     def printPackageMap(self):
-        for package, path in self.map.iteritems():
-            print package, path
+        for package, path in self.map.items():
+            print(package, path)
 
     def getPath(self, packageName):
         return self.map.get(packageName)
@@ -61,13 +61,13 @@ class PackageMap(object):
             packageName = relPath[:idx]
             relPath = relPath[idx+1:]
         except:
-            print 'failed to parse package filename:', filename
+            print('failed to parse package filename:', filename)
             return None
 
         packagePath = self.getPath(packageName)
 
         if not packagePath:
-            print 'failed to resolve filename, unknown package:', filename
+            print('failed to resolve filename, unknown package:', filename)
             return None
 
         return os.path.join(packagePath, relPath)

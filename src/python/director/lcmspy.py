@@ -13,13 +13,13 @@ messageTypeToModule = {}
 def loadMessageTypes(typesDict, typesModule, verbose=False):
 
     originalSize = len(typesDict)
-    for name, value in typesModule.__dict__.iteritems():
+    for name, value in typesModule.__dict__.items():
         if hasattr(value, '_get_packed_fingerprint'):
             typesDict[value._get_packed_fingerprint()] = value
             messageTypeToModule[value] = typesModule
 
     if verbose:
-        print 'loaded %d lcm message types from: %s' % (len(typesDict) - originalSize, typesModule.__name__)
+        print('loaded %d lcm message types from: %s' % (len(typesDict) - originalSize, typesModule.__name__))
 
 
 def findLCMModules(searchDir):
@@ -82,15 +82,15 @@ def onLCMMessage(channel, messageBytes, checkExistingChannel=False):
 
     if not msg:
         if channel not in lcmCatalog:
-            print 'failed to decode message on channel:', channel
+            print('failed to decode message on channel:', channel)
 
     else:
         if channel not in lcmCatalog:
-            print 'discovered channel/msg:', channel, getMessageFullName(msg)
+            print('discovered channel/msg:', channel, getMessageFullName(msg))
         else:
             previousType = type(lcmCatalog[channel])
             if previousType != type(msg):
-                print 'detected message type change: %s  %s --> %s' % (channel, getMessageTypeFullName(previousType), getMessageFullName(msg))
+                print('detected message type change: %s  %s --> %s' % (channel, getMessageTypeFullName(previousType), getMessageFullName(msg)))
 
     lcmCatalog[channel] = msg
 
@@ -106,7 +106,7 @@ def getArrayFieldInfo(value):
         return 'float', None
     elif isinstance(value, int):
         return 'integer', None
-    elif isinstance(value, (str, unicode)):
+    elif isinstance(value, str):
         return 'string', None
     elif isinstance(value, (list, tuple)):
         arrayType, messageType = getArrayFieldInfo(value)
@@ -124,26 +124,26 @@ def printMessageFields(msg, indent=''):
 
 
     for slot in msg.__slots__:
-        print '%s%s' % (indent, slot),
+        print('%s%s' % (indent, slot), end=' ')
         value = getattr(msg, slot)
 
         if isinstance(value, float):
-            print ': float'
+            print(': float')
         elif isinstance(value, int):
-            print ': integer'
-        elif isinstance(value, (str, unicode)):
-            print ': string'
+            print(': integer')
+        elif isinstance(value, str):
+            print(': string')
         elif isinstance(value, (list, tuple)):
 
             arrayType, messageValue = getArrayFieldInfo(value)
-            print ': array[%d] of ' % len(value) + arrayType
+            print(': array[%d] of ' % len(value) + arrayType)
             printMessageFields(messageValue, indent + '  ')
 
         elif type(value) in messageTypeToModule:
-            print ':', getMessageFullName(value)
+            print(':', getMessageFullName(value))
             printMessageFields(value, indent + '  ')
         else:
-            print ':', type(value)
+            print(':', type(value))
 
 
 def printLCMCatalog():
@@ -153,9 +153,9 @@ def printLCMCatalog():
     for channel in channels:
         msg = lcmCatalog[channel]
 
-        print '-----------------------'
-        print 'channel:', channel
-        print 'message:', getMessageFullName(msg)
+        print('-----------------------')
+        print('channel:', channel)
+        print('message:', getMessageFullName(msg))
         printMessageFields(lcmCatalog[channel], indent='  ')
 
 
@@ -163,8 +163,8 @@ def printLogFileDescription(filename):
 
     log = lcm.EventLog(filename, 'r')
 
-    print 'reading %s' % filename
-    print 'log file size: %.2f MB' % (log.size()/(1024.0**2))
+    print('reading %s' % filename)
+    print('log file size: %.2f MB' % (log.size()/(1024.0**2)))
 
     for event in log:
         onLCMMessage(event.channel, event.data)
@@ -185,8 +185,8 @@ def spyLCMTraffic():
     except KeyboardInterrupt:
         pass
 
-    print
-    print
+    print()
+    print()
     printLCMCatalog()
 
 

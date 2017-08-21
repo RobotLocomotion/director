@@ -67,7 +67,7 @@ class AsyncTask(object):
             if hasattr(cls, 'getDefaultProperties'):
                 cls.getDefaultProperties(self.properties)
 
-        for name, value in kwargs.iteritems():
+        for name, value in kwargs.items():
             self.properties.setProperty(_splitCamelCase(name).capitalize(), value)
 
 
@@ -107,7 +107,7 @@ class PrintTask(AsyncTask):
         if self.printFunction:
             self.printFunction(self.properties.message)
         else:
-            print self.properties.message
+            print(self.properties.message)
 
 
 class CallbackTask(AsyncTask):
@@ -337,7 +337,7 @@ class WaitForAtlasBehavior(AsyncTask):
 
     def run(self):
         behaviorName = self.properties.getProperty('Behavior name')
-        assert behaviorName in robotSystem.atlasDriver.getBehaviorMap().values()
+        assert behaviorName in list(robotSystem.atlasDriver.getBehaviorMap().values())
         while robotSystem.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
@@ -1186,7 +1186,7 @@ class PlanGazeTrajectory(AsyncTask):
 
         numberOfSamples = len(targetPoints)
 
-        for i in xrange(numberOfSamples):
+        for i in range(numberOfSamples):
             targetPos = targetPoints[i]
             targetFrame = transformUtils.copyFrame(gazeTargetFrame.transform)
             targetFrame.Translate(targetPos - np.array(targetFrame.GetPosition()))

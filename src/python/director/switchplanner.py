@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -74,7 +74,7 @@ class SwitchPlanner(object):
         # self.pinchToBox =
 
     def spawnBoxAffordanceAtFrame(self, boxFrame):
-        print 'spawning switch box affordance'
+        print('spawning switch box affordance')
         dimensions = [0.08, 0.19, 0.25]
         depth = dimensions[0]
         boxFrame.PreMultiply()

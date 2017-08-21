@@ -26,7 +26,7 @@ class Visualizer:
         self.geometries = {}
         self.poses = {}
         self.queue = {"setgeometry": [], "settransform": [], "delete": []}
-        for (path, geom) in geometries.items():
+        for (path, geom) in list(geometries.items()):
             self.setgeometry(path, geom)
         self.lcm = lcm.LCM()
         self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE", self.onResponse)
@@ -81,12 +81,12 @@ class Visualizer:
         if response["status"] == 0:
             print("ok")
         elif response["status"] == 1:
-            for path, geom in self.geometries.items():
+            for path, geom in list(self.geometries.items()):
                 self.setgeometry(path, geom)
-            for path, pose in self.poses.items():
+            for path, pose in list(self.poses.items()):
                 self.settransform(path, pose)
         else:
-            print("unhandled:", response)
+            print(("unhandled:", response))
 
 if __name__ == '__main__':
     # We'll open the visualizer by spawning it as a subprocess. See
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     # The viewer will take some time to load before it is ready to receive
     # messages, so we'll wait until it sends its first status message.
-    print "waiting for viewer to initialize"
+    print("waiting for viewer to initialize")
     lc = lcm.LCM()
     lc.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE", lambda c, d: None)
     vis_process = subprocess.Popen([vis_binary, '--testing', '--interactive'])

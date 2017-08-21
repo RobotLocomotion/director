@@ -1,4 +1,4 @@
-from __future__ import division # for proper float division
+ # for proper float division
 
 import os
 import sys

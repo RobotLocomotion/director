@@ -263,7 +263,7 @@ class GraspSearchPlanner(object):
         self.ikServer.sendPoseToServer(self.graspEndPose, 'grasp_end_pose')
         self.jointController.setPose('grasp_end_pose', self.graspEndPose)
 
-        print 'grasp end pose info:', self.graspEndPoseInfo
+        print('grasp end pose info:', self.graspEndPoseInfo)
 
     def computeGraspEndPoseFrames(self):
 
@@ -369,7 +369,7 @@ class GraspSearchPlanner(object):
         self.ikServer.sendPoseToServer(self.graspEndPose, 'grasp_end_pose')
         self.jointController.setPose('grasp_end_pose', self.graspEndPose)
 
-        print 'grasp end pose info:', info
+        print('grasp end pose info:', info)
 
 
     def commitState(self):
@@ -406,7 +406,7 @@ class GraspSearchPlanner(object):
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
 
-        print 'grasp reach info:', info
+        print('grasp reach info:', info)
 
         self.jointController.addPose('reach_end', endPose)
         self.computePostureGoal(startPoseName, 'reach_end')
@@ -437,7 +437,7 @@ class GraspSearchPlanner(object):
 
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
-        print 'retract info:', info
+        print('retract info:', info)
 
         self.jointController.addPose('retract_end', endPose)
         self.computePostureGoal(startPoseName, 'retract_end')
@@ -468,7 +468,7 @@ class GraspSearchPlanner(object):
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
 
-        print 'retract info:', info
+        print('retract info:', info)
 
         self.jointController.addPose('retract_end', endPose)
         self.computePostureGoal(startPoseName, 'retract_end')
@@ -485,7 +485,7 @@ class GraspSearchPlanner(object):
         self.ikServer.sendPoseToServer(self.preGraspEndPose, 'pre_grasp_end_pose')
         self.jointController.addPose('pre_grasp_end_pose', self.preGraspEndPose)
 
-        print 'pre grasp end pose info:', self.preGraspEndPoseInfo
+        print('pre grasp end pose info:', self.preGraspEndPoseInfo)
 
 
     def computeGraspTraj(self, poseStart='q_start', poseEnd='grasp_end_pose', timeSamples=None):
@@ -588,18 +588,18 @@ class GraspSearchPlanner(object):
                 if self.graspEndPoseInfo == 1 and self.preGraspEndPoseInfo == 1:
                     params = [self.reachingSide, self.graspSample]
                     score = self.computePostureCost(self.graspEndPose)
-                    print 'score:', score
-                    print 'params:', self.reachingSide, self.graspSample
+                    print('score:', score)
+                    print('params:', self.reachingSide, self.graspSample)
                     self.endPoses.append((score, self.graspEndPose, self.preGraspEndPose, params))
 
         if not self.endPoses:
-            print 'failed to find suitable grasp end pose'
+            print('failed to find suitable grasp end pose')
             return 0
 
         self.endPoses.sort(key=lambda x: x[0])
         self.useGraspEndPoseOption(0)
 
-        print '\n\nfound %d suitable end poses' % len(self.endPoses)
+        print('\n\nfound %d suitable end poses' % len(self.endPoses))
         return len(self.endPoses)
 
 
@@ -732,14 +732,14 @@ class DebrisPlannerDemo(object):
 
 
     def waitForAtlasBehaviorAsync(self, behaviorName):
-        assert behaviorName in self.atlasDriver.getBehaviorMap().values()
+        assert behaviorName in list(self.atlasDriver.getBehaviorMap().values())
         while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
 
     def printAsync(self, s):
         yield
-        print s
+        print(s)
 
 
     def userPrompt(self, message):
@@ -748,7 +748,7 @@ class DebrisPlannerDemo(object):
             return
 
         yield
-        result = raw_input(message)
+        result = input(message)
         if result != 'y':
             raise Exception('user abort.')
 

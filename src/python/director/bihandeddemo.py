@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -510,14 +510,14 @@ class BihandedPlannerDemo(object):
 
 
     def waitForAtlasBehaviorAsync(self, behaviorName):
-        assert behaviorName in self.atlasDriver.getBehaviorMap().values()
+        assert behaviorName in list(self.atlasDriver.getBehaviorMap().values())
         while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
 
     def printAsync(self, s):
         yield
-        print s
+        print(s)
 
 
     def userPrompt(self, message):
@@ -526,7 +526,7 @@ class BihandedPlannerDemo(object):
             return
 
         yield
-        result = raw_input(message)
+        result = input(message)
         if result != 'y':
             raise Exception('user abort.')
 
@@ -578,7 +578,7 @@ class BihandedPlannerDemo(object):
 
     def waitForPlanExecution(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
-        print 'waiting for plan execution:', planElapsedTime
+        print('waiting for plan execution:', planElapsedTime)
 
         return self.delay(planElapsedTime + 1.0)
 

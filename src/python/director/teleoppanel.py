@@ -118,7 +118,7 @@ class EndEffectorTeleopPanel(object):
         return str(combo.currentText)
 
     def setCheckboxState(self, checkbox, state):
-        assert type(state) is types.BooleanType
+        assert type(state) is bool
         checkbox.checked = state
 
     def getCheckboxState(self, checkbox):
@@ -1084,7 +1084,7 @@ class JointTeleopPanel(object):
             joints = group['joints']
             labels = group['labels']
             if len(labels) != len(joints):
-                print 'error, joints/labels mismatch for joint group:', name
+                print('error, joints/labels mismatch for joint group:', name)
                 continue
 
             jointGroupWidget = QtGui.QWidget()
@@ -1125,7 +1125,7 @@ class JointTeleopPanel(object):
         self.signalMapper = QtCore.QSignalMapper()
 
         self.sliderMax = 1000.0
-        for jointName, slider in self.slidersMap.iteritems():
+        for jointName, slider in self.slidersMap.items():
             slider.connect('valueChanged(int)', self.signalMapper, 'map()')
             self.signalMapper.setMapping(slider, jointName)
             slider.setMaximum(self.sliderMax)
@@ -1144,7 +1144,7 @@ class JointTeleopPanel(object):
     def generatePlan(self):
 
         hasBase = False
-        for jointIndex, jointValue in self.userJoints.iteritems():
+        for jointIndex, jointValue in self.userJoints.items():
             if self.toJointName(jointIndex).startswith('base_'):
                 hasBase = True
 
@@ -1179,7 +1179,7 @@ class JointTeleopPanel(object):
 
         enabled = self.ui.jointTeleopButton.checked
 
-        for slider in self.slidersMap.values():
+        for slider in list(self.slidersMap.values()):
             slider.setEnabled(enabled)
 
         self.ui.resetJointsButton.setEnabled(enabled)
@@ -1248,7 +1248,7 @@ class JointTeleopPanel(object):
         self.endPose = self.startPose.copy()
 
         hasBase = False
-        for jointIndex, jointValue in self.userJoints.iteritems():
+        for jointIndex, jointValue in self.userJoints.items():
             jointName = self.toJointName(jointIndex)
             self.endPose[jointIndex] = jointValue
             if jointName.startswith('base_'):
@@ -1264,7 +1264,7 @@ class JointTeleopPanel(object):
             endPoseName = 'posture_goal_end'
             ikPlanner.addPose(self.endPose, endPoseName)
 
-            jointNamesAll = self.slidersMap.keys()
+            jointNamesAll = list(self.slidersMap.keys())
 
             # remove leg joints
             jointNames = []
@@ -1320,7 +1320,7 @@ class JointTeleopPanel(object):
         baseJointOffsets = None
 
 
-        for jointName, slider in self.slidersMap.iteritems():
+        for jointName, slider in self.slidersMap.items():
             jointIndex = self.toJointIndex(jointName)
             jointValue = self.getJointValue(jointIndex)
 

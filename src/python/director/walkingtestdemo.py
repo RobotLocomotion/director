@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -116,14 +116,14 @@ class walkingTestDemo(object):
 
     def printAsync(self, s):
         yield
-        print s
+        print(s)
 
     def optionalUserPrompt(self, message):
         if not self.optionalUserPromptEnabled:
             return
 
         yield
-        result = raw_input(message)
+        result = input(message)
         if result != 'y':
             raise Exception('user abort.')
 
@@ -132,7 +132,7 @@ class walkingTestDemo(object):
             return
 
         yield
-        result = raw_input(message)
+        result = input(message)
         if result != 'y':
             raise Exception('user abort.')
 
@@ -185,7 +185,7 @@ class walkingTestDemo(object):
 
     def waitForPlanAnimation(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
-        print 'waiting for plan animation:', planElapsedTime
+        print('waiting for plan animation:', planElapsedTime)
         return self.delay(planElapsedTime)
 
     def animateLastPlan(self):
@@ -218,7 +218,7 @@ class walkingTestDemo(object):
 
 
     def autonomousTest(self, msg):
-        print "Got the autonomousTest message, executing walking test sequence"
+        print("Got the autonomousTest message, executing walking test sequence")
         q = self.autonomousExecute()
         q.start()
 

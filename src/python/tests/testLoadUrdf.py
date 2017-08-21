@@ -38,28 +38,28 @@ elif args.glob_dir:
 
     failedFiles = []
     for urdfFile in urdfFiles:
-        print 'loading:', urdfFile
+        print('loading:', urdfFile)
         try:
             robotModel, jointController = roboturdf.loadRobotModel(urdfFile=urdfFile, view=view, visible=False, useConfigFile=False)
         except:
-            print traceback.format_exc()
+            print(traceback.format_exc())
             failedFiles.append(urdfFile)
 
     if failedFiles:
-        print 'failed to load urdf files:'
-        print '\n'.join(failedFiles)
+        print('failed to load urdf files:')
+        print('\n'.join(failedFiles))
 
 else:
 
     robotModel, jointController = roboturdf.loadRobotModel('robot model', view)
 
-    print 'urdf file:', robotModel.getProperty('Filename')
+    print('urdf file:', robotModel.getProperty('Filename'))
 
     for joint in robotModel.model.getJointNames():
-        print 'joint:', joint
+        print('joint:', joint)
 
     for link in robotModel.model.getLinkNames():
-        print 'link:', link
+        print('link:', link)
         robotModel.getLinkFrame(link)
 
 

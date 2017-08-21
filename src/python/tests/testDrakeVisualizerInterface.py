@@ -118,10 +118,10 @@ def animate_robot():
             break
 
 def publish_robot_data():
-    print "spawning robot"
+    print("spawning robot")
     spawn_robot()
 
-    print "animating robot"
+    print("animating robot")
     animate_robot()
 
 def main():
@@ -130,12 +130,12 @@ def main():
     # instead.
     vis_binary = os.path.join(os.path.dirname(sys.executable),
                               "drake-visualizer")
-    print "vis_binary:", vis_binary
+    print("vis_binary:", vis_binary)
     vis_process = subprocess.Popen([vis_binary, '--testing', '--interactive'])
 
     # The viewer will take some time to load before it is ready to receive
     # messages, so we'll wait until it sends its first status message.
-    print "waiting for viewer to initialize"
+    print("waiting for viewer to initialize")
     lc = lcm.LCM()
     lc.subscribe("DRAKE_VIEWER_STATUS", lambda c, d: None)
     # Wait for one LCM message to be received.

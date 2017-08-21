@@ -1,5 +1,5 @@
 from director.thirdparty import transformations
-import vtkAll as vtk
+import director.vtkAll as vtk
 import math
 import numpy as np
 
@@ -21,8 +21,8 @@ def getNumpyFromTransform(transform):
     mat = transform.GetMatrix()
     a = np.zeros((4,4))
 
-    for r in xrange(4):
-        for c in xrange(4):
+    for r in range(4):
+        for c in range(4):
             a[r][c] = mat.GetElement(r, c)
 
     return a
@@ -36,8 +36,8 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
     axes = np.array([xaxis, yaxis, zaxis]).transpose().copy()
     vtk.vtkMath.Orthogonalize3x3(axes, axes)
 
-    for r in xrange(3):
-        for c in xrange(3):
+    for r in range(3):
+        for c in range(3):
             m.SetElement(r, c, axes[r][c])
 
     t.SetMatrix(m)

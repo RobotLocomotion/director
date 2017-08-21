@@ -20,8 +20,8 @@ def testTransform():
     mat2 = transformations.quaternion_matrix(quat)
     mat2[:3,3] = pos
 
-    print mat
-    print mat2
+    print(mat)
+    print(mat2)
     assert np.allclose(mat, mat2)
 
 
@@ -37,8 +37,8 @@ def testEuler():
     rpy = transformUtils.rollPitchYawFromTransform(frame)
     rpy2 = transformations.euler_from_matrix(mat)
 
-    print rpy
-    print rpy2
+    print(rpy)
+    print(rpy2)
     assert np.allclose(rpy, rpy2)
 
 
@@ -54,8 +54,8 @@ def testEulerToFrame():
 
     mat2 = transformations.euler_matrix(rpy[0], rpy[1], rpy[2])
 
-    print mat
-    print mat2
+    print(mat)
+    print(mat2)
     assert np.allclose(mat, mat2)
 
 

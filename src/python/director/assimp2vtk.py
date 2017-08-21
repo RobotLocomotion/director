@@ -28,7 +28,7 @@ class AssimpScene(object):
 
     def getTextureForMaterial(self, material):
 
-        materialDict = dict(material.properties.items())
+        materialDict = dict(list(material.properties.items()))
 
         if 'file' not in materialDict:
             return None
@@ -52,10 +52,10 @@ class AssimpScene(object):
                 texture.EdgeClampOn()
                 texture.RepeatOn()
             else:
-                print 'failed to load image file:', imageFile
+                print('failed to load image file:', imageFile)
                 texture = None
         else:
-            print 'cannot find texture file:', textureFile
+            print('cannot find texture file:', textureFile)
             texture = None
 
         self.textureCache[textureFile] = texture
@@ -79,7 +79,7 @@ class AssimpScene(object):
 
     def setMaterialProperties(self, obj, mesh):
         material = mesh.material
-        props = {k[0]:v for k, v in material.properties.iteritems()}
+        props = {k[0]:v for k, v in material.properties.items()}
 
         obj.setProperty('Alpha', props['opacity'])
         obj.setProperty('Color', props['diffuse'])
@@ -97,12 +97,12 @@ class AssimpScene(object):
 
 def addMaterialMetaData(polyData, material):
 
-    materialDict = dict(material.properties.items())
+    materialDict = dict(list(material.properties.items()))
     textureFile = materialDict['file']
 
     textureFileAbsPath = os.path.join(meshDir, textureFile)
     if not os.path.isfile(textureFileAbsPath):
-        print 'warning, cannot find texture file:', os.path.abspath(textureFileAbsPath)
+        print('warning, cannot find texture file:', os.path.abspath(textureFileAbsPath))
 
     s = vtk.vtkStringArray()
     s.InsertNextValue(textureFile)
@@ -135,7 +135,7 @@ def assimpMeshToPolyData(mesh):
 
     cells = vtk.vtkCellArray()
 
-    for i in xrange(nfaces):
+    for i in range(nfaces):
         face = faces[i]
         tri = vtk.vtkTriangle()
         tri.GetPointIds().SetId(0, face[0])
@@ -172,8 +172,8 @@ def assimpTransformToVtk(node):
 
     m = vtk.vtkMatrix4x4()
 
-    for r in xrange(4):
-        for c in xrange(4):
+    for r in range(4):
+        for c in range(4):
             m.SetElement(r, c, node.matrix[r][c])
 
     t = vtk.vtkTransform()
@@ -212,7 +212,7 @@ def writeMultiBlockPolyData(polyDataList, outFile):
 if __name__ == '__main__':
 
     if len(sys.argv) < 2:
-        print 'Usage: %s <mesh file>' % sys.argv[0]
+        print('Usage: %s <mesh file>' % sys.argv[0])
         sys.exit(1)
 
 

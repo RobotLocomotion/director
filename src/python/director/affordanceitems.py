@@ -73,7 +73,7 @@ class AffordanceItem(PolyDataItem):
         self._renderAllViews()
 
     def syncProperties(self, desc, copyMode=COPY_MODE_ALL):
-        for propertyName, propertyValue in desc.iteritems():
+        for propertyName, propertyValue in desc.items():
             if copyMode == self.COPY_MODE_SKIP_LOCAL:
                 if propertyName in self.LOCAL_PROPERTY_NAMES:
                     continue

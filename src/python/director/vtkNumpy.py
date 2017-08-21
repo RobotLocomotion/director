@@ -10,7 +10,7 @@ def numpyToPolyData(pts, pointData=None, createVertexCells=True):
     pd.SetPoints(getVtkPointsFromNumpy(pts.copy()))
 
     if pointData is not None:
-        for key, value in pointData.iteritems():
+        for key, value in list(pointData.items()):
             addNumpyToVtk(pd, value.copy(), key)
 
     if createVertexCells:

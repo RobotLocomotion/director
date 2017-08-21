@@ -60,13 +60,13 @@ def runTest():
         jointMax = limit[1] - jointLimitPadding
         samples, spacing = np.linspace(jointMin, jointMax, samplesPerJoint, retstep=True)
         jointSamples.append(samples)
-        print 'joint name:', name
-        print 'joint range: [%.4f, %.4f]' % (limit[0], limit[1])
-        print 'joint number of samples:', samplesPerJoint
-        print 'joint sample spacing: %.4f' % spacing
+        print('joint name:', name)
+        print('joint range: [%.4f, %.4f]' % (limit[0], limit[1]))
+        print('joint number of samples:', samplesPerJoint)
+        print('joint sample spacing: %.4f' % spacing)
 
     totalSamples = np.product([len(x) for x in jointSamples])
-    print 'total number of samples:', totalSamples
+    print('total number of samples:', totalSamples)
 
     allSamples = list(itertools.product(*jointSamples))
     if randomizeSamples:
@@ -102,18 +102,18 @@ def runTest():
     seedPoseName = 'sample_pose'
     nominalPoseName = 'sample_pose'
 
-    print
-    print 'constraints:'
-    print
-    print constraints[-2]
-    print
-    print constraints[-1]
-    print
-    print ikParameters
-    print
-    print 'seed pose name:', seedPoseName
-    print 'nominal pose name:', nominalPoseName
-    print
+    print()
+    print('constraints:')
+    print()
+    print(constraints[-2])
+    print()
+    print(constraints[-1])
+    print()
+    print(ikParameters)
+    print()
+    print('seed pose name:', seedPoseName)
+    print('nominal pose name:', nominalPoseName)
+    print()
 
 
     ikPlanner.addPose(jointController.q, 'sample_pose')
@@ -155,34 +155,34 @@ def runTest():
         endPose, info = computeIk(targetFrame, constraints, ikParameters, seedPoseName, nominalPoseName)
 
         if info >= 10:
-            print
-            print 'bad info:', info
+            print()
+            print('bad info:', info)
             jointController.addPose('bad', endPose)
-            print 'sample num:', totalSampleCount
-            print 'sample:', sample
-            print
+            print('sample num:', totalSampleCount)
+            print('sample:', sample)
+            print()
 
             badSampleCount += 1
             errorRate = badSampleCount/float(totalSampleCount)
-            print 'error rate: %.2f' % errorRate
-            print 'avg pose l2 norm:', sampleL2NormAccum/totalSampleCount
+            print('error rate: %.2f' % errorRate)
+            print('avg pose l2 norm:', sampleL2NormAccum/totalSampleCount)
 
             if testTolerances:
                 succeeded = False
                 for tol in [(0.01, 1), (0.01, 2), (0.02, 2), (0.02, 3), (0.03, 3), (0.03, 5), (0.04, 5), (0.05, 5), (0.1, 10), (0.2, 20)]:
 
-                    print 'retry tolerance:', tol
+                    print('retry tolerance:', tol)
                     setTolerance(tol[0], tol[1])
                     endPose, info = computeIk(frame, constraints, ikParameters, seedPoseName, nominalPoseName)
                     if info < 10:
                         succeeded = True
-                        print 'Worked!'
+                        print('Worked!')
                         break
 
                 setTolerance(0.005, 0.5)
 
                 if not succeeded:
-                    print 'Giving up after retries.'
+                    print('Giving up after retries.')
                     continue
 
 
@@ -190,7 +190,7 @@ def runTest():
         elapsed = timeNow - startTime
         if elapsed > 1.0:
             view.forceRender()
-            print '%d samples/sec' % (sampleCount / elapsed), '%d total samples' % totalSampleCount
+            print('%d samples/sec' % (sampleCount / elapsed), '%d total samples' % totalSampleCount)
             startTime = timeNow
             sampleCount = 0
 
