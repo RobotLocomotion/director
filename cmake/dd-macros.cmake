@@ -1,3 +1,9 @@
+macro(setup_python)
+  find_package(PythonLibs 2.7 REQUIRED)
+  find_package(PythonInterp 2.7 REQUIRED)
+endmacro()
+
+
 macro(setup_qt)
   set(DD_QT_VERSION 4 CACHE STRING "Selected Qt version")
   set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
@@ -14,6 +20,7 @@ macro(setup_qt)
 
   if(DD_QT_VERSION EQUAL 4)
     find_package(Qt4 REQUIRED QtCore QtGui QtOpenGL QtScript)
+    mark_as_advanced(QT_QMAKE_EXECUTABLE)
   elseif(DD_QT_VERSION EQUAL 5)
     if(APPLE)
       set(qt_homebrew_dir /usr/local/opt/qt/lib/cmake/)

@@ -3,16 +3,6 @@ import vtkAll as vtk
 import math
 import numpy as np
 
-try:
-    # This module uses libbot for some transformations.
-    # There is a pending branch that replaces libbot with the
-    # thirdparty.transformations module.  For now, libbot is
-    # imported with a try/except to make it an optional dependency,
-    # but eventually it will be removed and replaced with transformations.py
-    from director import botpy
-except ImportError:
-    pass
-
 
 def getTransformFromNumpy(mat):
     '''

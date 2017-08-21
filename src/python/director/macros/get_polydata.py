@@ -1,1 +1,0 @@
-polyData = om.getActiveObject().polyData

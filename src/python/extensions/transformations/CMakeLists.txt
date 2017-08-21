@@ -1,4 +1,3 @@
-find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
 find_package(NumPy)

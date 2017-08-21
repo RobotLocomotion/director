@@ -1,5 +1,3 @@
-find_package(PythonLibs 2.7 REQUIRED)
-find_package(PythonInterp 2.7 REQUIRED)
 find_package(PythonQt REQUIRED)
 find_package(CTKPythonConsole REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -70,6 +68,7 @@ qt_wrap_cpp(moc_srcs
   ddPropertiesPanel.h
   ddPythonEventFilter.h
   ddPythonManager.h
+  ddPythonUndoCommand.h
   ddQVTKWidgetView.h
   ddSignalMap.h
   ddSpreadsheetView.h
@@ -77,6 +76,7 @@ qt_wrap_cpp(moc_srcs
   ddViewBase.h
   ddViewManager.h
   ddViewMenu.h
+  ddVTKObjectMap.h
   )
 
 qt_wrap_ui(ui_srcs
@@ -102,8 +102,10 @@ set(srcs
   ddMainWindow.cpp
   ddObjectTree.cpp
   ddPropertiesPanel.cpp
+  ddPythonApp.cpp
   ddPythonManager.cpp
   ddPythonQtWrapperFactory.cpp
+  ddPythonUndoCommand.cpp
   ddQVTKWidgetView.cpp
   ddSignalMap.cpp
   ddSpreadsheetView.cpp
@@ -111,6 +113,7 @@ set(srcs
   ddViewBase.cpp
   ddViewManager.cpp
   ddViewMenu.cpp
+  ddVTKObjectMap.cpp
 
   vtkSimpleActorInteractor.cxx
   vtkTDxInteractorStyleCallback.cxx
@@ -268,6 +271,7 @@ add_executable(directorPython consoleApp.cpp)
 target_link_libraries(directorPython ddApp ${PYTHON_LIBRARIES})
 
 install(TARGETS ${_install_targets}
+    EXPORT ${DD_TARGETS_NAME}
     RUNTIME DESTINATION ${DD_INSTALL_BIN_DIR}
     LIBRARY DESTINATION ${DD_INSTALL_LIB_DIR}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})

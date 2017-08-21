@@ -433,7 +433,7 @@ def showText(text, name, fontSize=18, position=(10, 10), parent=None, view=None)
     return item
 
 
-def createAxesPolyData(scale, useTube):
+def createAxesPolyData(scale, useTube, tubeWidth=0.002):
     axes = vtk.vtkAxes()
     axes.SetComputeNormals(0)
     axes.SetScaleFactor(scale)
@@ -442,7 +442,7 @@ def createAxesPolyData(scale, useTube):
     if useTube:
         tube = vtk.vtkTubeFilter()
         tube.SetInputConnection(axes.GetOutputPort())
-        tube.SetRadius(0.002)
+        tube.SetRadius(tubeWidth)
         tube.SetNumberOfSides(12)
         tube.Update()
         axes = tube
@@ -473,6 +473,7 @@ class FrameItem(PolyDataItem):
         self.addProperty('Edit', False)
         self.addProperty('Trace', False)
         self.addProperty('Tube', False)
+        self.addProperty('Tube Width', 0.002, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=10, singleStep=0.01, hidden=True))
 
         self.properties.setPropertyIndex('Edit', 0)
         self.properties.setPropertyIndex('Trace', 1)
@@ -520,7 +521,7 @@ class FrameItem(PolyDataItem):
     def _updateAxesGeometry(self):
         scale = self.getProperty('Scale')
         self.rep.SetWorldSize(scale)
-        self.setPolyData(createAxesPolyData(scale, self.getProperty('Tube')))
+        self.setPolyData(createAxesPolyData(scale, self.getProperty('Tube'), self.getProperty('Tube Width')))
 
     def _onPropertyChanged(self, propertySet, propertyName):
         PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
@@ -547,6 +548,7 @@ class FrameItem(PolyDataItem):
                 om.removeFromObjectModel(self.traceData.getTraceData())
                 self.traceData = None
         elif propertyName == 'Tube':
+            self.properties.setPropertyAttribute('Tube Width', 'hidden', not self.getProperty(propertyName))
             self._updateAxesGeometry()
 
     def onRemoveFromObjectModel(self):
@@ -786,7 +788,30 @@ class ViewOptionsItem(om.ObjectModelItem):
         self.view.render()
 
 
-def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=[1,1,1], alpha=0.05, gridTransform=None):
+def getVisibleActors(view):
+    actors = view.renderer().GetActors()
+    return [actors.GetItemAsObject(i) for i in range(actors.GetNumberOfItems())
+                if actor.GetVisibility()]
+
+
+def computeViewBoundsNoGrid(view, gridObj):
+    gridObj.actor.SetUseBounds(False)
+    bounds = view.renderer().ComputeVisiblePropBounds()
+    gridObj.actor.SetUseBounds(True)
+    return bounds
+
+
+def computeViewBoundsSoloGrid(view, gridObj):
+    actors = getVisibleActors(view)
+    onlyGridShowing = (len(actors) == 1) and (actors[0] == gridObj.actor)
+    if onlyGridShowing:
+        gridObj.actor.SetUseBounds(True)
+        return view.renderer().ComputeVisiblePropBounds()
+    else:
+        return computeViewBoundsNoGrid(view, gridObj)
+
+
+def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=[1,1,1], alpha=0.05, gridTransform=None, viewBoundsFunction=None):
 
     grid = vtk.vtkGridSource()
     grid.SetScale(cellSize)
@@ -805,19 +830,17 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
 
     gridObj.setProperty('Surface Mode', 'Wireframe')
 
-    def computeViewBoundsNoGrid():
-        if not gridObj.getProperty('Visible'):
+    viewBoundsFunction = viewBoundsFunction or computeViewBoundsNoGrid
+    def onViewBoundsRequest():
+        if view not in gridObj.views or not gridObj.getProperty('Visible'):
             return
-
-        gridObj.actor.SetUseBounds(False)
-        bounds = view.renderer().ComputeVisiblePropBounds()
-        gridObj.actor.SetUseBounds(True)
+        bounds = viewBoundsFunction(view, gridObj)
         if vtk.vtkMath.AreBoundsInitialized(bounds):
             view.addCustomBounds(bounds)
         else:
             view.addCustomBounds([-1, 1, -1, 1, -1, 1])
+    view.connect('computeBoundsRequest(ddQVTKWidgetView*)', onViewBoundsRequest)
 
-    view.connect('computeBoundsRequest(ddQVTKWidgetView*)', computeViewBoundsNoGrid)
     return gridObj
 
 

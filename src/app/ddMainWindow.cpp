@@ -78,7 +78,6 @@ ddMainWindow::ddMainWindow()
 
   this->Internal->UserMacrosManager = new ddMacrosManager(this);
   this->Internal->UserMacrosManager->setToolBar(this->Internal->MacrosToolBar);
-  this->Internal->UserMacrosManager->addPath(this->Internal->PythonManager->appSitePackagesDir() + "/director/macros");
 
   this->connect(this->Internal->ViewManager, SIGNAL(currentViewChanged(ddViewBase*, ddViewBase*)), SLOT(onCurrentViewChanged(ddViewBase*, ddViewBase*)));
   this->onCurrentViewChanged(0, this->Internal->ViewManager->currentView());
@@ -186,13 +185,7 @@ QList<QAction*> ddMainWindow::toolBarActions() const
 //-----------------------------------------------------------------------------
 void ddMainWindow::onCurrentViewChanged(ddViewBase* previousView, ddViewBase* currentView)
 {
-  QMap<QString, QString> macroDirs;
 
-  macroDirs["Segmentation View"] = ddPythonManager::appSitePackagesDir() + "/director/macros/segmentation_view";
-  macroDirs["DRC View"] = ddPythonManager::appSitePackagesDir() + "/director/macros/drc_view";
-
-  this->Internal->ViewMacrosManager->removePath(macroDirs.value(this->Internal->ViewManager->viewName(previousView)));
-  this->Internal->ViewMacrosManager->addPath(macroDirs.value(this->Internal->ViewManager->viewName(currentView)));
 }
 
 //-----------------------------------------------------------------------------

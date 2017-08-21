@@ -8,6 +8,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QShortcut>
+#include <QLibrary>
 
 //-----------------------------------------------------------------------------
 class ddPythonManager::ddInternal
@@ -59,39 +60,41 @@ void ddPythonManager::preInitialization()
   this->addWrapperFactory(new ddPythonQtWrapperFactory);
   this->registerPythonQtDecorator(new ddPythonQtDecorators);
 
-  // when running from a cmake build directory (not an install tree)
-  // then automatically prepend the python sys.path
-  if (QFileInfo(QCoreApplication::applicationDirPath()  + "/../CMakeCache.txt").exists())
-  {
-    PythonQt::self()->addSysPath(this->appSitePackagesDir());
-  }
+  PythonQt::self()->importModule("PythonQt.dd").addObject("_pythonManager", this);
 
-  PythonQtObjectPtr mod = PythonQt::self()->importModule("PythonQt.dd");
-  mod.addObject("_pythonManager", this);
+  QString libDir = QFileInfo(QCoreApplication::applicationDirPath() + "/../lib").canonicalFilePath();
+  PythonQtObjectPtr mod = PythonQt::self()->importModule("sys");
+  QVariantList version = mod.getVariable("version_info").value<QVariantList>();
+  QString pythonMajor = version[0].toString();
+  QString pythonMinor = version[1].toString();
+
+  QStringList paths;
+  paths << libDir + QString("/python%1/dist-packages").arg(pythonMajor);
+  paths << libDir + QString("/python%1/site-packages").arg(pythonMajor);
+  paths << libDir + QString("/python%1.%2/dist-packages").arg(pythonMajor, pythonMinor);
+  paths << libDir + QString("/python%1.%2/site-packages").arg(pythonMajor, pythonMinor);
+
+  foreach (const QString& path, paths)
+  {
+    if (QDir(path).exists())
+    {
+      PythonQt::self()->addSysPath(QDir::fromNativeSeparators(path));
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------
 QString ddPythonManager::appSitePackagesDir()
 {
-  return QFileInfo(QCoreApplication::applicationDirPath()  + "/../lib/python2.7/dist-packages").canonicalFilePath();
-}
+  PythonQtObjectPtr mod = PythonQt::self()->importModule("sys");
+  QVariantList version = mod.getVariable("version_info").value<QVariantList>();
 
-//-----------------------------------------------------------------------------
-QStringList ddPythonManager::pythonPaths()
-{
-  QStringList searchDirs;
-  searchDirs << this->appSitePackagesDir();
-  searchDirs << this->appSitePackagesDir().replace("dist-packages", "site-packages");
+  QString sitePath = QString("%1/../lib/python%2.%3/site-packages").arg(
+    QCoreApplication::applicationDirPath(),
+    version[0].toString(),
+    version[1].toString());
 
-  QStringList paths;
-  foreach (const QString& dirname, searchDirs)
-  {
-    if (QDir(dirname).exists())
-    {
-      paths.append(dirname);
-    }
-  }
-  return paths;
+  return QFileInfo(sitePath).canonicalFilePath();
 }
 
 //-----------------------------------------------------------------------------
@@ -120,6 +123,28 @@ ctkPythonConsole* ddPythonManager::consoleWidget() const
 void ddPythonManager::showConsole()
 {
   this->Internal->Console->show();
+}
+
+//-----------------------------------------------------------------------------
+void ddPythonManager::loadPlugin(const QString& filename, const QString& functionName)
+{
+  QLibrary myLib(filename);
+  if (!myLib.load())
+  {
+    printf("error loading library: %s\n", qPrintable(myLib.errorString()));
+    return;
+  }
+
+  typedef void (*initFunction)();
+  initFunction func = (initFunction) myLib.resolve(functionName.toLocal8Bit().data());
+  if (func)
+  {
+    func();
+  }
+  else
+  {
+    printf("could not resolve init function: %s\n", qPrintable(functionName));
+  }
 }
 
 //-----------------------------------------------------------------------------

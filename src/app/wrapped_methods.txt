@@ -93,9 +93,18 @@ void ddViewMenu::addWidget(QWidget*, QAction*);
 void ddViewMenu::addSeparator();
 void ddViewMenu::removeWidget(QWidget*);
 
+ddPythonUndoCommand::ddPythonUndoCommand(const QString&, PythonQtObjectPtr, PythonQtObjectPtr, PythonQtObjectPtr);
+ddPythonUndoCommand::ddPythonUndoCommand(const QString&, PythonQtObjectPtr, PythonQtObjectPtr, PythonQtObjectPtr, PythonQtObjectPtr, int);
+void ddPythonUndoCommand::push(QUndoStack*);
+QString ddPythonUndoCommand::text() const;
+void ddPythonUndoCommand::setText(const QString&)
+PythonQtObjectPtr ddPythonUndoCommand::userData() const;
 
 ddSignalMap::ddSignalMap();
 QMap<QString, QVariant> ddSignalMap::map() const;
 void ddSignalMap::signalItemChanged(const QString&);
 void ddSignalMap::setItem(const QString&, const QVariant&);
 QVariant ddSignalMap::value(const QString&) const;
+
+ddVTKObjectMap::ddVTKObjectMap();
+QVariant ddVTKObjectMap::take(const QString&);

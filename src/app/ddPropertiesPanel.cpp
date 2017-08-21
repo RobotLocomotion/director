@@ -4,7 +4,7 @@
 #include <QtTreePropertyBrowser>
 #include <QtGroupBoxPropertyBrowser>
 #include <QtVariantEditorFactory>
-
+#include <QDebug>
 
 #include <QVBoxLayout>
 
@@ -110,7 +110,19 @@ QtVariantProperty* ddPropertiesPanel::addProperty(const QString& name, const QVa
 {
   int propertyType = value.type();
 
+  // Python may pass integer properties as QVariant::LongLong
+  // but this type is not supported by the QtPropertyBrowser
+  if (propertyType == QVariant::LongLong)
+  {
+    propertyType = QVariant::Int;
+  }
+
   QtVariantProperty* property = this->Internal->Manager->addProperty(propertyType, name);
+  if (!property)
+  {
+    qWarning() << "Unsupported property type " << value.typeName() << " given for property " << name;
+    property = this->Internal->Manager->addProperty(QVariant::String, name);
+  }
   property->setValue(value);
 
   this->Internal->Browser->addProperty(property);
@@ -155,10 +167,23 @@ QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString& name, const 
     return 0;
   }
 
+  int propertyType = value.type();
   int subId = parent->subProperties().length();
   QString subName = QString("%1[%2]").arg(name).arg(subId);
 
-  QtVariantProperty* property = this->Internal->Manager->addProperty(value.type(), subName);
+  // Python may pass integer properties as QVariant::LongLong
+  // but this type is not supported by the QtPropertyBrowser
+  if (propertyType == QVariant::LongLong)
+  {
+    propertyType = QVariant::Int;
+  }
+
+  QtVariantProperty* property = this->Internal->Manager->addProperty(propertyType, subName);
+  if (!property)
+  {
+    qWarning() << "Unsupported property type " << value.typeName() << " given for property " << name;
+    property = this->Internal->Manager->addProperty(QVariant::String, name);
+  }
   property->setValue(value);
 
   parent->addSubProperty(property);

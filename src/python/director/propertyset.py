@@ -161,8 +161,9 @@ class PropertySet(object):
         self.assertProperty(propertyName)
         attributes = self._attributes[propertyName]
         assert hasattr(attributes, propertyAttribute), "Missing attribute: {:s}".format(propertyAttribute)
-        setattr(attributes, propertyAttribute, value)
-        self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
+        if getattr(attributes, propertyAttribute) != value:
+            setattr(attributes, propertyAttribute, value)
+            self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
 
     def __getattribute__(self, name):
         try:
@@ -280,13 +281,15 @@ class PropertyPanelHelper(object):
 
 
 class PropertyPanelConnector(object):
+
     def __init__(self, propertySet, propertiesPanel, propertyNamesToAdd=None):
         self.propertySet = propertySet
         self.propertyNamesToAdd = propertyNamesToAdd
         self.propertiesPanel = propertiesPanel
-        self.propertySet.connectPropertyAdded(self._onPropertyAdded)
-        self.propertySet.connectPropertyChanged(self._onPropertyChanged)
-        self.propertySet.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
+        self.connections = []
+        self.connections.append(self.propertySet.connectPropertyAdded(self._onPropertyAdded))
+        self.connections.append(self.propertySet.connectPropertyChanged(self._onPropertyChanged))
+        self.connections.append(self.propertySet.connectPropertyAttributeChanged(self._onPropertyAttributeChanged))
         self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
 
         self.timer = TimerCallback()
@@ -297,7 +300,10 @@ class PropertyPanelConnector(object):
         self._blockSignals = False
 
     def cleanup(self):
+        self.timer.callback = None
         self.propertiesPanel.disconnect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
+        for connection in self.connections:
+            self.propertySet.callbacks.disconnect(connection)
 
     def _rebuild(self):
         if not self.timer.singleShotTimer.isActive():

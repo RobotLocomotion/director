@@ -220,6 +220,7 @@ class ImagePointPicker(object):
                 self.hideCursor()
 
         if event.modifiers() != QtCore.Qt.ShiftModifier:
+            self.showCursor = False
             if self.annotationObj:
                 self.hoverPos = None
                 self.draw()
@@ -277,8 +278,10 @@ class ImagePointPicker(object):
             points.append(self.hoverPos)
 
         # draw points
+        radius = 5
+        scale = (2*self.view.camera().GetParallelScale())/(self.view.renderer().GetSize()[1])
         for p in points:
-            d.addSphere(p, radius=5)
+            d.addSphere(p, radius=radius*scale)
 
         if self.drawLines and len(points) > 1:
             for a, b in zip(points, points[1:]):
@@ -316,7 +319,7 @@ class ImagePointPicker(object):
     def displayPointToImagePoint(self, displayPoint, restrictToImageDimensions=True):
         point = self.imageView.getImagePixel(displayPoint, restrictToImageDimensions)
         if point is not None:
-            point[2] = -1.0
+            point[2] = np.sign(self.view.camera().GetPosition()[2])
             return point
 
 

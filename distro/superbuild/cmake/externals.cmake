@@ -75,10 +75,12 @@ if(APPLE)
 else()
   find_package(PythonLibs 2.7 REQUIRED)
 endif()
+find_package(PythonInterp 2.7 REQUIRED)
 
 set(python_args
+  -DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}
   -DPYTHON_INCLUDE_DIR:PATH=${PYTHON_INCLUDE_DIR}
-  -DPYTHON_INCLUDE_DIR2:PATH=${PYTHON_INCLUDE_DIR}
+  -DPYTHON_INCLUDE_DIR2:PATH=${PYTHON_INCLUDE_DIR} # required for cmake 2.8 on ubuntu 14.04
   -DPYTHON_LIBRARY:PATH=${PYTHON_LIBRARY}
   )
 
@@ -324,6 +326,7 @@ elseif(USE_PRECOMPILED_VTK)
   set(url_base "http://patmarion.com/bottles")
 
   find_program(LSB_RELEASE lsb_release)
+  mark_as_advanced(LSB_RELEASE)
   set(ubuntu_version)
   if(LSB_RELEASE)
     execute_process(COMMAND ${LSB_RELEASE} -is
@@ -383,7 +386,7 @@ else()
       -DBUILD_EXAMPLES:BOOL=OFF
       -DVTK_RENDERING_BACKEND:STRING=OpenGL2
       -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
-      -DVTK_PYTHON_VERSION=2
+      -DVTK_PYTHON_VERSION:STRING=2
       -DModule_vtkGUISupportQt:BOOL=ON
       -DCMAKE_MACOSX_RPATH:BOOL=ON
       -DVTK_WRAP_PYTHON:BOOL=ON
@@ -482,12 +485,13 @@ if(USE_PCL)
 
 ExternalProject_Add(PointCloudLibraryPlugin
   GIT_REPOSITORY https://github.com/patmarion/PointCloudLibraryPlugin.git
-  GIT_TAG a88aa5a
+  GIT_TAG 2b1bdfe
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${eigen_args}
     ${boost_args}
     ${flann_args}
+    ${python_args}
     ${vtk_args}
     -DPCL_REQUIRED_VERSION:STRING=1.8.0
   DEPENDS

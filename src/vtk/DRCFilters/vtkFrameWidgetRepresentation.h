@@ -28,6 +28,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 class vtkTransform;
 class vtkDataSet;
+class vtkActor;
 
 class VTKDRCFILTERS_EXPORT vtkFrameWidgetRepresentation : public vtkWidgetRepresentation
 {
@@ -71,6 +72,8 @@ public:
 
   void SetTranslateAxisEnabled(int axisId, bool enabled);
   void SetRotateAxisEnabled(int axisId, bool enabled);
+
+  void SetRotationActor(int axisId, vtkActor* actor);
 
   // Description:
   // Methods supporting, and required by, the rendering process.

@@ -87,6 +87,10 @@ class ConsoleApp(object):
     def applicationInstance():
         return QtCore.QCoreApplication.instance()
 
+    @staticmethod
+    def processEvents():
+        QtCore.QCoreApplication.instance().processEvents()
+
     def showObjectModel(self):
 
         if not self.objectModelWidget:

@@ -14,6 +14,7 @@ set(sources
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
   vtkInteractorStyleTerrain2.cxx
+  vtkPickCenteredInteractorStyle.cxx
   )
 
 # extra source files to compile but do not python wrap
@@ -172,16 +173,21 @@ if(pkg_deps)
 endif()
 
 install(TARGETS ${library_name}
+    EXPORT ${DD_TARGETS_NAME}
     RUNTIME DESTINATION ${DD_INSTALL_BIN_DIR}
     LIBRARY DESTINATION ${DD_INSTALL_LIB_DIR}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})
 
-if(VTK_WRAP_PYTHON)
-  find_package(PythonLibs 2.7 REQUIRED)
-  include_directories(${PYTHON_INCLUDE_DIR})
-  include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
-  wrap_python(${library_name} "${sources}")
-  set_target_properties(${library_name}Python PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
-  target_link_libraries(${library_name}Python ${PYTHON_LIBRARIES})
-  target_link_libraries(${library_name}PythonD ${PYTHON_LIBRARIES})
+if(NOT VTK_WRAP_PYTHON)
+  message(FATAL_ERROR "VTK was compiled without Python support. "
+    "VTK_WRAP_PYTHON is OFF. You must use a version of VTK with Python. "
+    "VTK_DIR is: ${VTK_DIR}")
 endif()
+
+include_directories(${PYTHON_INCLUDE_DIR})
+include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
+wrap_python(${library_name} "${sources}")
+set_target_properties(${library_name}Python
+  PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
+target_link_libraries(${library_name}Python ${PYTHON_LIBRARIES})
+target_link_libraries(${library_name}PythonD ${PYTHON_LIBRARIES})

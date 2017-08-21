@@ -2,18 +2,6 @@ from director import transformUtils
 from director.thirdparty import transformations
 import numpy as np
 
-try:
-  from director import botpy
-except ImportError:
-  botpy = None
-
-'''
-This tests the routines in director.transformUtils, botpy, and
-director.thirdparty.transformations to make sure the modules
-agree about conversions between matrices, quaternions, and
-euler angles.
-'''
-
 
 def testTransform():
     '''
@@ -35,37 +23,6 @@ def testTransform():
     print mat
     print mat2
     assert np.allclose(mat, mat2)
-
-
-def isQuatEqual(quatA, quatB):
-    matA = transformations.quaternion_matrix(quatA)
-    matB = transformations.quaternion_matrix(quatB)
-    return transformations.is_same_transform(matA, matB)
-
-
-def testQuaternionInterpolate():
-    '''
-    Test quaternion interpolation in botpy
-    '''
-
-    q1 = transformations.random_quaternion()
-    q2 = transformations.random_quaternion()
-
-    print q1
-    print q2
-
-    for weight in np.linspace(0, 1, 10):
-      qi = botpy.quat_interpolate(q1, q2, weight)
-      qi2 = transformations.quaternion_slerp(q1, q2, weight)
-
-      print weight, qi, qi2
-      assert isQuatEqual(qi, qi2)
-
-      if weight == 0.0:
-        assert isQuatEqual(qi, q1)
-
-      if weight == 1.0:
-        assert isQuatEqual(qi, q2)
 
 
 def testEuler():
@@ -102,36 +59,6 @@ def testEulerToFrame():
     assert np.allclose(mat, mat2)
 
 
-def testEulerBotpy():
-    '''
-    Test some quaternion and euler conversions with botpy
-    '''
-
-    quat = transformations.random_quaternion()
-    rpy = transformations.euler_from_quaternion(quat)
-
-    rpy2 = botpy.quat_to_roll_pitch_yaw(quat)
-    quat2 = botpy.roll_pitch_yaw_to_quat(rpy)
-
-    mat = transformations.quaternion_matrix(quat)
-    frame = transformUtils.getTransformFromNumpy(mat)
-    rpy3 = transformUtils.rollPitchYawFromTransform(frame)
-
-    print quat, quat2
-    print rpy, rpy2, rpy3
-
-    assert isQuatEqual(quat, quat2)
-    assert np.allclose(rpy, rpy2)
-    assert np.allclose(rpy2, rpy3)
-
-
 testTransform()
 testEuler()
 testEulerToFrame()
-
-if botpy:
-    testQuaternionInterpolate()
-    testEulerBotpy()
-else:
-    print 'skipped botpy tests because botpy module is not available'
-
