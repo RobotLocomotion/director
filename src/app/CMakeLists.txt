@@ -103,6 +103,7 @@ set(srcs
   ddMainWindow.cpp
   ddObjectTree.cpp
   ddPropertiesPanel.cpp
+  ddPythonApp.cpp
   ddPythonManager.cpp
   ddPythonQtWrapperFactory.cpp
   ddPythonUndoCommand.cpp
