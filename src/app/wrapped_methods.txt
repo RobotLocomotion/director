@@ -105,3 +105,6 @@ QMap<QString, QVariant> ddSignalMap::map() const;
 void ddSignalMap::signalItemChanged(const QString&);
 void ddSignalMap::setItem(const QString&, const QVariant&);
 QVariant ddSignalMap::value(const QString&) const;
+
+ddVTKObjectMap::ddVTKObjectMap();
+QVariant ddVTKObjectMap::take(const QString&);

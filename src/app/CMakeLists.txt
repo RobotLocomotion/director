@@ -78,6 +78,7 @@ qt_wrap_cpp(moc_srcs
   ddViewBase.h
   ddViewManager.h
   ddViewMenu.h
+  ddVTKObjectMap.h
   )
 
 qt_wrap_ui(ui_srcs
@@ -114,6 +115,7 @@ set(srcs
   ddViewBase.cpp
   ddViewManager.cpp
   ddViewMenu.cpp
+  ddVTKObjectMap.cpp
 
   vtkSimpleActorInteractor.cxx
   vtkTDxInteractorStyleCallback.cxx
