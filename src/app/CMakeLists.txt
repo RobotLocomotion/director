@@ -270,6 +270,7 @@ add_executable(directorPython consoleApp.cpp)
 target_link_libraries(directorPython ddApp ${PYTHON_LIBRARIES})
 
 install(TARGETS ${_install_targets}
+    EXPORT ${DD_TARGETS_NAME}
     RUNTIME DESTINATION ${DD_INSTALL_BIN_DIR}
     LIBRARY DESTINATION ${DD_INSTALL_LIB_DIR}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})

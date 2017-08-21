@@ -11,6 +11,7 @@ set(DD_INSTALL_DOC_DIR share/doc/director)
 set(DD_INSTALL_LIB_DIR lib)
 set(DD_INSTALL_INCLUDE_DIR include/director)
 set(DD_INSTALL_PYTHON_DIR ${DD_INSTALL_LIB_DIR}/python2.7/dist-packages)
+set(DD_TARGETS_NAME director-targets)
 
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DD_INSTALL_BIN_DIR}")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DD_INSTALL_LIB_DIR}")
@@ -50,4 +51,4 @@ add_subdirectory(src)
 # documentation
 add_subdirectory(docs)
 
-install(FILES LICENSE.txt DESTINATION ${DD_INSTALL_DOC_DIR})
+include(cmake/dd-post-build.cmake)

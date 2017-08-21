@@ -1,0 +1,39 @@
+# director-confing.cmake defines the following variables:
+#
+#   DIRECTOR_USE_FILE     - cmake script that can be included for project convenience
+#   DIRECTOR_INCLUDE_DIRS - include directories for director
+#   DIRECTOR_LIBRARIES    - libraries to link against for director
+#   DIRECTOR_VTK_DIR      - path to vtk dir used as director dependency
+#   DIRECTOR_PYTHON_EXECUTABLE - path to Python executable used as director dependency
+#   DD_QT_VERSION         - Qt version used as director dependency
+
+get_filename_component(DD_CONFIG_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+
+# setup include dirs
+set(DD_INCLUDE_DIRS)
+#set(DD_RELATIVE_INCLUDE_DIRS @DD_RELATIVE_INCLUDE_DIRS@)
+
+#if(EXISTS "${DD_CONFIG_DIR}/CMakeCache.txt")
+#   include("${DD_CONFIG_DIR}/ves-build-config.cmake")
+#else()
+  set(DD_INCLUDE_DIR_RELATIVE_TO_CONFIG_DIR @DD_INCLUDE_DIR_RELATIVE_TO_CONFIG_DIR@)
+  set(DD_INCLUDE_BASE_DIR "${DD_CONFIG_DIR}/${DD_INCLUDE_DIR_RELATIVE_TO_CONFIG_DIR}")
+  list(APPEND DD_RELATIVE_INCLUDE_DIRS @DD_RELATIVE_BUILD_INCLUDE_DIRS@)
+#endif()
+
+#foreach(dir ${DD_RELATIVE_INCLUDE_DIRS})
+#  list(APPEND DIRECTOR_INCLUDE_DIRS "${DD_INCLUDE_BASE_DIR}/${dir}")
+#endforeach()
+
+#set(DIRECTOR_INCLUDE_DIRS "${DD_INCLUDE_BASE_DIR}")
+set(DIRECTOR_INCLUDE_DIRS "@CMAKE_SOURCE_DIR@/src/app")
+set(DIRECTOR_SOURCE_DIR "@CMAKE_SOURCE_DIR@")
+set(DD_QT_VERSION @DD_QT_VERSION@)
+set(DIRECTOR_VTK_DIR "@VTK_DIR@")
+set(DIRECTOR_PYTHON_EXECUTABLE "@PYTHON_EXECUTABLE@")
+set(DIRECTOR_USE_FILE "${DIRECTOR_SOURCE_DIR}/cmake/use_director.cmake")
+
+# setup libraries & other targets
+include("${DD_CONFIG_DIR}/@DD_TARGETS_NAME@.cmake")
+set(DIRECTOR_LIBRARIES @DD_LIBRARIES@)
