@@ -1,4 +1,4 @@
-from __future__ import division
+
 
 import numpy as np
 
@@ -94,7 +94,7 @@ class TerrainRegionItem(vis.PolyDataItem):
             self.setPolyData(debug.getPolyData())
             self.safe_region = safe_region
         except QhullError:
-            print "Could not generate convex hull (polytope is likely unbounded)."
+            print("Could not generate convex hull (polytope is likely unbounded).")
 
 
     def onFrameModified(self, frame):

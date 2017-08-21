@@ -1,5 +1,5 @@
 import os
-import vtkAll as vtk
+from . import vtkAll as vtk
 
 class JointPropagator(object):
 

@@ -20,7 +20,7 @@ import os
 import functools
 import numpy as np
 import scipy.io
-import vtkAll as vtk
+from . import vtkAll as vtk
 import bot_core as lcmbotcore
 from director.tasks.taskuserpanel import TaskUserPanel
 import director.tasks.robottasks as rt
@@ -554,7 +554,7 @@ class EgressPlanner(object):
         tCopy = transformUtils.copyFrame(t)
         tCopy.PostMultiply()
         tCopy.Concatenate(self.polaris.originFrame.transform.GetLinearInverse())
-        print transformUtils.poseFromTransform(tCopy)
+        print(transformUtils.poseFromTransform(tCopy))
         return tCopy
 
 
@@ -599,7 +599,7 @@ class EgressPanel(TaskUserPanel):
 
     def onStart(self):
         self._syncProperties()
-        print 'Egress Planner Ready'
+        print('Egress Planner Ready')
 
     def onUpdateAffordance(self):
         if not self.platformPlanner.initializedFlag:

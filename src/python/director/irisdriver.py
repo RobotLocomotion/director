@@ -1,4 +1,4 @@
-from __future__ import division
+
 
 import numpy as np
 import drc as lcmdrc
@@ -33,10 +33,10 @@ class IRISDriver(object):
         self.segmentation_sub = lcmUtils.addSubscriber('IRIS_SEGMENTATION_RESPONSE', lcmdrc.iris_region_response_t, self.onIRISRegionResponse)
 
     def getNewUID(self):
-        return max(self.regions.keys() + [0]) + 1
+        return max(list(self.regions.keys()) + [0]) + 1
 
     def getNewUIDs(self, num_ids=1):
-        return [max(self.regions.keys() + [0]) + 1 + i for i in range(num_ids)]
+        return [max(list(self.regions.keys()) + [0]) + 1 + i for i in range(num_ids)]
 
     def newTerrainItem(self, tform, uid=None, region=None):
         if uid is None:

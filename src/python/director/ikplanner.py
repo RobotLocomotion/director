@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -76,7 +76,7 @@ class ConstraintSet(object):
             self.endPose = self.ikPlanner.clipState(self.endPose, self.jointLimitsLower, self.jointLimitsUpper)
 
         self.ikPlanner.addPose(self.endPose, 'q_end')
-        print 'info:', self.info
+        print('info:', self.info)
         return self.endPose, self.info
 
     def runIkTraj(self):
@@ -125,7 +125,7 @@ class ConstraintSet(object):
         self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, side, eeName, eePose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
         if self.info == 1:
             self.ikPlanner.addPose(self.endPose, 'reach_end')
-        print 'info:', self.info
+        print('info:', self.info)
         return self.endPose, self.info
 
 class IkOptionsItem(om.ObjectModelItem):
@@ -314,7 +314,7 @@ class IKPlanner(object):
         self.clipFloat32SafeJointLimits = False
 
     def getJointGroup(self, name):
-        jointGroup = filter(lambda group: group['name'] == name, self.jointGroups)
+        jointGroup = [group for group in self.jointGroups if group['name'] == name]
         if (len(jointGroup) == 1):
             return jointGroup[0]['joints']
         else:
@@ -866,7 +866,7 @@ class IKPlanner(object):
     def computeStandPlan(self, startPose):
 
         endPose, info = self.computeStandPose(startPose)
-        print 'info:', info
+        print('info:', info)
 
         return self.computePostureGoal(startPose, endPose)
 
@@ -912,7 +912,7 @@ class IKPlanner(object):
     def computeHomeNominalPlan(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167, moveArms=True):
 
         endPose, info = self.computeHomeNominalPose(startPose, footReferenceFrame, pelvisHeightAboveFeet, None, moveArms)
-        print 'info:', info
+        print('info:', info)
 
         return self.computePostureGoal(startPose, endPose)
 
@@ -953,7 +953,7 @@ class IKPlanner(object):
     def computeHomeStandPlan(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167):
 
         endPose, info = self.computeHomeStandPose(startPose, footReferenceFrame, pelvisHeightAboveFeet)
-        print 'info:', info
+        print('info:', info)
 
         return self.computePostureGoal(startPose, endPose)
 
@@ -1031,9 +1031,9 @@ class IKPlanner(object):
     def createJointPostureConstraintFromDatabase(self, postureGroup, postureName, side=None):
         postureJoints = self.getPostureJointsFromDatabase(postureGroup, postureName, side=side)
         p = ikconstraints.PostureConstraint()
-        p.joints = postureJoints.keys()
-        p.jointsLowerBound = postureJoints.values()
-        p.jointsUpperBound = postureJoints.values()
+        p.joints = list(postureJoints.keys())
+        p.jointsLowerBound = list(postureJoints.values())
+        p.jointsUpperBound = list(postureJoints.values())
         p.tspan = [1, 1]
         return p
 
@@ -1057,7 +1057,7 @@ class IKPlanner(object):
 
         if referencePose is None:
 
-            for name, position in postureJoints.iteritems():
+            for name, position in postureJoints.items():
                 jointId = robotstate.getDrakePoseJointNames().index(name)
                 endPose[jointId] = position
         else:
@@ -1387,7 +1387,7 @@ class IKPlanner(object):
         constraints = []
         poseNames = []
 
-        times = range(len(poses)) if times is None else times
+        times = list(range(len(poses))) if times is None else times
         for i, pose in enumerate(poses):
 
             if isinstance(pose, str):
@@ -1421,9 +1421,9 @@ class IKPlanner(object):
         self.addPose(startPose, startPoseName)
 
         p = ikconstraints.PostureConstraint()
-        p.joints = postureJoints.keys()
-        p.jointsLowerBound = postureJoints.values()
-        p.jointsUpperBound = postureJoints.values()
+        p.joints = list(postureJoints.keys())
+        p.jointsLowerBound = list(postureJoints.values())
+        p.jointsUpperBound = list(postureJoints.values())
         p.tspan = [1, 1]
 
         constraints = [p]
@@ -1455,7 +1455,7 @@ class IKPlanner(object):
             goalPoseJoints[name] = position
 
         feetOnGround = True
-        for jointName in goalPoseJoints.keys():
+        for jointName in list(goalPoseJoints.keys()):
             if 'leg' in jointName:
                 feetOnGround = False
 
@@ -1486,7 +1486,7 @@ class IKPlanner(object):
         jointPositions = np.array(jointPositions)
         jointPositionsClipped = np.clip(jointPositions, lowerBound, upperBound)
         if np.max(np.abs(jointPositions-jointPositionsClipped)) > 1e-6:
-            print 'State is outside of joint limits! clipped to limits.'
+            print('State is outside of joint limits! clipped to limits.')
         return jointPositionsClipped.tolist()
         
 
@@ -1509,7 +1509,7 @@ class IKPlanner(object):
         if self.clipFloat32SafeJointLimits: 
             self.lastManipPlan = self.clipPlan(self.lastManipPlan)
 
-        print 'traj info:', info
+        print('traj info:', info)
         return self.lastManipPlan
 
 
@@ -1540,7 +1540,7 @@ class IKPlanner(object):
         self.lastManipPlan = listener.waitForResponse(timeout=12000)
         listener.finish()
 
-        print 'traj info:', info
+        print('traj info:', info)
         return self.lastManipPlan
         
     def createDistanceToGoalConstraint(self, side, distance):
@@ -1610,7 +1610,7 @@ class RobotPoseGUIWrapper(object):
             return
 
         def capturePose(jointController):
-            return dict(zip(jointController.jointNames, jointController.q.tolist()))
+            return dict(list(zip(jointController.jointNames, jointController.q.tolist())))
 
         panel.captureMethods = []
         panel.addCaptureMethod('Robot state', functools.partial(capturePose, robotStateJointController))

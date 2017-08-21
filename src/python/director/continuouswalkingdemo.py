@@ -2,8 +2,8 @@ import os
 import math
 import numpy as np
 import operator
-import vtkAll as vtk
-import vtkNumpy
+from . import vtkAll as vtk
+from . import vtkNumpy
 import functools
 import ihmc
 
@@ -28,8 +28,8 @@ import drc as lcmdrc
 import bot_core
 import atlas
 
-from thirdparty import qhull_2d
-from thirdparty import min_bounding_rect
+from .thirdparty import qhull_2d
+from .thirdparty import min_bounding_rect
 
 from PythonQt import QtCore,QtGui
 
@@ -188,7 +188,7 @@ class ContinousWalkingDemo(object):
         om.getOrCreateContainer('foot placements',om.getOrCreateContainer('continuous'))
         om.getOrCreateContainer('steps',om.getOrCreateContainer('continuous'))
 
-        print 'got %d clusters' % len(clusters)
+        print('got %d clusters' % len(clusters))
 
         # get the rectangles from the clusters:
         blocks = []
@@ -239,7 +239,7 @@ class ContinousWalkingDemo(object):
                 next_block_pos = blocks[j].cornerTransform.GetPosition()
                 frames_dist = pow(pow(block_pos[0]-next_block_pos[0],2)+pow(block_pos[2]-next_block_pos[2],2),0.5)
                 if frames_dist < 0.05:
-                    print 'CORRECTION: Merging segments representing same step.'
+                    print('CORRECTION: Merging segments representing same step.')
                     if (block_pos[1] < next_block_pos[1]):  
                         block.rectWidth = block_pos[1] - next_block_pos[1] + blocks[j].rectWidth
                         #block.rectWidth = block.rectWidth+blocks[j].rectWidth
@@ -390,7 +390,7 @@ class ContinousWalkingDemo(object):
 
     def computeFootstepPlanSafeRegions(self, blocks, robotPose, standingFootName):
 
-        print 'planning with safe regions.  %d blocks.' % len(blocks)
+        print('planning with safe regions.  %d blocks.' % len(blocks))
 
         folder = om.getOrCreateContainer('Safe terrain regions')
         om.removeFromObjectModel(folder)
@@ -438,7 +438,7 @@ class ContinousWalkingDemo(object):
         if not plan:
             return []
 
-        print 'received footstep plan with %d steps.' % len(plan.footsteps)
+        print('received footstep plan with %d steps.' % len(plan.footsteps))
 
         footsteps = []
         for i, footstep in enumerate(plan.footsteps):
@@ -517,7 +517,7 @@ class ContinousWalkingDemo(object):
         clusters = segmentation.findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
                                                        clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0])
         if clusters is None:
-            print "No cluster found, stop walking now!"
+            print("No cluster found, stop walking now!")
             return
 
         # Step 3: find the corners of the minimum bounding rectangles
@@ -649,9 +649,9 @@ class ContinousWalkingDemo(object):
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
 
         if (self.automaticContinuousWalkingEnabled):
-            print "Requested Footstep Plan, it will be AUTOMATICALLY EXECUTED"
+            print("Requested Footstep Plan, it will be AUTOMATICALLY EXECUTED")
         else:
-            print "Requested Footstep Plan, it will be not be executed"
+            print("Requested Footstep Plan, it will be not be executed")
 
     def onAtlasStepParams(self,msg):
         if (msg.desired_step_spec.foot_index ==1):
@@ -678,11 +678,11 @@ class ContinousWalkingDemo(object):
         if (self.processContinuousStereo):
             polyData = self.cameraView.getStereoPointCloud(2,'CAMERA_FUSED', cameraName='CAMERA_TSDF', removeSize=4000)
             doStereoFiltering = True
-            print "makeReplanRequest processContinuousStereo"
+            print("makeReplanRequest processContinuousStereo")
         elif (self.processRawStereo):
             polyData = self.cameraView.getStereoPointCloud(2,'MULTISENSE_CAMERA')
             doStereoFiltering = True
-            print "makeReplanRequest processRawStereo"
+            print("makeReplanRequest processRawStereo")
         else:
             polyData = segmentation.getCurrentRevolutionData()
             doStereoFiltering = False
@@ -729,7 +729,7 @@ class ContinousWalkingDemo(object):
             return
         
         if self.automaticContinuousWalkingEnabled:
-            print "Committing Footstep Plan for AUTOMATIC EXECUTION"
+            print("Committing Footstep Plan for AUTOMATIC EXECUTION")
             lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
     
     def onRobotStatus(self, msg):
@@ -915,7 +915,7 @@ class ContinousWalkingDemo(object):
         t.Translate(0.0, 0.0, 0.0)
         t.RotateZ(4.5)
 
-        for i in xrange(len(stepPoints)):
+        for i in range(len(stepPoints)):
             stepPoints[i] = np.array(t.TransformPoint(stepPoints[i]))
 
         stepOffset = np.array([stepLength, 0.0, stepHeight])
@@ -926,7 +926,7 @@ class ContinousWalkingDemo(object):
         vis.showFrame(goalFrame, 'goal frame', scale=0.2)
 
         rpySeed = np.radians(goalFrame.GetOrientation())
-        for i in xrange(numSteps):
+        for i in range(numSteps):
 
             step = stepPoints + (i+1)*stepOffset
             self.convertStepToSafeRegion(step, rpySeed)

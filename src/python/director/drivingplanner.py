@@ -3,7 +3,7 @@ import math
 import textwrap
 import drc as lcmdrc
 import bot_core as lcmbotcore
-import vtkAll as vtk
+from . import vtkAll as vtk
 from director import transformUtils
 from director import visualization as vis
 from director import objectmodel as om
@@ -798,8 +798,8 @@ class DrivingPlanner(object):
 
         # trip the safety if slider[3] is < 1/2, emergency come off the throttle
         if slider[3] < 0.5:
-            print 'Emergency stop, coming off the throttle'
-            print "setting l_leg_aky to it's min value"
+            print('Emergency stop, coming off the throttle')
+            print("setting l_leg_aky to it's min value")
             ankleGoalPositionRadians = self.jointLimitsMin[self.akyIdx]
 
 
@@ -852,8 +852,8 @@ class DrivingPlanner(object):
         msg = helper.waitForResponse(timeout=1000, keepAlive=False)
 
         if msg is None:
-            print "Didn't receive a JOINT_POSITION_GOAL message"
-            print "Are you streaming?"
+            print("Didn't receive a JOINT_POSITION_GOAL message")
+            print("Are you streaming?")
             return None
 
         pose = robotstate.convertStateMessageToDrakePose(msg)
@@ -938,7 +938,7 @@ class DrivingPlanner(object):
         self.graspWheelAngle = self.wheelAngleBeforeReGrasp
 
     def printSteeringWheelAngleInDegrees(self):
-        print np.rad2deg(self.getSteeringWheelAngle())
+        print(np.rad2deg(self.getSteeringWheelAngle()))
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -1425,7 +1425,7 @@ class DrivingPlannerPanel(TaskUserPanel):
             traj = self.drivingPlanner.transformDrivingTrajectory(traj)
             numTrajPoints = len(traj)
 
-            for i in xrange(numTrajPoints):
+            for i in range(numTrajPoints):
                 rgb = [(numTrajPoints - i) / float(numTrajPoints), 1 - (numTrajPoints - i) / float(numTrajPoints), 1]
                 d.addSphere(traj[i], 0.05, rgb, resolution=12)
 

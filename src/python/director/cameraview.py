@@ -151,7 +151,7 @@ class ImageManager(object):
         return imageUtime
 
     def updateImages(self):
-        for imageName in self.images.keys():
+        for imageName in list(self.images.keys()):
             self.updateImage(imageName)
 
     def setImageRotation180(self, imageName):
@@ -245,7 +245,7 @@ class CameraView(object):
         utorsoToLocal = vtk.vtkTransform()
         self.imageManager.queue.getTransform('utorso', 'local', imageUtime, utorsoToLocal)
 
-        p = range(3)
+        p = list(range(3))
         utorsoToLocal.TransformPoint(pickedPoint, p)
 
         ray = np.array(p) - np.array(cameraToLocal.GetPosition())
@@ -361,7 +361,7 @@ class CameraView(object):
     def updateImages(self):
 
         updated = False
-        for imageName, lastUtime in self.updateUtimes.iteritems():
+        for imageName, lastUtime in self.updateUtimes.items():
             currentUtime = self.imageManager.updateImage(imageName)
             if currentUtime != lastUtime:
                 self.updateUtimes[imageName] = currentUtime
@@ -701,7 +701,7 @@ class CameraFrustumVisualizer(object):
 
         camRays = []
         rays = np.array(self.imageManager.queue.getCameraFrustumBounds(self.cameraName))
-        for i in xrange(4):
+        for i in range(4):
             ray = np.array(cameraToLocal.TransformVector(rays[i*3:i*3+3]))
             ray /= np.linalg.norm(ray)
             camRays.append(ray)

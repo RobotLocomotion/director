@@ -11,9 +11,9 @@ def getTaskDescriptionFiles(searchDir):
 def loadTaskDescriptionsFromFile(descriptionFile):
     descriptions = []
     globalVars = {}
-    execfile(descriptionFile, globalVars)
+    exec(compile(open(descriptionFile).read(), descriptionFile, 'exec'), globalVars)
 
-    for key, value in globalVars.iteritems():
+    for key, value in globalVars.items():
         if isinstance(value, list):
             descriptions.append((key, value))
 

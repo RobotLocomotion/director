@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -180,7 +180,7 @@ class DrillPlannerDemo(object):
 
         # These changes are all that are required to run with different combinations
         if ( self.drill.model == 'dewalt_barrel' ):
-            print "Using a Dewalt Barrel Drill"
+            print("Using a Dewalt Barrel Drill")
             self.wall.relativeStanceXYZ = [-0.3, 0.75, 0]
             self.wall.relativeStanceRPY = [0, 0, -90]
             self.wall.relativeStanceFarXYZ = [-0.3, 1.25, 0]
@@ -212,7 +212,7 @@ class DrillPlannerDemo(object):
     def onTagDetection(self, msg):
         # Store a tag detection for later use
         if (msg.id != 2):
-            print "Received detection not from Drill Wall, ignoring"
+            print("Received detection not from Drill Wall, ignoring")
             return
 
         pickedPoint = msg.cxy
@@ -967,7 +967,7 @@ class DrillPlannerDemo(object):
 
         self.thumbPressToHandFrame = transformUtils.concatenateTransforms([self.getThumbToPalmTransform(), palmToHand])
 
-        print 'thumb press to hand frame:', self.thumbPressToHandFrame.GetPosition(), transformUtils.rollPitchYawFromTransform(self.thumbPressToHandFrame)
+        print('thumb press to hand frame:', self.thumbPressToHandFrame.GetPosition(), transformUtils.rollPitchYawFromTransform(self.thumbPressToHandFrame))
 
 
     def planDrillButtonPress(self, jointDegreesPerSecond, quasiStaticShrinkFactor=None):
@@ -1047,7 +1047,7 @@ class DrillPlannerDemo(object):
             lastPoint[0] = p
 
 
-        for i in xrange(numberOfTargets+1):
+        for i in range(numberOfTargets+1):
             theta = (float(i)/numberOfTargets)*(2*np.pi) + np.pi/2.0
             x, y = radius*np.cos(theta), radius*np.sin(theta)
             addTarget(x, y)
@@ -1711,11 +1711,11 @@ class DrillPlannerDemo(object):
         goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
 
         distToGoal2D = np.linalg.norm( goalToBit.GetPosition()[1:3] )
-        print "distToGoal2D", distToGoal2D , "from" , self.currentCutGoal
+        print("distToGoal2D", distToGoal2D , "from" , self.currentCutGoal)
 
         if (distToGoal2D < self.goalThreshold ): # typically 5cm
             if ( self.currentCutGoal == len(self.cutPoints) -1):
-                print distToGoal2D , " - within threshold of last goal", self.currentCutGoal
+                print(distToGoal2D , " - within threshold of last goal", self.currentCutGoal)
                 return False
 
             self.currentCutGoal=self.currentCutGoal+1
@@ -1755,9 +1755,9 @@ class DrillPlannerDemo(object):
             worldToBit = self.getWorldToBit(startPose)
             vis.updateFrame(worldToBit, 'world to drill bit', visible=True, scale=0.2)
 
-            print "handToBit"
-            print handToBit.GetPosition()
-            print handToBit.GetOrientation()
+            print("handToBit")
+            print(handToBit.GetPosition())
+            print(handToBit.GetOrientation())
 
         # button drill: [1,0,0] , barrel drill: [0,1,0] - axis is along bit xaxis (this was explictly defined
         all_axes = transformUtils.getAxesFromTransform( handToBit )
@@ -1828,20 +1828,20 @@ class DrillPlannerDemo(object):
         self.multisenseDriver.setNeckPitch(15)
 
     def waitForAtlasBehaviorAsync(self, behaviorName):
-        assert behaviorName in self.atlasDriver.getBehaviorMap().values()
+        assert behaviorName in list(self.atlasDriver.getBehaviorMap().values())
         while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
     def printAsync(self, s):
         yield
-        print s
+        print(s)
 
     def userPrompt(self, message):
         if not self.userPromptEnabled:
             return
 
         yield
-        result = raw_input(message)
+        result = input(message)
         if result != 'y':
             raise Exception('user abort.')
 
@@ -1893,7 +1893,7 @@ class DrillPlannerDemo(object):
 
     def waitForPlanAnimation(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
-        print 'waiting for plan animation:', planElapsedTime
+        print('waiting for plan animation:', planElapsedTime)
         return self.delay(planElapsedTime)
 
     def animateLastPlan(self):
@@ -2015,7 +2015,7 @@ class DrillPlannerDemo(object):
         success = True
         while (success is True):
             success = self.planNextCut( self.computeNextCutDesired )
-            print " "
+            print(" ")
 
         self.planNextCut( self.computeRetractionDesired, True )
 
@@ -2487,7 +2487,7 @@ class DrillImageFitter(ImageBasedAffordanceFit):
 
         self.drillDemo.thumbPressToHandFrame = transformUtils.concatenateTransforms([thumbPressToWorld, handToWorld.GetLinearInverse()])
 
-        print 'thumb press fit to hand frame:', self.drillDemo.thumbPressToHandFrame.GetPosition(), transformUtils.rollPitchYawFromTransform(self.drillDemo.thumbPressToHandFrame)
+        print('thumb press fit to hand frame:', self.drillDemo.thumbPressToHandFrame.GetPosition(), transformUtils.rollPitchYawFromTransform(self.drillDemo.thumbPressToHandFrame))
 
 
     def fitDrillWall(self, polyData, points):

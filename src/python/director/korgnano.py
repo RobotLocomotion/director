@@ -32,10 +32,10 @@ class KorgNanoKontrol(object):
 
         signalNames = []
 
-        for inputName, inputDescription in self.inputs.iteritems():
+        for inputName, inputDescription in self.inputs.items():
             channelStart, numChannels, isContinuous = inputDescription
 
-            for i in xrange(numChannels):
+            for i in range(numChannels):
 
                 channelId = '' if numChannels == 1 else '_%d' % i
                 if isContinuous:
@@ -58,7 +58,7 @@ class KorgNanoKontrol(object):
         try:
             self.reader = midi.MidiReader(midi.findKorgNanoKontrol2())
         except:
-            print 'midi controller not found.'
+            print('midi controller not found.')
             self.reader = None
 
     def onMidiCommand(self, channel, value):
@@ -67,7 +67,7 @@ class KorgNanoKontrol(object):
 
         inputs = self.inputs
 
-        for inputName, inputDescription in inputs.iteritems():
+        for inputName, inputDescription in inputs.items():
             channelStart, numChannels, isContinuous = inputDescription
 
             if channelStart <= channel < (channelStart + numChannels):
@@ -109,6 +109,6 @@ class KorgNanoKontrol(object):
             value = message[3]
             targets[channel] = value
 
-        for channel, value in targets.iteritems():
+        for channel, value in targets.items():
             position = value/127.0
             self.onMidiCommand(channel, position)

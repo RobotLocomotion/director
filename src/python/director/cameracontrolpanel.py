@@ -88,7 +88,7 @@ class CameraControlPanel(object):
 
         self.ui.setTargetButton.connect('clicked()', self.onSetTarget)
 
-        for modeName in self.trackerManager.trackers.keys():
+        for modeName in list(self.trackerManager.trackers.keys()):
             self.ui.trackModeCombo.addItem(modeName)
         self.ui.trackModeCombo.connect('currentIndexChanged(const QString&)', self.onTrackModeChanged)
 

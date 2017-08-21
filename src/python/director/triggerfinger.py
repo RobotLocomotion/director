@@ -19,7 +19,7 @@ class TriggerFingerPublisher():
 		self.msg = lcmdrc.trigger_finger_t()
 	
 	def startPublishing(self):	
-		print 'Publishing on ' + self.lcmChannel
+		print('Publishing on ' + self.lcmChannel)
 		self.timer.start()
 
 	def publish(self):
@@ -64,7 +64,7 @@ class TriggerFingerPublisher():
 
 def main(argv):
 	if len(argv) is not 2:
-		print 'Usage: directorPython triggerfinger.py <LCM_CHANNEL>'
+		print('Usage: directorPython triggerfinger.py <LCM_CHANNEL>')
 		return
 
 	publisher = TriggerFingerPublisher(argv[1])

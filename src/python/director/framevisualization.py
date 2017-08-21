@@ -67,7 +67,7 @@ class FrameUpdater(object):
 
     def getEnabledFrameNames(self):
         enabledFrames = set()
-        for name, item in self.itemMap.iteritems():
+        for name, item in self.itemMap.items():
             isChecked = item.checkState() == QtCore.Qt.Checked
             if isChecked:
                 enabledFrames.add(name)

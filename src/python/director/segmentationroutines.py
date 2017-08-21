@@ -13,10 +13,10 @@ from director import objectmodel as om
 from director.transformUtils import getTransformFromAxes
 from director import vtkAll as vtk
 
-import vtkNumpy
+from . import vtkNumpy
 import numpy as np
-from shallowCopy import shallowCopy
-from debugVis import DebugData
+from .shallowCopy import shallowCopy
+from .debugVis import DebugData
 
 
 
@@ -169,7 +169,7 @@ def getDebugFolder():
 def applyLineFit(dataObj, distanceThreshold=0.02):
 
     f = vtk.vtkPCLSACSegmentationLine()
-    f.SetInput(dataObj)
+    f.SetInputData(dataObj)
     f.SetDistanceThreshold(distanceThreshold)
     f.Update()
     origin = np.array(f.GetLineOrigin())
@@ -225,7 +225,7 @@ def labelPointDistanceAlongAxis(polyData, axis, origin=None, resultArrayName='di
 def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100, maxClusterSize=1e6):
 
     f = vtk.vtkPCLEuclideanClusterExtraction()
-    f.SetInput(dataObj)
+    f.SetInputData(dataObj)
     f.SetClusterTolerance(clusterTolerance)
     f.SetMinClusterSize(int(minClusterSize))
     f.SetMaxClusterSize(int(maxClusterSize))
@@ -258,7 +258,7 @@ def extractClusters(polyData, clusterInXY=False, **kwargs):
 
 
     clusters = []
-    for i in xrange(1, clusterLabels.max() + 1):
+    for i in range(1, clusterLabels.max() + 1):
         cluster = thresholdPoints(polyData, 'cluster_labels', [i, i])
         clusters.append(cluster)
     return clusters
@@ -268,7 +268,7 @@ def applyVoxelGrid(polyData, leafSize=0.01):
 
     v = vtk.vtkPCLVoxelGrid()
     v.SetLeafSize(leafSize, leafSize, leafSize)
-    v.SetInput(polyData)
+    v.SetInputData(polyData)
     v.Update()
     return shallowCopy(v.GetOutput())
 
@@ -276,7 +276,7 @@ def applyVoxelGrid(polyData, leafSize=0.01):
 def labelOutliers(dataObj, searchRadius=0.03, neighborsInSearchRadius=10):
 
     f = vtk.vtkPCLRadiusOutlierRemoval()
-    f.SetInput(dataObj)
+    f.SetInputData(dataObj)
     f.SetSearchRadius(searchRadius)
     f.SetNeighborsInSearchRadius(int(neighborsInSearchRadius))
     f.Update()

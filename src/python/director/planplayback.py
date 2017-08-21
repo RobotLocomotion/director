@@ -1,5 +1,5 @@
 import os
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import re
@@ -192,7 +192,7 @@ class PlanPlayback(object):
         poses = np.array(poses)
 
         if self.jointNameRegex:
-            jointIds = range(poses.shape[1])
+            jointIds = list(range(poses.shape[1]))
         else:
             diffs = np.diff(poses, axis=0)
             jointIds = np.unique(np.where(diffs != 0.0)[1])

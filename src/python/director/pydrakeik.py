@@ -68,7 +68,7 @@ class PyDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
             obj = objClass()
             constraints.append(obj)
 
-            for attr, value in c.iteritems():
+            for attr, value in c.items():
                 if isinstance(value, dict) and 'position' in value and 'quaternion' in value:
                     value = transformUtils.transformFromPose(value['position'], value['quaternion'])
                 setattr(obj, attr, value)
@@ -221,12 +221,12 @@ class PyDrakeIkServer(object):
 
         self.rigidBodyTree = self.loadRigidBodyTree(fields.urdfFile, fields.packagePaths)
 
-        self.bodyNames = [rbt.get_body_name(self.rigidBodyTree, i) for i in xrange(rbt.get_num_bodies(self.rigidBodyTree))]
+        self.bodyNames = [rbt.get_body_name(self.rigidBodyTree, i) for i in range(rbt.get_num_bodies(self.rigidBodyTree))]
         self.bodyNameToId = {}
         for i, name in enumerate(self.bodyNames):
             self.bodyNameToId[name] = i
 
-        self.positionNames = [rbt.get_position_name(self.rigidBodyTree, i) for i in xrange(rbt.get_num_positions(self.rigidBodyTree))]
+        self.positionNames = [rbt.get_position_name(self.rigidBodyTree, i) for i in range(rbt.get_num_positions(self.rigidBodyTree))]
         self.positionNameToId = {}
         for i, name in enumerate(self.positionNames):
             self.positionNameToId[name] = i
@@ -428,7 +428,7 @@ class PyDrakeIkServer(object):
 
         assert len(fields.jointNames) == rbt.get_num_positions(self.rigidBodyTree)
 
-        for i in xrange(len(self.positionNames)):
+        for i in range(len(self.positionNames)):
             if self.positionNames[i] != fields.jointNames[i]:
                 raise Exception('joint name order mismatch. input=%r, rigidBodyTree=%r' % (fields.jointNames, self.positionNames))
 
@@ -536,7 +536,7 @@ class PyDrakeIkServer(object):
         assert len(results.q_sol) == len(timeSamples)
 
         poses = []
-        for i in xrange(len(results.q_sol)):
+        for i in range(len(results.q_sol)):
             q = results.q_sol[i]
             q.shape = q.shape[0]
             poses.append(q)
@@ -557,7 +557,7 @@ class PyDrakeIkServer(object):
             assert len(results.q_sol) == len(pointwiseTimeSamples)
 
             poses = []
-            for i in xrange(len(results.q_sol)):
+            for i in range(len(results.q_sol)):
                 q = results.q_sol[i]
                 q.shape = q.shape[0]
                 poses.append(q)

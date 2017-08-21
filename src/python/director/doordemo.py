@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -740,7 +740,7 @@ class DoorDemo(object):
 
         ]
 
-        for i in xrange(p.numberOfExitSteps):
+        for i in range(p.numberOfExitSteps):
 
             sign = -1 if (i%2) else 1
             stepFrames.append([p.exitFootDistance + (i+1)*p.exitStepDistance, sign*p.endStanceWidth/2.0, 0.0])
@@ -767,7 +767,7 @@ class DoorDemo(object):
 
 
         stepFrames = []
-        for i in xrange(30):
+        for i in range(30):
 
             sign = -1 if leadingFoot is 'right' else 1
             if i % 2:
@@ -794,7 +794,7 @@ class DoorDemo(object):
     def planManualFootstepsTest(self, stepDistance=0.26, stanceWidth=0.26, numberOfSteps=4, leadingFoot='right'):
 
         stepFrames = []
-        for i in xrange(numberOfSteps):
+        for i in range(numberOfSteps):
 
             sign = -1 if leadingFoot is 'right' else 1
             if i % 2:

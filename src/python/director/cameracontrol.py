@@ -179,7 +179,7 @@ class PositionTracker(CameraTracker):
         delta = newTargetPosition - self.lastTargetPosition
 
         followAxes = [True, True, True]
-        for i in xrange(3):
+        for i in range(3):
             if not followAxes[i]:
                 delta[i] = 0.0
 
@@ -460,7 +460,7 @@ def smoothDamp(current, target, currentVelocity, smoothTime, maxSpeed, deltaTime
     num7 = (currentVelocity + num * num4) * deltaTime
     currentVelocity = (currentVelocity - num * num7) * num3
     num8 = target + (num4 + num7) * num3
-    for i in xrange(len(current)):
+    for i in range(len(current)):
         if (num5[i] - current[i] > 0.0 == num8[i] > num5[i]):
             num8[i] = num5[i]
             currentVelocity[i] = (num8[i] - num5[i]) / deltaTime
@@ -493,7 +493,7 @@ class RobotModelFollower(object):
         newTrackPosition = np.array(self.jointController.q[:3])
 
         delta = newTrackPosition - self.lastTrackPosition
-        for i in xrange(3):
+        for i in range(3):
             if not self.followAxes[i]:
                 delta[i] = 0.0
 

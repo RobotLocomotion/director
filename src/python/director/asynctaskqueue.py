@@ -70,7 +70,7 @@ class AsyncTaskQueue(object):
     def callbackLoop(self):
 
         try:
-            for i in xrange(10):
+            for i in range(10):
                 self.doWork()
             if not self.tasks:
                 self.stop()
@@ -121,7 +121,7 @@ class AsyncTaskQueue(object):
 
     def handleGenerator(self, generator):
         try:
-            result = generator.next()
+            result = next(generator)
         except StopIteration:
             self.generators.remove(generator)
         else:
@@ -189,7 +189,7 @@ class PrintTask(AsyncTask):
         self.message = message
 
     def __call__(self):
-        print self.message
+        print(self.message)
 
 
 class UserPromptTask(AsyncTask):

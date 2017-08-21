@@ -41,9 +41,9 @@ class MatlabServer(object):
         self.sock.listen(1)
 
         while True:
-            print 'waiting for client...'
+            print('waiting for client...')
             conn, addr = self.sock.accept()
-            print 'client connected.'
+            print('client connected.')
             self.serve(conn)
 
     def serve(self, sock):
@@ -63,7 +63,7 @@ class MatlabServer(object):
             except socket.timeout as e:
                 pass
             except socket.error as e:
-                print 'socket error:', e
+                print('socket error:', e)
                 sock.close()
                 return
 
@@ -192,7 +192,7 @@ class MatlabCommunicator(object):
                 '<br/>'.join([self._colorReplace(line) for line in self.outputLines]) + '</pre>')
 
         if self.echoToStdOut or not self.outputConsole:
-            print '\n'.join([self._colorStrip(line) for line in self.outputLines])
+            print('\n'.join([self._colorStrip(line) for line in self.outputLines]))
 
         if self.outputConsole:
             scrollBar = self.outputConsole.verticalScrollBar()
@@ -213,7 +213,7 @@ class MatlabCommunicator(object):
         self.clearResult()
         self.client.send(command + '\n')
         if self.echoCommandsToStdOut:
-            print command
+            print(command)
         if self.writeCommandsToLogFile:
             self.getLogFile().write(command + '\n')
             self.getLogFile().flush()
@@ -286,7 +286,7 @@ class MatlabCommunicator(object):
 
         while self.isAlive():
 
-            command = raw_input('>>>')
+            command = input('>>>')
 
             if not command:
                 continue

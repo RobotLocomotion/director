@@ -144,7 +144,7 @@ class RawType(ValueType):
 		children = xml_children(value)
 		list(map(node.append, children))
 		# Copy attributes
-		for (attrib_key, attrib_value) in value.attrib.iteritems():
+		for (attrib_key, attrib_value) in value.attrib.items():
 			node.set(attrib_key, attrib_value)
 
 class SimpleElementType(ValueType):
@@ -179,7 +179,7 @@ class FactoryType(ValueType):
 		self.name = name
 		self.typeMap = typeMap
 		self.nameMap = {}
-		for (key, value) in typeMap.items():
+		for (key, value) in list(typeMap.items()):
 			# Reverse lookup
 			self.nameMap[value] = key
 	

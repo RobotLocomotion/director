@@ -1,5 +1,5 @@
 import os
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import numpy as np
@@ -110,13 +110,13 @@ class ManipulationPlanDriver(object):
 
     def getSupportLCMFromListOfSupports(self, supportsList,ts):
         supports = [0]*len(ts)
-        for i in xrange(len(ts)):
+        for i in range(len(ts)):
             supportElement = lcmdrc.support_element_t()
             supportElement.utime = getUtime()
             numBodies = len(supportsList[i])
             supportElement.num_bodies = numBodies
             supportBodies = []
-            for j in xrange(numBodies):
+            for j in range(numBodies):
                 name = supportsList[i][j]
                 if name is 'l_foot':
                     supportBodies.append(self.getFootSupportBodyMsg('left'))
@@ -129,7 +129,7 @@ class ManipulationPlanDriver(object):
                 elif name is 'pelvis':
                     supportBodies.append(self.getPelvisSupportBodyMsg())
                 else:
-                    print "passed a support that isn't allowed"
+                    print("passed a support that isn't allowed")
 
             supportElement.support_bodies = supportBodies
             supports[i] = supportElement

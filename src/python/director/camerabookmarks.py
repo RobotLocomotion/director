@@ -48,7 +48,7 @@ class CameraBookmarkWidget(object):
         w = QtGui.QWidget()
         l = QtGui.QGridLayout(w)
 
-        for i in xrange(self.numberOfBookmarks):
+        for i in range(self.numberOfBookmarks):
             storeButton = QtGui.QPushButton('set')
             flyButton = QtGui.QPushButton('fly')
             textEdit = QtGui.QLineEdit('camera %d' % i)

@@ -1,7 +1,7 @@
 import PythonQt
 from PythonQt import QtCore, QtGui
 import numpy as np
-import vtkAll as vtk
+import director.vtkAll as vtk
 
 #global state is fine here since this module behaves like a singleton
 lastEditedFrame = None

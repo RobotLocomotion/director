@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -98,14 +98,14 @@ class PolarisPlatformPlanner(object):
 
     def getFootstepRelativeTransform(self):
         self.footstepsToPlan = []
-        for n in xrange(1,self.numFootsteps + 1):
+        for n in range(1,self.numFootsteps + 1):
             stepFrameName = 'step ' + str(n) + ' frame'
             fToWorld = transformUtils.copyFrame(om.findObjectByName(stepFrameName).transform)
             fToPlan = self.getTransformToPlanningFrame(fToWorld)
             self.footstepsToPlan.append(fToPlan)
 
     def visFootstepFrames(self):
-        for n in xrange(1,self.numFootsteps + 1):
+        for n in range(1,self.numFootsteps + 1):
             fToPlan = self.footstepsToPlan[n-1]
             fToWorld = fToPlan
             fToWorld.PostMultiply()
@@ -258,7 +258,7 @@ class PolarisPlatformPlanner(object):
         polyData = segmentation.cropToBox(polyData, stanceFrame, [1.0, 1.0, 0.1])
 
         if not polyData.GetNumberOfPoints():
-            print 'empty search region point cloud'
+            print('empty search region point cloud')
             return
 
         vis.updatePolyData(polyData, 'running board search points', parent=segmentation.getDebugFolder(), color=[0,1,0], visible=False)

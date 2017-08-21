@@ -11,7 +11,7 @@ import numpy as np
 import math
 from time import sleep
 
-import vtkAll as vtk
+from . import vtkAll as vtk
 
 from time import time
 from copy import deepcopy
@@ -90,11 +90,11 @@ class NavigationPanel(object):
     def printTransform(self,t,message):
         p = t.GetPosition()
         q = t.GetOrientation()
-        print "%f %f %f | %f %f %f | %s" % (p[0],p[1],p[2],q[0],q[1],q[2],message)
+        print("%f %f %f | %f %f %f | %s" % (p[0],p[1],p[2],q[0],q[1],q[2],message))
 
 
     def onCaptureButton(self):
-        print "capture" #,self.jointController.q
+        print("capture") #,self.jointController.q
         # body frame:
         #goal = self.jointController.q[0:6]
 
@@ -110,10 +110,10 @@ class NavigationPanel(object):
 
     def updateComboBox(self):
         self.ui.comboBox.clear()
-        self.ui.comboBox.addItems(self.goal.keys())
+        self.ui.comboBox.addItems(list(self.goal.keys()))
 
     def onVisualizeButton(self):
-        print "viz",self.ui.comboBox.currentText
+        print("viz",self.ui.comboBox.currentText)
         frame = self.getFrameFromCombo()
 
         #vis.showFrame(frame, self.getSelectedGoalName(), parent="navigation", scale=0.35, visible=True)
@@ -121,7 +121,7 @@ class NavigationPanel(object):
         vis.updateFrame(frame, "Current Goal", parent="navigation")
 
     def onPlanButton(self):
-        print "plan",self.ui.comboBox.currentText
+        print("plan",self.ui.comboBox.currentText)
 
         goalFrame = self.getFrameFromCombo()
         startPose = self.jointController.q
@@ -130,7 +130,7 @@ class NavigationPanel(object):
         self.footstepDriver.sendFootstepPlanRequest(request)
 
     def onReversePlanButton(self):
-        print "reverse me"
+        print("reverse me")
 
         #self.clearFootstepPlan()
         lastPlan = self.footstepDriver.lastFootstepPlan

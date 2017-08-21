@@ -86,7 +86,7 @@ def createSkybox(imageMap, view):
     objs = {}
     planes = createSkyboxPlanes()
 
-    for side, imageFilename in imageMap.iteritems():
+    for side, imageFilename in imageMap.items():
         texture = createTexture(imageFilename)
         obj = vis.PolyDataItem('skybox %s' % side, planes[side], view=None)
         obj.actor.SetTexture(texture)

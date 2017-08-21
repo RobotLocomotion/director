@@ -93,7 +93,7 @@ class ViconVisualizer(object):
             vis.addChildFrame(obj)
             return obj
 
-        return [makeMarker(i) for i in xrange(numberOfMarkers)]
+        return [makeMarker(i) for i in range(numberOfMarkers)]
 
     def drawModel(self, model):
 

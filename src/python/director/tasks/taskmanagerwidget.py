@@ -115,7 +115,7 @@ class TaskTree(object):
                     taskClass, args = child
                     assert isinstance(args, dict)
                     task = taskClass()
-                    for propertyName, propertyValue in args.iteritems():
+                    for propertyName, propertyValue in args.items():
                         assert isinstance(propertyName, str)
                         task.properties.setProperty(propertyName, propertyValue)
                     taskQueue.onAddTask(task, obj)
@@ -334,7 +334,7 @@ class TaskQueueWidget(object):
 
 
     def onTaskStarted(self, taskQueue, task):
-        print 'starting task:', task.properties.getProperty('Name')
+        print('starting task:', task.properties.getProperty('Name'))
         self.taskTree.selectTask(task)
         item = self.taskTree.findTaskItem(task)
         if len(self.completedTasks) and item.getProperty('Visible'):

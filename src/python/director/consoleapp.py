@@ -50,7 +50,7 @@ class ConsoleApp(object):
                 try:
                     func()
                 except:
-                    print traceback.format_exc()
+                    print((traceback.format_exc()))
 
         startTimer = TimerCallback(callback=onStartup)
         startTimer.singleShot(0)
@@ -58,7 +58,7 @@ class ConsoleApp(object):
         result = ConsoleApp.applicationInstance().exec_()
 
         if ConsoleApp.getTestingEnabled() and not ConsoleApp.getTestingInteractiveEnabled():
-            print 'TESTING PROGRAM RETURNING EXIT CODE:', result
+            print(('TESTING PROGRAM RETURNING EXIT CODE:', result))
             sys.exit(result)
 
         return result

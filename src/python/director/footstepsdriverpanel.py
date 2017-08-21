@@ -109,7 +109,7 @@ class FootstepsPanel(object):
 
     def applyDefaults(self):
         set_name = self.driver.defaults_map[self.driver.params.properties.defaults]
-        for k, v in self.driver.default_step_params[set_name].iteritems():
+        for k, v in self.driver.default_step_params[set_name].items():
             self.driver.params.setProperty(k, v)
 
     def newWalkingGoalFrame(self, robotModel, distanceForward=1.0):

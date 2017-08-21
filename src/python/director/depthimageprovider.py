@@ -34,6 +34,6 @@ class DepthImageProvider(object):
         dims = depthImage.GetDimensions()
         d = vnp.getNumpyFromVtk(depthImage, 'ImageScalars')
         d = d.reshape(dims[1], dims[0])
-        t = np.array([[transform.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)])
+        t = np.array([[transform.GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
 
         return d, t

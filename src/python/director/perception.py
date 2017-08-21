@@ -20,7 +20,7 @@ import drc as lcmdrc
 import bot_core as lcmbotcore
 import multisense as lcmmultisense
 import maps as lcmmaps
-import lcmUtils
+from . import lcmUtils
 
 
 class MultisenseItem(om.ObjectModelItem):
@@ -305,7 +305,7 @@ class MultiSenseSource(TimerCallback):
         self.nextScanLineId = 0
         self.lastScanLine = max(self.lastScanLine - self.numberOfScanLines, 0)
 
-        for i in xrange(self.numberOfScanLines):
+        for i in range(self.numberOfScanLines):
             polyData = vtk.vtkPolyData()
             scanLine = vis.PolyDataItem('scan line %d' % i, polyData, self.view)
             scanLine.actor.SetPickable(0)
@@ -378,7 +378,7 @@ class MultiSenseSource(TimerCallback):
         #print 'updating actors:', self.nextScanLineId, (self.nextScanLineId + (scanLinesToUpdate-1)) % self.numberOfActors
         #print 'updating scan lines:', self.lastScanLine + 1, self.lastScanLine + 1 + (scanLinesToUpdate-1)
 
-        for i in xrange(scanLinesToUpdate):
+        for i in range(scanLinesToUpdate):
             scanLine = self.scanLines[(self.nextScanLineId + i) % self.numberOfScanLines]
             self.reader.GetDataForScanLine(self.lastScanLine + i + 1, scanLine.polyData)
 
@@ -459,7 +459,7 @@ class MultiSenseSource(TimerCallback):
         assert neckPitchDegrees <= 90 and neckPitchDegrees >= -90
 
         jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
-        jointGroupNeck = filter(lambda group: group['name'] == 'Neck', jointGroups)
+        jointGroupNeck = [group for group in jointGroups if group['name'] == 'Neck']
 
         neckJoints = jointGroupNeck[0]['joints']
         if (len(neckJoints) == 1): # Atlas
@@ -522,7 +522,7 @@ class LidarSource(TimerCallback):
         self.nextScanLineId = 0
         self.lastScanLine = max(self.lastScanLine - self.numberOfScanLines, 0)
 
-        for i in xrange(self.numberOfScanLines):
+        for i in range(self.numberOfScanLines):
             polyData = vtk.vtkPolyData()
             scanLine = vis.PolyDataItem('scan line %d' % i, polyData, self.view)
             scanLine.actor.SetPickable(0)
@@ -586,7 +586,7 @@ class LidarSource(TimerCallback):
         #print 'updating actors:', self.nextScanLineId, (self.nextScanLineId + (scanLinesToUpdate-1)) % self.numberOfActors
         #print 'updating scan lines:', self.lastScanLine + 1, self.lastScanLine + 1 + (scanLinesToUpdate-1)
 
-        for i in xrange(scanLinesToUpdate):
+        for i in range(scanLinesToUpdate):
             scanLine = self.scanLines[(self.nextScanLineId + i) % self.numberOfScanLines]
             self.reader.GetDataForScanLine(self.lastScanLine + i + 1, scanLine.polyData)
             if self.colorBy and self.colorBy in scanLine.getArrayNames():
@@ -716,7 +716,7 @@ class MapServerSource(TimerCallback):
 
     def getNameForViewId(self, viewId):
 
-        for typeName, typeValue in lcmmaps.data_request_t.__dict__.iteritems():
+        for typeName, typeValue in lcmmaps.data_request_t.__dict__.items():
             if typeValue == viewId:
                 return typeName
 
@@ -793,7 +793,7 @@ class MapServerSource(TimerCallback):
         dims = depthImage.GetDimensions()
         d = vnp.getNumpyFromVtk(depthImage, 'ImageScalars')
         d = d.reshape(dims[1], dims[0])
-        t = np.array([[transform.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)])
+        t = np.array([[transform.GetMatrix().GetElement(r, c) for c in range(4)] for r in range(4)])
 
         return d, t
 

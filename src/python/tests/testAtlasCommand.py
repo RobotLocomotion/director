@@ -82,7 +82,7 @@ def loadValkyrieGains():
     dampingRatio = data['dampingRatio']
     gains = dict()
 
-    for key, value in KpGains.iteritems():
+    for key, value in KpGains.items():
         jointName = str(key)
         d = {'Kp': value}
         d['Kd'] = 2*dampingRatio*np.sqrt(value)
@@ -138,7 +138,7 @@ def getAtlasUserModePositionGains():
 def drakePoseToAtlasCommand(drakePose):
     jointIndexMap = robotstate.getRobotStateToDrakePoseJointMap()
     robotState = np.zeros(len(jointIndexMap))
-    for jointIdx, drakeIdx in jointIndexMap.iteritems():
+    for jointIdx, drakeIdx in jointIndexMap.items():
         robotState[jointIdx] = drakePose[drakeIdx]
     position = robotState.tolist()
     msg = newAtlasCommandMessageAtZero()
@@ -148,7 +148,7 @@ def drakePoseToAtlasCommand(drakePose):
 def atlasCommandToDrakePose(msg):
     jointIndexMap = robotstate.getRobotStateToDrakePoseJointMap()
     drakePose = np.zeros(len(robotstate.getDrakePoseJointNames()))
-    for jointIdx, drakeIdx in jointIndexMap.iteritems():
+    for jointIdx, drakeIdx in jointIndexMap.items():
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
@@ -197,7 +197,7 @@ def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True, useConstrainedDof
     if useConstrainedDofs:
         # if we aren't using the fixed base then remove the fixed base from this
         whole_body_data.num_constrained_dofs = numPositions - numFloatingBaseJoints
-        whole_body_data.constrained_dofs = range(numFloatingBaseJoints+1, numPositions+1)
+        whole_body_data.constrained_dofs = list(range(numFloatingBaseJoints+1, numPositions+1))
 
     msg.whole_body_data = whole_body_data
     return msg
@@ -395,7 +395,7 @@ class CommittedRobotPlanListener(object):
         poseTimes, poses = playback.getPlanPoses(msg)
         f = playback.getPoseInterpolator(poseTimes, poses)
 
-        print 'received robot plan, %.2f seconds' % (poseTimes[-1] - poseTimes[0])
+        print('received robot plan, %.2f seconds' % (poseTimes[-1] - poseTimes[0]))
 
         commandStream.applyPlanDefaults()
         commandStream.startStreaming()
@@ -413,7 +413,7 @@ class CommittedRobotPlanListener(object):
                 pose = poses[-1]
                 setPose(pose)
                 commandStream.applyDefaults()
-                print 'plan ended.'
+                print('plan ended.')
                 return False
 
             pose = f(tNow)
@@ -467,9 +467,9 @@ class PositionGoalListener(object):
         allowedJointNames = ['l_leg_aky','l_arm_lwy']
 
         if not (jointName in allowedJointNames):
-            print 'Position goals are not allowed for this joint'
-            print 'ignoring this position goal'
-            print 'use the sliders instead'
+            print('Position goals are not allowed for this joint')
+            print('ignoring this position goal')
+            print('use the sliders instead')
             return
             
         commandStream.setIndividualJointGoalPose(jointPositionGoal, jointName)
@@ -614,7 +614,7 @@ class JointTeleopPanel(object):
                 continue
 
             if len(labels) != len(joints):
-                print 'error, joints/labels mismatch for joint group:', name
+                print('error, joints/labels mismatch for joint group:', name)
                 continue
 
             jointGroupWidget = QtGui.QWidget()
@@ -639,7 +639,7 @@ class JointTeleopPanel(object):
         self.signalMapper = QtCore.QSignalMapper()
 
         self.sliderMax = 1000.0
-        for jointName, slider in self.slidersMap.iteritems():
+        for jointName, slider in self.slidersMap.items():
             slider.connect('valueChanged(int)', self.signalMapper, 'map()')
             self.signalMapper.setMapping(slider, jointName)
             slider.setMaximum(self.sliderMax)
@@ -726,7 +726,7 @@ class JointTeleopPanel(object):
 
     def updateSliders(self):
 
-        for jointName, slider in self.slidersMap.iteritems():
+        for jointName, slider in self.slidersMap.items():
             jointIndex = self.toJointIndex(jointName)
             jointValue = self.getJointValue(jointIndex)
 
@@ -779,19 +779,19 @@ class AtlasCommandPanel(object):
         allowedJointNames = ['l_leg_aky','l_arm_lwy']
 
         if not (jointName in allowedJointNames):
-            print 'Position goals are not allowed for this joint'
-            print 'ignoring this position goal'
-            print 'use the sliders instead'
+            print('Position goals are not allowed for this joint')
+            print('ignoring this position goal')
+            print('use the sliders instead')
             return
 
         if (jointName == 'l_arm_lwy') and (not self.jointCommandPanel.steeringControlEnabled):
-            print 'Steering control not enabled'
-            print 'ignoring steering command'
+            print('Steering control not enabled')
+            print('ignoring steering command')
             return
 
         if (jointName == 'l_leg_aky') and (not self.jointCommandPanel.throttleControlEnabled):
-            print 'Throttle control not enabled'
-            print 'ignoring throttle command'
+            print('Throttle control not enabled')
+            print('ignoring throttle command')
             return
             
         jointIdx = self.jointTeleopPanel.toJointIndex(joint_name)
@@ -875,7 +875,7 @@ def main():
     options['useConstrainedDofs'] = args.useConstrainedDofs
     options['forceControl'] = args.forceControl
 
-    print "forceControl", options['forceControl']
+    print("forceControl", options['forceControl'])
 
     if args.mode == 'base':
         baseMain()
@@ -911,9 +911,9 @@ def robotMain(useDrivingGains=False, useController=False, options=None):
 
     commandStream.setOptions(options)
 
-    print 'waiting for robot state...'
+    print('waiting for robot state...')
     commandStream.waitForRobotState()
-    print 'starting.'
+    print('starting.')
     commandStream.timer.targetFps = 1000
 
     if useController==True:
