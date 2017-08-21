@@ -10,7 +10,6 @@ set(DD_INSTALL_BIN_DIR bin)
 set(DD_INSTALL_DOC_DIR share/doc/director)
 set(DD_INSTALL_LIB_DIR lib)
 set(DD_INSTALL_INCLUDE_DIR include/director)
-set(DD_INSTALL_PYTHON_DIR ${DD_INSTALL_LIB_DIR}/python2.7/dist-packages)
 set(DD_TARGETS_NAME director-targets)
 
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DD_INSTALL_BIN_DIR}")
@@ -43,7 +42,9 @@ option(USE_COLLECTIONS "Build director with collections dependency." OFF)
 
 use_cpp11()
 setup_qt()
+setup_python()
 setup_pkg_config_path()
+set(DD_INSTALL_PYTHON_DIR ${DD_INSTALL_LIB_DIR}/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages)
 
 # build project
 add_subdirectory(src)

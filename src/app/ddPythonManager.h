@@ -34,9 +34,6 @@ public slots:
 protected:
 
   virtual void preInitialization();
-
-  virtual QStringList pythonPaths();
-
   virtual void executeInitializationScripts();
 
   void setupConsoleShortcuts();

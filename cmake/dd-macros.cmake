@@ -1,3 +1,9 @@
+macro(setup_python)
+  find_package(PythonLibs 2.7 REQUIRED)
+  find_package(PythonInterp 2.7 REQUIRED)
+endmacro()
+
+
 macro(setup_qt)
   set(DD_QT_VERSION 4 CACHE STRING "Selected Qt version")
   set_property(CACHE DD_QT_VERSION PROPERTY STRINGS 4 5)
