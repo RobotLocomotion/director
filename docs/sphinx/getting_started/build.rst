@@ -41,7 +41,7 @@ The required 3rd party dependencies are:
 
   - Qt4 or Qt5 (Qt 4.8.7 recommended)
   - VTK 6.2+ (VTK 7.1.1 recommended)
-  - Python 2.7 and NumPy
+  - Python 3.4+ and NumPy
 
 Additionally, you will need CMake 2.8 or greater to configure the source code.
 

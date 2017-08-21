@@ -78,20 +78,21 @@ endif()
 
 
 if(APPLE)
-  find_program(PYTHON_CONFIG_EXECUTABLE python-config)
+  find_program(PYTHON_CONFIG_EXECUTABLE python3-config)
   if (NOT PYTHON_CONFIG_EXECUTABLE)
-    message(SEND_ERROR "python-config executable not found, but python is required.")
+    message(SEND_ERROR "python3-config executable not found, but python is required.")
   endif()
   # using "python-config --prefix" so that cmake always uses the python that is
   # in the users path, this is a fix for homebrew on Mac:
   # https://github.com/Homebrew/homebrew/issues/25118
   execute_process(COMMAND ${PYTHON_CONFIG_EXECUTABLE} --prefix OUTPUT_VARIABLE python_prefix OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(PYTHON_INCLUDE_DIR ${python_prefix}/include/python2.7)
-  set(PYTHON_LIBRARY ${python_prefix}/lib/libpython2.7${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set(PYTHON_INCLUDE_DIR ${python_prefix}/include/python3.6m)
+  set(PYTHON_LIBRARY ${python_prefix}/lib/libpython3.6m${CMAKE_SHARED_LIBRARY_SUFFIX})
 else()
-  find_package(PythonLibs 2.7 REQUIRED)
+  set(Python_ADDITIONAL_VERSIONS 3.4) # required for cmake 2.8 on ubuntu 14.04
+  find_package(PythonLibs 3.4 REQUIRED)
 endif()
-find_package(PythonInterp 2.7 REQUIRED)
+find_package(PythonInterp 3.4 REQUIRED)
 
 set(python_args
   -DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}
@@ -361,19 +362,19 @@ elseif(USE_PRECOMPILED_VTK)
 
   if (ubuntu_version EQUAL 14.04)
     if(DD_QT_VERSION EQUAL 4)
-      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python2.7-ubuntu14.04.tar.gz)
-      set(vtk_package_md5 fe5c16f427a497b5713c52a68ecf564d)
+      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python3.4-ubuntu14.04.tar.gz)
+      set(vtk_package_md5 5e9b52be15dccadefdd033c58f055705)
     else()
       message(FATAL_ERROR "Compiling director with Qt5 is not supported on Ubuntu 14.04. "
                "Please set DD_QT_VERSION to 4.")
     endif()
   elseif(ubuntu_version EQUAL 16.04)
     if(DD_QT_VERSION EQUAL 4)
-      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python2.7-ubuntu16.04.tar.gz)
-      set(vtk_package_md5 1291e072405a3982b559ec011c3cf2a1)
+      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python3.5-ubuntu16.04.tar.gz)
+      set(vtk_package_md5 185e718e13ef532e3af4a80397091058)
     else()
-      set(vtk_package_url ${url_base}/vtk7.1-qt5.5-python2.7-ubuntu16.04.tar.gz)
-      set(vtk_package_md5 5ac930a7b1c083f975115d5970fb1a34)
+      set(vtk_package_url ${url_base}/vtk7.1-qt5.5-python3.5-ubuntu16.04.tar.gz)
+      set(vtk_package_md5 00000000000000000000000000000000)
     endif()
   else()
     message(FATAL_ERROR "USE_PRECOMPILED_VTK requires Ubuntu 14.04 or 16.04 "
@@ -407,7 +408,7 @@ else()
       -DBUILD_EXAMPLES:BOOL=OFF
       -DVTK_RENDERING_BACKEND:STRING=OpenGL2
       -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
-      -DVTK_PYTHON_VERSION:STRING=2
+      -DVTK_PYTHON_VERSION:STRING=3
       -DModule_vtkGUISupportQt:BOOL=ON
       -DVTK_WRAP_PYTHON:BOOL=ON
     )

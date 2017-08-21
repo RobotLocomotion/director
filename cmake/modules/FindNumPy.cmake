@@ -41,9 +41,9 @@
 
 # Finding NumPy involves calling the Python interpreter
 if(NumPy_FIND_REQUIRED)
-    find_package(PythonInterp 2.7 REQUIRED)
+    find_package(PythonInterp 3.4 REQUIRED)
 else()
-    find_package(PythonInterp 2.7)
+    find_package(PythonInterp 3.4)
 endif()
 
 if(NOT PYTHONINTERP_FOUND)
