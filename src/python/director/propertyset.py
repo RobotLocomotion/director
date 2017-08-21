@@ -161,8 +161,9 @@ class PropertySet(object):
         self.assertProperty(propertyName)
         attributes = self._attributes[propertyName]
         assert hasattr(attributes, propertyAttribute), "Missing attribute: {:s}".format(propertyAttribute)
-        setattr(attributes, propertyAttribute, value)
-        self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
+        if getattr(attributes, propertyAttribute) != value:
+            setattr(attributes, propertyAttribute, value)
+            self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
 
     def __getattribute__(self, name):
         try:
