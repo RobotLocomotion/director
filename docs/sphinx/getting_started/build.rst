@@ -57,7 +57,7 @@ The dependencies can be installed on Ubuntu using apt-get:
 
 ::
 
-    sudo apt-get install cmake libqt4-dev python3-dev python3-numpy
+    sudo apt-get install cmake libqt4-dev python-dev python-numpy
 
 On Ubuntu the build does not require VTK to be installed.  A compatible version
 of VTK will be downloaded (precompiled binaries) at build time.
