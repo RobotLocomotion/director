@@ -22,6 +22,18 @@ def numpyToPolyData(pts, pointData=None, createVertexCells=True):
     return pd
 
 
+def numpyToImageData(img, flip=True, vtktype=vtk.VTK_UNSIGNED_CHAR):
+    if flip:
+        img = np.flipud(img)
+    height, width, numChannels = img.shape
+    image = vtk.vtkImageData()
+    image.SetDimensions(width, height, 1)
+    image.AllocateScalars(vtktype, numChannels)
+    scalars = getNumpyFromVtk(image, 'ImageScalars')
+    scalars[:] = img.reshape(width*height, numChannels)[:]
+    return image
+
+
 def getNumpyFromVtk(dataObj, arrayName='Points', arrayType='points'):
     assert arrayType in ('points', 'cells')
 
