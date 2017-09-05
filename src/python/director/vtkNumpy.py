@@ -46,19 +46,7 @@ def getVtkPointsFromNumpy(numpyArray):
 
 
 def getVtkPolyDataFromNumpyPoints(points):
-    '''
-    Given an Nx3 array of xyz points
-    Return a new vtkPolyData containing points and vertex cells.
-    If the input points is not float64 it will be converted first.
-    '''
-
-    if points.dtype != np.float64:
-        points = points.astype(np.float64)
-
-    polyData = vtk.vtkPolyData()
-    polyData.SetPoints(getVtkPointsFromNumpy(points))
-    vtk.vtkPCLConversions.AddVertexCells(polyData)
-    return polyData
+    return numpyToPolyData(points)
 
 
 def getVtkFromNumpy(numpyArray):
