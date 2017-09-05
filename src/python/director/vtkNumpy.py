@@ -4,7 +4,7 @@ from vtk.util import numpy_support
 import numpy as np
 
 
-def numpyToPolyData(pts, pointData=None, createVertexCells=False):
+def numpyToPolyData(pts, pointData=None, createVertexCells=True):
 
     pd = vtk.vtkPolyData()
     pd.SetPoints(getVtkPointsFromNumpy(pts.copy()))
