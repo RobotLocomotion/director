@@ -1,20 +1,19 @@
-import vtkAll as vtk
-from vtkNumpy import addNumpyToVtk
-from shallowCopy import shallowCopy
+import director.vtkAll as vtk
+from director import vtkNumpy as vnp
+from director.shallowCopy import shallowCopy
 import numpy as np
+
 
 class DebugData(object):
 
     def __init__(self):
         self.append = vtk.vtkAppendPolyData()
 
-
     def write(self, filename):
         writer = vtk.vtkXMLPolyDataWriter()
         writer.SetInputConnection(self.append.GetOutputPort())
         writer.SetFileName(filename)
         writer.Update()
-
 
     def addPolyData(self, polyData, color=[1,1,1], extraLabels=None):
         '''
@@ -29,16 +28,15 @@ class DebugData(object):
         if color is not None:
             colorArray = np.empty((polyData.GetNumberOfPoints(), 3), dtype=np.uint8)
             colorArray[:,:] = np.array(color)*255
-            addNumpyToVtk(polyData, colorArray, 'RGB255')
+            vnp.addNumpyToVtk(polyData, colorArray, 'RGB255')
 
         if extraLabels is not None:
             for labelName, labelValue in extraLabels:
                 extraArray = np.empty((polyData.GetNumberOfPoints(), 1), dtype=type(labelValue))
                 extraArray[:] = labelValue
-                addNumpyToVtk(polyData, extraArray, labelName)
+                vnp.addNumpyToVtk(polyData, extraArray, labelName)
 
         self.append.AddInputData(polyData)
-
 
     def addLine(self, p1, p2, radius=0.0, color=[1,1,1]):
 
@@ -173,7 +171,7 @@ class DebugData(object):
         transformFilter.Update()
         self.addPolyData(transformFilter.GetOutput())
 
-    def addEllipsoid(self, center, radii, color=[1,1,1], alpha=1.0, resolution=24):
+    def addEllipsoid(self, center, radii, resolution=24, color=[1,1,1]):
         """
         Add an ellipsoid centered at [center] with x, y, and z principal axis radii given by
         radii = [x_scale, y_scale, z_scale]
@@ -195,8 +193,21 @@ class DebugData(object):
         transformFilter.Update()
         self.addPolyData(transformFilter.GetOutput(), color)
 
-    def getPolyData(self):
+    def addPolygon(self, points, color=[1,1,1]):
+        points = vnp.getVtkPointsFromNumpy(points.copy())
+        polygon = vtk.vtkPolygon()
+        polygon.GetPointIds().SetNumberOfIds(points.GetNumberOfPoints())
 
+        for i in range(points.GetNumberOfPoints()):
+            polygon.GetPointIds().SetId(i, i)
+
+        polyData = vtk.vtkPolyData()
+        polyData.SetPoints(points)
+        polyData.Allocate(1, 1)
+        polyData.InsertNextCell(polygon.GetCellType(), polygon.GetPointIds())
+        self.addPolyData(polyData, color)
+
+    def getPolyData(self):
         if self.append.GetNumberOfInputConnections(0):
             self.append.Update()
         return shallowCopy(self.append.GetOutput())
