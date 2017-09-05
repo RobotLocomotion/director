@@ -30,7 +30,10 @@ def numpyToImageData(img, flip=True, vtktype=vtk.VTK_UNSIGNED_CHAR):
     image.SetDimensions(width, height, 1)
     image.AllocateScalars(vtktype, numChannels)
     scalars = getNumpyFromVtk(image, 'ImageScalars')
-    scalars[:] = img.reshape(width*height, numChannels)[:]
+    if numChannels > 1:
+        scalars[:] = img.reshape(width*height, numChannels)[:]
+    else:
+        scalars[:] = img.reshape(width*height)[:]
     return image
 
 

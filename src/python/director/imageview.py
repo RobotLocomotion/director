@@ -136,6 +136,9 @@ class ImageView(object):
           image.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, numChannels)
 
         scalars = vnp.getNumpyFromVtk(image, 'ImageScalars')
-        scalars[:] = img.reshape(width*height, numChannels)[:]
+        if numChannels > 1:
+            scalars[:] = img.reshape(width*height, numChannels)[:]
+        else:
+            scalars[:] = img.reshape(width*height)[:]
         image.Modified()
         self.view.render()
