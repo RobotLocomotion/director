@@ -1,7 +1,9 @@
-from director import vtkAll as vtk
 import PythonQt
 from PythonQt import QtGui, QtCore
 from director import pointpicker
+from director import vtkNumpy as vnp
+from director import vtkAll as vtk
+import numpy as np
 
 
 class ImageView(object):
@@ -57,6 +59,19 @@ class ImageView(object):
         else:
             return None
 
+    def resizeView(self, scale=1.0):
+        image = self.getImage()
+        assert image
+        width, height, _ = image.GetDimensions()
+        assert width > 0 and height > 0
+        self.view.resize(width * scale, height * scale)
+        self.resetCamera()
+
+    def show(self):
+        if not self.view.isVisible() and self.getImage():
+            self.resizeView()
+        self.view.show()
+
     def filterEvent(self, obj, event):
 
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
@@ -103,3 +118,27 @@ class ImageView(object):
         aspectRatio = float(viewWidth)/viewHeight
         parallelScale = max(imageWidth/aspectRatio, imageHeight) / 2.0
         camera.SetParallelScale(parallelScale)
+
+    def showNumpyImage(self, img, flip=True):
+
+        image = self.getImage()
+        if not image:
+            image = vtk.vtkImageData()
+            self.setImage(image)
+
+        if flip:
+          img = np.flipud(img)
+
+        height, width, numChannels = img.shape
+        dims = image.GetDimensions()
+        if dims[0] != width or dims[1] != height or image.GetNumberOfScalarComponents() != numChannels:
+          image.SetDimensions(width, height, 1)
+          image.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, numChannels)
+
+        scalars = vnp.getNumpyFromVtk(image, 'ImageScalars')
+        if numChannels > 1:
+            scalars[:] = img.reshape(width*height, numChannels)[:]
+        else:
+            scalars[:] = img.reshape(width*height)[:]
+        image.Modified()
+        self.view.render()

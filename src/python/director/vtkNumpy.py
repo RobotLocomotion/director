@@ -4,7 +4,7 @@ from vtk.util import numpy_support
 import numpy as np
 
 
-def numpyToPolyData(pts, pointData=None, createVertexCells=False):
+def numpyToPolyData(pts, pointData=None, createVertexCells=True):
 
     pd = vtk.vtkPolyData()
     pd.SetPoints(getVtkPointsFromNumpy(pts.copy()))
@@ -20,6 +20,21 @@ def numpyToPolyData(pts, pointData=None, createVertexCells=False):
         pd = shallowCopy(f.GetOutput())
 
     return pd
+
+
+def numpyToImageData(img, flip=True, vtktype=vtk.VTK_UNSIGNED_CHAR):
+    if flip:
+        img = np.flipud(img)
+    height, width, numChannels = img.shape
+    image = vtk.vtkImageData()
+    image.SetDimensions(width, height, 1)
+    image.AllocateScalars(vtktype, numChannels)
+    scalars = getNumpyFromVtk(image, 'ImageScalars')
+    if numChannels > 1:
+        scalars[:] = img.reshape(width*height, numChannels)[:]
+    else:
+        scalars[:] = img.reshape(width*height)[:]
+    return image
 
 
 def getNumpyFromVtk(dataObj, arrayName='Points', arrayType='points'):
@@ -46,19 +61,7 @@ def getVtkPointsFromNumpy(numpyArray):
 
 
 def getVtkPolyDataFromNumpyPoints(points):
-    '''
-    Given an Nx3 array of xyz points
-    Return a new vtkPolyData containing points and vertex cells.
-    If the input points is not float64 it will be converted first.
-    '''
-
-    if points.dtype != np.float64:
-        points = points.astype(np.float64)
-
-    polyData = vtk.vtkPolyData()
-    polyData.SetPoints(getVtkPointsFromNumpy(points))
-    vtk.vtkPCLConversions.AddVertexCells(polyData)
-    return polyData
+    return numpyToPolyData(points)
 
 
 def getVtkFromNumpy(numpyArray):
