@@ -519,8 +519,8 @@ if(USE_KINECT)
 
 
   ExternalProject_Add(cv-utils
-    GIT_REPOSITORY https://github.com/patmarion/cv-utils
-    GIT_TAG 6671b92
+    GIT_REPOSITORY https://github.com/patmarion/cv-utils.git
+    GIT_TAG 9ee0128
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
