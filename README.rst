@@ -64,7 +64,7 @@ Required Dependencies
 The required 3rd party dependencies are:
 
   - Qt4 or Qt5 (Qt 4.8.7 recommended)
-  - VTK 6.2+ (VTK 7.1.1 recommended)
+  - VTK 6.2+ (VTK 8.0.1 recommended)
   - Python 2.7 and NumPy
 
 Additionally, you will need CMake 2.8 or greater to configure the source code.
@@ -73,14 +73,19 @@ The dependencies can be installed on Mac using `Homebrew <http://brew.sh/>`_:
 
 ::
 
-    brew tap patmarion/director && brew tap-pin patmarion/director
-    brew install cmake python numpy qt vtk7 eigen
+    brew tap robotlocomotion/director && brew tap-pin robotlocomotion/director
+    brew install cmake glib libyaml numpy python scipy vtk@8.0
+    pip2 install lxml PyYAML
 
 The dependencies can be installed on Ubuntu using apt-get:
 
 ::
 
-    sudo apt-get install cmake libqt4-dev python-dev python-numpy
+    sudo apt-get install build-essential cmake libexpat1-dev libfreetype6-dev \
+      libglib2.0-dev libhdf5-dev libjpeg8-dev libjsoncpp-dev liblz4-dev \
+      libnetcdf-dev libogg-dev libpng12-dev libqt4-dev libtheora-dev \
+      libtiff5-dev libx11-dev libxext-dev libxml2-dev libxt-dev python-dev \
+      python-lxml python-numpy python-scipy python-yaml zlib1g-dev
 
 On Ubuntu the build does not require VTK to be installed.  A compatible version
 of VTK will be downloaded (precompiled binaries) at build time.
