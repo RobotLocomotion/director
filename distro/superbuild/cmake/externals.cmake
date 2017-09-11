@@ -206,8 +206,8 @@ if (USE_LCM AND NOT USE_SYSTEM_LIBBOT)
     )
 
   ExternalProject_Add(robotlocomotion-lcmtypes
-    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
-    GIT_TAG 4bd59a1
+    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes.git
+    GIT_TAG 821ff4b
     ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
