@@ -232,7 +232,7 @@ if(USE_STANDALONE_LCMGL)
 
   ExternalProject_Add(bot-lcmgl-download
     GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
-    GIT_TAG c328b73
+    GIT_TAG 4835477
     SOURCE_DIR ${source_prefix}/bot-lcmgl
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
