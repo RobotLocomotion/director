@@ -141,9 +141,14 @@ if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
   ExternalProject_Add(lcm
     GIT_REPOSITORY https://github.com/lcm-proj/lcm.git
-    GIT_TAG 89f26a4
+    GIT_TAG c0a0093
     ${cmake3_args}
     CMAKE_CACHE_ARGS
+      -DLCM_ENABLE_EXAMPLES:BOOL=OFF
+      -DLCM_ENABLE_LUA:BOOL=OFF
+      -DLCM_ENABLE_TESTS:BOOL=OFF
+      -DLCM_INSTALL_M4MACROS:BOOL=OFF
+      -DLCM_NAMESPACE:STRING=lcm::
       ${default_cmake_args}
       ${python_args}
     DEPENDS
