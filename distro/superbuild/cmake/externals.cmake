@@ -98,8 +98,8 @@ if (NOT USE_SYSTEM_EIGEN)
 
 ExternalProject_Add(
   eigen
-  URL http://www.vtk.org/files/support/eigen-3.2.1.tar.gz
-  URL_MD5 a0e0a32d62028218b1c1848ad7121476
+  URL https://bitbucket.org/eigen/eigen/get/3.3.3.tar.gz
+  URL_MD5 f21cee193e15e55cfd15ebbc16fc00a7
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
