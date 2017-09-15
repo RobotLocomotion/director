@@ -33,7 +33,7 @@ cp $(which python) $binDir/
 touch $binDir/qt.conf
 
 mkdir -p $sitePackagesDir
-cp -r /usr/local/opt/vtk7/lib/python${pythonVersion}/site-packages/vtk $sitePackagesDir/
+cp -r /usr/local/opt/vtk@8.0/lib/python${pythonVersion}/site-packages/vtk $sitePackagesDir/
 cp -r /usr/local/lib/python${pythonVersion}/site-packages/numpy $sitePackagesDir/
 cp -r /usr/local/lib/python${pythonVersion}/site-packages/scipy $sitePackagesDir/
 cp -r /usr/local/lib/python${pythonVersion}/site-packages/yaml $sitePackagesDir/

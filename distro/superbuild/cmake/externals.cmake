@@ -98,8 +98,8 @@ if (NOT USE_SYSTEM_EIGEN)
 
 ExternalProject_Add(
   eigen
-  URL http://www.vtk.org/files/support/eigen-3.2.1.tar.gz
-  URL_MD5 a0e0a32d62028218b1c1848ad7121476
+  URL https://bitbucket.org/eigen/eigen/get/3.3.3.tar.gz
+  URL_MD5 f21cee193e15e55cfd15ebbc16fc00a7
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -141,9 +141,14 @@ if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
   ExternalProject_Add(lcm
     GIT_REPOSITORY https://github.com/lcm-proj/lcm.git
-    GIT_TAG 89f26a4
+    GIT_TAG c0a0093
     ${cmake3_args}
     CMAKE_CACHE_ARGS
+      -DLCM_ENABLE_EXAMPLES:BOOL=OFF
+      -DLCM_ENABLE_LUA:BOOL=OFF
+      -DLCM_ENABLE_TESTS:BOOL=OFF
+      -DLCM_INSTALL_M4MACROS:BOOL=OFF
+      -DLCM_NAMESPACE:STRING=lcm::
       ${default_cmake_args}
       ${python_args}
     DEPENDS
@@ -201,8 +206,8 @@ if (USE_LCM AND NOT USE_SYSTEM_LIBBOT)
     )
 
   ExternalProject_Add(robotlocomotion-lcmtypes
-    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
-    GIT_TAG 4bd59a1
+    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes.git
+    GIT_TAG 821ff4b
     ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
@@ -227,7 +232,7 @@ if(USE_STANDALONE_LCMGL)
 
   ExternalProject_Add(bot-lcmgl-download
     GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
-    GIT_TAG c328b73
+    GIT_TAG 4835477
     SOURCE_DIR ${source_prefix}/bot-lcmgl
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
@@ -315,7 +320,7 @@ ExternalProject_Add(QtPropertyBrowser
 if(USE_SYSTEM_VTK)
 
   if(APPLE)
-    set(vtk_homebrew_dir /usr/local/opt/vtk7/lib/cmake/vtk-7.1)
+    set(vtk_homebrew_dir /usr/local/opt/vtk@8.0/lib/cmake/vtk-8.0)
   endif()
 
   find_package(VTK REQUIRED PATHS ${vtk_homebrew_dir})
@@ -329,7 +334,7 @@ if(USE_SYSTEM_VTK)
 
 elseif(USE_PRECOMPILED_VTK)
 
-  set(url_base "http://patmarion.com/bottles")
+  set(url_base "https://d2mbb5ninhlpdu.cloudfront.net/vtk")
 
   find_program(LSB_RELEASE lsb_release)
   mark_as_advanced(LSB_RELEASE)
@@ -347,19 +352,19 @@ elseif(USE_PRECOMPILED_VTK)
 
   if (ubuntu_version EQUAL 14.04)
     if(DD_QT_VERSION EQUAL 4)
-      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python2.7-ubuntu14.04.tar.gz)
-      set(vtk_package_md5 fe5c16f427a497b5713c52a68ecf564d)
+      set(vtk_package_url ${url_base}/vtk-8.0.1-qt-4.8.6-trusty-x86_64.tar.gz)
+      set(vtk_package_md5 07ce235b6a32d654c5d2a13da4720d3d)
     else()
       message(FATAL_ERROR "Compiling director with Qt5 is not supported on Ubuntu 14.04. "
                "Please set DD_QT_VERSION to 4.")
     endif()
   elseif(ubuntu_version EQUAL 16.04)
     if(DD_QT_VERSION EQUAL 4)
-      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python2.7-ubuntu16.04.tar.gz)
-      set(vtk_package_md5 1291e072405a3982b559ec011c3cf2a1)
+      set(vtk_package_url ${url_base}/vtk-8.0.1-qt-4.8.7-xenial-x86_64.tar.gz)
+      set(vtk_package_md5 4619006bca86fb80d4c97d9fe3661836)
     else()
-      set(vtk_package_url ${url_base}/vtk7.1-qt5.5-python2.7-ubuntu16.04.tar.gz)
-      set(vtk_package_md5 5ac930a7b1c083f975115d5970fb1a34)
+      set(vtk_package_url ${url_base}/vtk-8.0.1-qt-5.5.1-xenial-x86_64.tar.gz)
+      set(vtk_package_md5 3c69fbcad3df49343223464f52793375)
     endif()
   else()
     message(FATAL_ERROR "USE_PRECOMPILED_VTK requires Ubuntu 14.04 or 16.04 "
@@ -376,14 +381,14 @@ elseif(USE_PRECOMPILED_VTK)
       ${source_prefix}/vtk-precompiled ${install_prefix}
   )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-8.0)
   set(vtk_depends vtk-precompiled)
 
 else()
 
   ExternalProject_Add(vtk
-    GIT_REPOSITORY git://vtk.org/VTK.git
-    GIT_TAG v8.0.0
+    GIT_REPOSITORY https://gitlab.kitware.com/vtk/vtk.git
+    GIT_TAG v8.0.1
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
@@ -398,7 +403,7 @@ else()
       -DVTK_WRAP_PYTHON:BOOL=ON
     )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-8.0)
   set(vtk_depends vtk)
 
 endif()
