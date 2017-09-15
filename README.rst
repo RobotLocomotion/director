@@ -74,13 +74,16 @@ The dependencies can be installed on Mac using `Homebrew <http://brew.sh/>`_:
 ::
 
     brew tap patmarion/director && brew tap-pin patmarion/director
-    brew install cmake python numpy qt vtk7 eigen
+    brew install cmake glib libyaml numpy python scipy vtk7
+    pip2 install lxml PyYAML
 
 The dependencies can be installed on Ubuntu using apt-get:
 
 ::
 
-    sudo apt-get install cmake libqt4-dev python-dev python-numpy
+    sudo apt-get install build-essential cmake libglib2.0-dev libqt4-dev \
+      libx11-dev libxext-dev libxt-dev python-dev python-lxml python-numpy \
+      python-scipy python-yaml
 
 On Ubuntu the build does not require VTK to be installed.  A compatible version
 of VTK will be downloaded (precompiled binaries) at build time.
