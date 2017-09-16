@@ -7,15 +7,18 @@ install_ubuntu_deps_common()
   apt-get install -y \
     build-essential \
     cmake \
-    freeglut3-dev \
     git \
     libglib2.0-dev \
     libqt4-dev \
+    libx11-dev \
+    libxext-dev \
+    libxt-dev \
     lsb-release \
     python-coverage \
     python-dev \
     python-lxml \
     python-numpy \
+    python-scipy \
     python-yaml \
     wget \
     xvfb
@@ -26,7 +29,7 @@ install_ubuntu_deps_common()
       graphviz \
       python-pip \
       python-sphinx
-    pip install sphinx-rtd-theme
+    pip install sphinx_rtd_theme
   fi
 
   if [ "$MAKE_PACKAGE" = "ON" ]; then
@@ -42,9 +45,9 @@ install_ubuntu_deps()
 
   ubuntu_version=$(lsb_release --release --short)
   if [ "$ubuntu_version" = "14.04" ]; then
-   :
+    apt-get install -y libgl1-mesa-dev-lts-xenial
   else
-   :
+    apt-get install -y libgl1-mesa-dev
   fi
 
   # cleanup to make the docker image smaller
@@ -63,13 +66,12 @@ install_osx_deps()
   cd $(brew --repository homebrew/core) && git reset --hard 543d8e9b27b9bb25ce4491773684c30c8cb66dcc
   #brew upgrade
 
-  brew install qt vtk7
-  brew install doxygen graphviz
+  brew install doxygen graphviz libyaml vtk7
   brew install glib # for lcm
   brew ls --versions python || brew install python
   brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
 
-  pip install pyyaml lxml Sphinx sphinx-rtd-theme coverage
+  pip install coverage lxml PyYAML Sphinx sphinx_rtd_theme
 }
 
 

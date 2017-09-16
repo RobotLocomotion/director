@@ -98,8 +98,8 @@ if (NOT USE_SYSTEM_EIGEN)
 
 ExternalProject_Add(
   eigen
-  URL http://www.vtk.org/files/support/eigen-3.2.1.tar.gz
-  URL_MD5 a0e0a32d62028218b1c1848ad7121476
+  URL https://bitbucket.org/eigen/eigen/get/3.3.3.tar.gz
+  URL_MD5 f21cee193e15e55cfd15ebbc16fc00a7
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -141,9 +141,14 @@ if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
   ExternalProject_Add(lcm
     GIT_REPOSITORY https://github.com/lcm-proj/lcm.git
-    GIT_TAG 89f26a4
+    GIT_TAG c0a0093
     ${cmake3_args}
     CMAKE_CACHE_ARGS
+      -DLCM_ENABLE_EXAMPLES:BOOL=OFF
+      -DLCM_ENABLE_LUA:BOOL=OFF
+      -DLCM_ENABLE_TESTS:BOOL=OFF
+      -DLCM_INSTALL_M4MACROS:BOOL=OFF
+      -DLCM_NAMESPACE:STRING=lcm::
       ${default_cmake_args}
       ${python_args}
     DEPENDS
@@ -201,8 +206,8 @@ if (USE_LCM AND NOT USE_SYSTEM_LIBBOT)
     )
 
   ExternalProject_Add(robotlocomotion-lcmtypes
-    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
-    GIT_TAG 4bd59a1
+    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes.git
+    GIT_TAG 821ff4b
     ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
@@ -227,7 +232,7 @@ if(USE_STANDALONE_LCMGL)
 
   ExternalProject_Add(bot-lcmgl-download
     GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
-    GIT_TAG c328b73
+    GIT_TAG 4835477
     SOURCE_DIR ${source_prefix}/bot-lcmgl
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
