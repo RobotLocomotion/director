@@ -501,7 +501,7 @@ if(USE_PCL)
 
 ExternalProject_Add(PointCloudLibraryPlugin
   GIT_REPOSITORY https://github.com/patmarion/PointCloudLibraryPlugin.git
-  GIT_TAG 2b1bdfe
+  GIT_TAG 84de916
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${eigen_args}
