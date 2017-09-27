@@ -35,6 +35,7 @@ public:
     this->mEmitMessages = true;
     this->mNotifyAllMessages = false;
     this->mRequiredElapsedMilliseconds = 0;
+    this->mTimer.start();
     this->connect(this, SIGNAL(messageReceivedInQueue(const QString&)), SLOT(onMessageInQueue(const QString&)));
   }
 
