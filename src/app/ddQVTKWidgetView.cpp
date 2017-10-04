@@ -164,7 +164,7 @@ void ddQVTKWidgetView::init(bool disable_anti_alias)
 
   this->connect(&this->Internal->RenderTimer, SIGNAL(timeout()), SLOT(onRenderTimer()));
   this->Internal->RenderTimer.start();
-  this->setLightKitEnabled(true); 
+  this->setLightKitEnabled(true);
 }
 
 //-----------------------------------------------------------------------------
