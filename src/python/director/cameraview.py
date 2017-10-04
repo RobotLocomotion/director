@@ -492,6 +492,7 @@ class CameraImageView(object):
         self.imageInitialized = False
         self.updateUtime = 0
         self.useImageColorMap = False
+        self.imageMapToColors = None
         self.initView(view)
         self.initEventFilter()
 
@@ -648,6 +649,9 @@ class CameraImageView(object):
 
         if not self.view.isVisible():
             return
+
+        if self.useImageColorMap and self.imageMapToColors:
+            self.imageMapToColors.Update()
 
         currentUtime = self.imageManager.updateImage(self.imageName)
         if currentUtime != self.updateUtime:
