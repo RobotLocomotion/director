@@ -208,7 +208,7 @@ if (USE_LCM)
 
 endif()
 
-if (USE_DRC)
+if (TRUE)
 
   find_package(LibBot REQUIRED MODULE)
   include_directories(${LIBBOT_INCLUDE_DIRS})
@@ -216,17 +216,31 @@ if (USE_DRC)
   find_package(PCL REQUIRED)
   include_directories(${PCL_INCLUDE_DIRS})
 
+  find_package(OpenCV REQUIRED)
+  include_directories(${OpenCV_INCLUDE_DIRS})
+
+  find_package(ZLIB REQUIRED)
+
+  find_package(bot2-core-lcmtypes REQUIRED)
+
+  find_library(CVUTILS_LIBRARY cv-utils DOC "The cv-utils library")
+  find_path(CVUTILS_INCLUDE_DIR image_utils/jpeg.h PATH_SUFFIXES cv-utils DOC "Path to the cv-utils include directory")
+
+  set(CVUTILS_INCLUDE_DIRS ${CVUTILS_INCLUDE_DIR})
+  set(CVUTILS_LIBRARIES ${CVUTILS_LIBRARY})
+  include_directories(${CVUTILS_INCLUDE_DIRS})
+
   set(moc_srcs)
   qt_wrap_cpp(moc_srcs
     ddBotImageQueue.h
-    ddKinectLCM.h
+    #ddKinectLCM.h
     ddPointCloudLCM.h
   )
 
   list(APPEND srcs
     ${moc_srcs}
     ddBotImageQueue.cpp
-    ddKinectLCM.cpp
+    #ddKinectLCM.cpp
     ddPointCloudLCM.cpp
   )
 
@@ -237,10 +251,10 @@ if (USE_DRC)
   list (APPEND deps
     ${LIBBOT_LIBRARIES}
     ${PCL_LIBRARIES}
-  )
-
-  list(APPEND pkg_deps
-    image-utils multisense_utils kinect-utils lcmtypes_kinect lcmtypes_bot2-core
+    ${OpenCV_LIBS}
+    ${CVUTILS_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ${bot2-core-lcmtypes_LIBRARIES}
   )
 
 endif()
