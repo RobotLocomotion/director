@@ -13,7 +13,7 @@ from director import lcmUtils
 from director import robotstate
 from director import segmentation
 from director.tasks.taskuserpanel import TaskUserPanel
-from director.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.imagebasedaffordancefit import ImageBasedAffordanceFit
 from director.uuidutil import newUUID
 from director import ioUtils
 from director import ikplanner

@@ -1,20 +1,8 @@
-from director import transformUtils
 from director.timercallback import TimerCallback
 from director import objectmodel as om
-from director import visualization as vis
-from director import applogic as app
-from director.debugVis import DebugData
-from director import ioUtils
-from director.simpletimer import SimpleTimer
-from director.utime import getUtime
-from director.pointpicker import ImagePointPicker
-from director import affordanceitems
-from director import affordanceupdater
-from director import cameraview
-from director import segmentation
 from director import propertyset
 from director import asynctaskqueue as atq
-import director.tasks.robottasks as rt
+import director.tasks.basictasks as basictasks
 import director.tasks.taskmanagerwidget as tmw
 
 import numpy as np
@@ -77,6 +65,7 @@ class TaskUserPanel(object):
 
     def initImageView(self, imageView, activateAffordanceUpdater=True):
         if activateAffordanceUpdater:
+            from director import affordanceupdater
             self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, imageView)
             self.affordanceUpdater.timer.start()
         self.imageViewLayout.addWidget(imageView.view)
@@ -114,8 +103,8 @@ class TaskUserPanel(object):
 
 
     def _activatePrompts(self):
-        rt.UserPromptTask.promptFunction = self.onTaskPrompt
-        rt.PrintTask.printFunction = self.appendMessage
+        basictasks.UserPromptTask.promptFunction = self.onTaskPrompt
+        basictasks.PrintTask.printFunction = self.appendMessage
 
     def onStep(self):
 
@@ -267,43 +256,3 @@ class TaskUserPanel(object):
         self.ui.promptRejectButton.connect('clicked()', self.onRejectPrompt)
         self.clearPrompt()
         self.updateTaskButtons()
-
-
-class ImageBasedAffordanceFit(object):
-
-    def __init__(self, imageView=None, numberOfPoints=1):
-
-        self.imageView = imageView or cameraview.CameraImageView(cameraview.imageManager, self.getImageChannel(), 'image view')
-        self.imagePicker = ImagePointPicker(self.imageView, numberOfPoints=numberOfPoints)
-        self.imagePicker.connectDoubleClickEvent(self.onImageViewDoubleClick)
-        self.imagePicker.annotationFunc = self.onImageAnnotation
-        self.imagePicker.start()
-
-        self.pointCloudSource = 'lidar'
-        self.pickLineRadius = 0.05
-        self.pickNearestToCamera = True
-
-    def getImageChannel(self):
-        return 'CAMERA_LEFT'
-
-    def getPointCloud(self):
-        assert self.pointCloudSource in ('lidar', 'stereo')
-        if self.pointCloudSource == 'stereo':
-            return segmentation.getDisparityPointCloud(decimation=1, removeOutliers=False)
-        else:
-            return segmentation.getCurrentRevolutionData()
-
-    def onImageAnnotation(self, *points):
-        polyData = self.getPointCloud()
-        points = [self.getPointCloudLocationFromImage(p, self.imageView, polyData) for p in points]
-        self.fit(polyData, points)
-
-    def getPointCloudLocationFromImage(self, imagePixel, imageView, polyData):
-        cameraPos, ray = imageView.getWorldPositionAndRay(imagePixel)
-        return segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData, distanceToLineThreshold=self.pickLineRadius, nearestToCamera=self.pickNearestToCamera)
-
-    def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
-        pass
-
-    def fit(self, pointData, points):
-        pass
