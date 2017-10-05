@@ -208,7 +208,8 @@ if (USE_LCM)
 
 endif()
 
-if (TRUE)
+message("Use perception is " ${USE_PERCEPTION})
+if (USE_PERCEPTION)
 
   find_package(LibBot REQUIRED MODULE)
   include_directories(${LIBBOT_INCLUDE_DIRS})
