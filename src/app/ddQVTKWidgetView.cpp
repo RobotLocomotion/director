@@ -117,7 +117,6 @@ void ddQVTKWidgetView::init(bool disable_anti_alias)
 #else
   this->Internal->VTKWidget->SetUseTDx(true);
   this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 #endif
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
   if (disable_anti_alias){
