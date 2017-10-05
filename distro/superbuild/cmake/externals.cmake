@@ -8,6 +8,7 @@ option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
 option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
+option(USE_PERCEPTION "Build director features that require OpenCV, PCL, cv-utils, and libbot as dependencies." OFF)
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
@@ -596,6 +597,7 @@ ExternalProject_Add(director
     -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_DRAKE:BOOL=${USE_DRAKE}
     -DDD_QT_VERSION:STRING=${DD_QT_VERSION}
+    -DUSE_PERCEPTION:BOOL=${USE_PERCEPTION}
     ${default_cmake_args}
     ${eigen_args}
     ${boost_args}

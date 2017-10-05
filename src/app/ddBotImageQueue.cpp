@@ -515,14 +515,8 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
   }
 
   vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
-
-  image->SetWholeExtent(0, w-1, 0, h-1, 0, 0);
-  image->SetSpacing(1.0, 1.0, 1.0);
-  image->SetOrigin(0.0, 0.0, 0.0);
-  image->SetExtent(image->GetWholeExtent());
-  image->SetNumberOfScalarComponents(nComponents);
-  image->SetScalarType(componentType);
-  image->AllocateScalars();
+  image->SetDimensions(w, h, 1);
+  image->AllocateScalars(componentType, nComponents);
 
   unsigned char* outPtr = static_cast<unsigned char*>(image->GetScalarPointer(0, 0, 0));
 
@@ -576,7 +570,7 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
     float point[3] = {cloud->points[i].x, cloud->points[i].y, cloud->points[i].z};
     unsigned char color[3] = {cloud->points[i].r, cloud->points[i].g, cloud->points[i].b};
     points->SetPoint(j, point);
-    rgbArray->SetTupleValue(j, color);
+    rgbArray->SetTypedTuple(j, color);
     j++;
   }
   nr_points = j;
