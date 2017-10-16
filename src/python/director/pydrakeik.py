@@ -341,6 +341,18 @@ class PyDrakeIkServer(object):
         wc = pydrakeik.WorldGazeDirConstraint(self.rigidBodyTree, bodyId, bodyAxis, worldAxis, coneThreshold, tspan)
         return wc
 
+    def handleWorldGazeTargetConstraint(self, c, fields):
+
+        bodyId = self.bodyNameToId[c.linkName]
+        tspan = np.asarray(c.tspan, dtype=float)
+        bodyAxis = np.asarray(c.axis, dtype=float)
+        gazeOrigin = np.asarray(c.bodyPoint, dtype=float)
+        targetPosition = np.asarray(c.worldPoint, dtype=float)
+        coneThreshold = c.coneThreshold
+
+        wc = pydrakeik.WorldGazeTargetConstraint(self.rigidBodyTree, bodyId, bodyAxis, targetPosition, gazeOrigin, coneThreshold, tspan)
+        return wc
+
     def handlePostureConstraint(self, c, fields):
 
         tspan = np.asarray(c.tspan, dtype=float)
@@ -391,6 +403,7 @@ class PyDrakeIkServer(object):
             ikconstraints.FixedLinkFromRobotPoseConstraint : self.handleFixedLinkFromRobotPoseConstraint,
             ikconstraints.QuatConstraint : self.handleQuatConstraint,
             ikconstraints.WorldGazeDirConstraint : self.handleWorldGazeDirConstraint,
+            ikconstraints.WorldGazeTargetConstraint: self.handleWorldGazeTargetConstraint,
             ikconstraints.PostureConstraint : self.handlePostureConstraint,
             ikconstraints.QuasiStaticConstraint : self.handleQuasiStaticConstraint,
             }
