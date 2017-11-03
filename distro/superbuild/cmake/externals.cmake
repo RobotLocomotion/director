@@ -3,7 +3,8 @@ option(USE_LCM "Build with lcm." OFF)
 option(USE_LCMGL "Build with lcm-gl." OFF)
 option(USE_OCTOMAP "Build with octomap." OFF)
 option(USE_APRILTAGS "Build with apriltags lcm driver." OFF)
-option(USE_KINECT "Build with kinect lcm driver." OFF)
+option(USE_KINECT "Build withkinect lcm driver." OFF)
+option(USE_OPENNI2_LCM "Build withkinect lcm driver." ON)
 option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
@@ -519,12 +520,15 @@ ExternalProject_Add(PointCloudLibraryPlugin
 endif()
 
 
+
+
 ###############################################################################
 # camera driver
 
 if(USE_KINECT)
 
-  ExternalProject_Add(openni2-camera-lcm
+  if(USE_OPENNI2_LCM)
+    ExternalProject_Add(openni2-camera-lcm
     GIT_REPOSITORY https://github.com/openhumanoids/openni2-camera-lcm
     GIT_TAG 6bd5573
     CMAKE_CACHE_ARGS
@@ -533,7 +537,8 @@ if(USE_KINECT)
     DEPENDS
       ${lcm_depends}
     )
-
+  endif()
+  
 
   ExternalProject_Add(cv-utils
     GIT_REPOSITORY https://github.com/patmarion/cv-utils.git
