@@ -208,7 +208,6 @@ if (USE_LCM)
 
 endif()
 
-message("Use perception is " ${USE_PERCEPTION})
 if (USE_PERCEPTION)
 
   find_package(LibBot REQUIRED MODULE)
@@ -234,14 +233,12 @@ if (USE_PERCEPTION)
   set(moc_srcs)
   qt_wrap_cpp(moc_srcs
     ddBotImageQueue.h
-    #ddKinectLCM.h
     ddPointCloudLCM.h
   )
 
   list(APPEND srcs
     ${moc_srcs}
     ddBotImageQueue.cpp
-    #ddKinectLCM.cpp
     ddPointCloudLCM.cpp
   )
 
