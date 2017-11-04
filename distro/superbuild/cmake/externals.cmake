@@ -3,7 +3,7 @@ option(USE_LCM "Build with lcm." OFF)
 option(USE_LCMGL "Build with lcm-gl." OFF)
 option(USE_OCTOMAP "Build with octomap." OFF)
 option(USE_APRILTAGS "Build with apriltags lcm driver." OFF)
-option(USE_KINECT "Build with kinect lcm driver." OFF)
+option(USE_OPENNI2_LCM "Build with openni2 lcm driver." OFF)
 option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
@@ -522,7 +522,7 @@ endif()
 ###############################################################################
 # camera driver
 
-if(USE_KINECT)
+if(USE_OPENNI2_LCM)
 
   ExternalProject_Add(openni2-camera-lcm
     GIT_REPOSITORY https://github.com/openhumanoids/openni2-camera-lcm
@@ -534,6 +534,9 @@ if(USE_KINECT)
       ${lcm_depends}
     )
 
+endif()
+
+if(USE_PERCEPTION)
 
   ExternalProject_Add(cv-utils
     GIT_REPOSITORY https://github.com/patmarion/cv-utils.git
@@ -543,15 +546,6 @@ if(USE_KINECT)
     DEPENDS
       ${lcm_depends} ${pcl_depends}
     )
-
-  #ExternalProject_Add(kinect
-  #  GIT_REPOSITORY https://github.com/openhumanoids/kinect.git
-  #  GIT_TAG 3e94f58
-  #  CMAKE_CACHE_ARGS
-  #    ${default_cmake_args}
-  #  DEPENDS
-  #    ${lcm_depends} ${libbot_depends}
-  #  )
 
   set(cvutils_depends cv-utils)
 
