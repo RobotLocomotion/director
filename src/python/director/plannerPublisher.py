@@ -101,7 +101,14 @@ class PlannerPublisher(object):
             else: # no affordanceUpdater - so no attached collision objects either
                 s+=',"attachedTo":"__world__"'
             if classname=='MeshAffordanceItem':
-                s+=',"filename":"'+aff.getMeshManager().getFilesystemFilename(des['Filename'])+'"'
+                if aff.getMeshManager().getFilesystemFilename(des['Filename']):
+                    s+=',"filename":"'+aff.getMeshManager().getFilesystemFilename(des['Filename'])+'"'
+                else:
+                    if os.path.isfile(des['Filename']):
+                        s+=',"filename":"'+des['Filename']+'"'
+                    else:
+                        raise Exception("Mesh does not exist.")
+                s+=',"scale":'+repr(des['Scale'])
             if classname=='SphereAffordanceItem':
                 s+=',"radius":'+repr(des['Radius'])
             if classname=='CylinderAffordanceItem' or classname=='CapsuleAffordanceItem':
