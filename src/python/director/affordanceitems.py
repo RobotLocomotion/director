@@ -241,15 +241,16 @@ class MeshAffordanceItem(AffordanceItem):
             if os.path.isfile(filename):
                 polyData = ioUtils.readPolyData(filename)
 
-                transform = vtk.vtkTransform()
-                transform.Scale(scale)
+                if not scale == [1, 1, 1]:
+                    transform = vtk.vtkTransform()
+                    transform.Scale(scale)
 
-                transformFilter = vtk.vtkTransformPolyDataFilter()
-                transformFilter.SetInput(polyData)
-                transformFilter.SetTransform(transform)
-                transformFilter.Update()
+                    transformFilter = vtk.vtkTransformPolyDataFilter()
+                    transformFilter.SetInput(polyData)
+                    transformFilter.SetTransform(transform)
+                    transformFilter.Update()
 
-                polyData = transformFilter.GetOutput()
+                    polyData = transformFilter.GetOutput()
             else:
                 # use axes as a placeholder mesh
                 d = DebugData()
