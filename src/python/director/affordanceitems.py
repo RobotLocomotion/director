@@ -213,8 +213,12 @@ class MeshAffordanceItem(AffordanceItem):
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.setProperty('Collision Enabled', False)
+
         self.addProperty('Filename', '')
+        self.addProperty('Scale', [1.0, 1.0, 1.0], attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+
         self.properties.setPropertyIndex('Filename', 0)
+        self.properties.setPropertyIndex('Scale', 1)
 
         # attempt to reload geometry if it is currently empty
         if self.getProperty('Filename') and not self.polyData.GetNumberOfPoints():
@@ -223,6 +227,7 @@ class MeshAffordanceItem(AffordanceItem):
 
     def updateGeometryFromProperties(self):
         filename = self.getProperty('Filename')
+        scale = self.getProperty('Scale')
 
         if not filename:
             polyData = vtk.vtkPolyData()
@@ -230,12 +235,22 @@ class MeshAffordanceItem(AffordanceItem):
             polyData = self.getMeshManager().get(filename)
 
         if not polyData:
-
             if not os.path.isabs(filename):
                 filename = os.path.join(director.getDRCBaseDir(), filename)
 
             if os.path.isfile(filename):
                 polyData = ioUtils.readPolyData(filename)
+
+                if not scale == [1, 1, 1]:
+                    transform = vtk.vtkTransform()
+                    transform.Scale(scale)
+
+                    transformFilter = vtk.vtkTransformPolyDataFilter()
+                    transformFilter.SetInput(polyData)
+                    transformFilter.SetTransform(transform)
+                    transformFilter.Update()
+
+                    polyData = transformFilter.GetOutput()
             else:
                 # use axes as a placeholder mesh
                 d = DebugData()
@@ -287,7 +302,7 @@ class MeshAffordanceItem(AffordanceItem):
     def _onPropertyChanged(self, propertySet, propertyName):
         AffordanceItem._onPropertyChanged(self, propertySet, propertyName)
 
-        if propertyName == 'Filename':
+        if propertyName in ('Filename', 'Scale'):
             self.updateGeometryFromProperties()
 
 
