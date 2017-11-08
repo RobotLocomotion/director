@@ -2,6 +2,7 @@ import director.objectmodel as om
 import director.applogic as app
 from shallowCopy import shallowCopy
 import director.vtkAll as vtk
+from director import filterUtils
 from director import transformUtils
 from director import callbacks
 from director import frameupdater
@@ -937,13 +938,14 @@ def addChildFrame(obj, initialTransform=None):
     '''
 
     if obj.getChildFrame():
-        return
+        return frame
 
     if initialTransform:
-        pd = transformPolyData(obj.polyData, initialTransform.GetLinearInverse())
+        pd = filterUtils.transformPolyData(obj.polyData, initialTransform.GetLinearInverse())
         obj.setPolyData(pd)
-
-    t = obj.actor.GetUserTransform()
+        t = initialTransform
+    else:
+        t = obj.actor.GetUserTransform()
 
     if t is None:
         t = vtk.vtkTransform()
