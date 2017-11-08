@@ -50,7 +50,12 @@ class ConsoleApp(object):
                 try:
                     func()
                 except:
-                    print traceback.format_exc()
+                    if ConsoleApp.getTestingEnabled():
+                        raise
+                    else:
+                        print traceback.format_exc()
+
+
 
         startTimer = TimerCallback(callback=onStartup)
         startTimer.singleShot(0)
