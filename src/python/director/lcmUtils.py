@@ -118,7 +118,7 @@ def addSubscriber(channel, messageClass=None, callback=None, historicalLoader=No
             else:
                 callback(msg)
         else:
-            print(('error decoding message on channel:', channel))
+            print('error decoding message on channel:', channel)
 
     if callback is not None:
         if messageClass is not None:
@@ -150,7 +150,7 @@ def getNextMessage(subscriber, messageClass=None, timeout=0):
         try:
             msg = messageClass.decode(messageData)
         except ValueError:
-            print(('error decoding message on channel:', subscriber.channel()))
+            print('error decoding message on channel:', subscriber.channel())
             return None
 
         return msg

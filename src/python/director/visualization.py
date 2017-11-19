@@ -108,7 +108,7 @@ class PolyDataItem(om.ObjectModelItem):
 
         array = self.polyData.GetPointData().GetArray(arrayName)
         if not array:
-            print(('colorBy(%s): array not found' % arrayName))
+            print('colorBy(%s): array not found' % arrayName)
             self.mapper.ScalarVisibilityOff()
             self.polyData.GetPointData().SetActiveScalars(None)
             return
@@ -1204,7 +1204,7 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     item.setProperty('Alpha', alpha)
 
     if colorByName and colorByName not in item.getArrayNames():
-        print(('showPolyData(colorByName=%s): array not found' % colorByName))
+        print('showPolyData(colorByName=%s): array not found' % colorByName)
         colorByName = None
 
     if colorByName:
