@@ -22,7 +22,7 @@ def _consoleAppExceptionHook(exc_type, exc_value, exc_traceback):
 
 class ConsoleApp(object):
 
-    _startupCallbacks = []
+    _startupCallbacks = {}
 
     def __init__(self):
         om.init()
@@ -46,7 +46,10 @@ class ConsoleApp(object):
             sys.excepthook = _consoleAppExceptionHook
 
         def onStartup():
-            for func in ConsoleApp._startupCallbacks:
+            callbacks = []
+            for priority in sorted(ConsoleApp._startupCallbacks.keys()):
+                callbacks.extend(ConsoleApp._startupCallbacks[priority])
+            for func in callbacks:
                 try:
                     func()
                 except:
