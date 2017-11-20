@@ -23,6 +23,7 @@ def _consoleAppExceptionHook(exc_type, exc_value, exc_traceback):
 class ConsoleApp(object):
 
     _startupCallbacks = {}
+    _exitCode = 0
 
     def __init__(self):
         om.init()
@@ -85,10 +86,11 @@ class ConsoleApp(object):
 
     @staticmethod
     def quit():
-        ConsoleApp.applicationInstance().quit()
+        ConsoleApp.exit(ConsoleApp._exitCode)
 
     @staticmethod
     def exit(exitCode=0):
+        ConsoleApp._exitCode = exitCode
         ConsoleApp.applicationInstance().exit(exitCode)
 
     @staticmethod
