@@ -10,7 +10,7 @@
 #include <drake/multibody/rigid_body_tree.h>
 #include <drake/multibody/force_torque_measurement.h>
 #endif
-#include <drake/util/convexHull.h>
+#include <drake/systems/robotInterfaces/convex_hull.h>
 
 #include <vector>
 #include <string>
