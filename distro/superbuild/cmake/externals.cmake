@@ -7,6 +7,7 @@ option(USE_OPENNI2_LCM "Build with openni2 lcm driver." OFF)
 option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
+option(USE_SIGNAL_SCOPE "Build with signal-scope." OFF)
 option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
 option(USE_PERCEPTION "Build director features that require OpenCV, PCL, cv-utils, and libbot as dependencies." OFF)
 option(USE_ROS "Build components that depend on ROS." OFF)
@@ -577,6 +578,25 @@ if(USE_APRILTAGS)
 
 endif()
 
+
+###############################################################################
+# signal-scope
+
+if(USE_SIGNAL_SCOPE)
+
+  ExternalProject_Add(signal-scope
+    GIT_REPOSITORY https://github.com/openhumanoids/signal-scope.git
+    GIT_TAG 62fe2f4
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+      ${qt_args}
+    DEPENDS
+      ctkPythonConsole 
+      PythonQt
+  )
+
+endif()
 
 ###############################################################################
 # director
