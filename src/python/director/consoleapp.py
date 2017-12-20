@@ -24,6 +24,7 @@ class ConsoleApp(object):
 
     _startupCallbacks = {}
     _exitCode = 0
+    _quitTimer = None
 
     def __init__(self):
         om.init()
@@ -83,6 +84,11 @@ class ConsoleApp(object):
         quitTimer = TimerCallback()
         quitTimer.callback = ConsoleApp.quit
         quitTimer.singleShot(timeoutInSeconds)
+        ConsoleApp._quitTimer = quitTimer
+
+    @staticmethod
+    def getQuitTimer():
+        return ConsoleApp._quitTimer
 
     @staticmethod
     def quit():
