@@ -938,7 +938,7 @@ def addChildFrame(obj, initialTransform=None):
     '''
 
     if obj.getChildFrame():
-        return frame
+        return obj.getChildFrame()
 
     if initialTransform:
         pd = filterUtils.transformPolyData(obj.polyData, initialTransform.GetLinearInverse())
