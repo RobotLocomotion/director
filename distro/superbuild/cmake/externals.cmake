@@ -539,8 +539,8 @@ endif()
 if(USE_PERCEPTION)
 
   ExternalProject_Add(cv-utils
-    GIT_REPOSITORY https://github.com/gizatt/cv-utils.git
-    GIT_TAG 3ea4eb1b1b34bb9c9c08ad6627228c04ab6e2f2c
+    GIT_REPOSITORY https://github.com/patmarion/cv-utils.git
+    GIT_TAG c4939fedf66c767de15607adde3aff44ab2b503b
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
