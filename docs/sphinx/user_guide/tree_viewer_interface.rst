@@ -136,6 +136,15 @@ The ``planar_lidar`` type is simply a shortcut for generating a pointcloud witho
 
 ------
 
+Triad Fields:
+
+The ``triad`` type generates an XYZ triad, useful for marking a frame or coordinate system.
+
+:scale: (optional) the scale factor of the triad. Defaults to 1.0.
+:tube: (optional) a boolean indicating whether to draw the triad as three tubes (True) or three hairlines (False). Defaults to False.
+
+------
+
 Line Fields:
 
 The ``line`` type generates a line through a sequence of two or more points. 
