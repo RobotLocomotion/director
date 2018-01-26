@@ -125,6 +125,20 @@ class Triad(BaseGeometry):
             "tube": self.tube
         }
 
+class PointCloud(BaseGeometry):
+    __slots__ = ["points", "channels"]
+    def __init__(self, points, channels={}):
+        self.points = points
+        self.channels = channels
+
+    def serialize(self):
+        return {
+            "type": "pointcloud",
+            "points": [list(p) for p in self.points],
+            "channels": {name: [list(c) for c in values] for (name, values) in self.channels.iteritems()}
+        }
+
+
 class PolyLine(BaseGeometry):
     def __init__(self, points, radius=0.01, closed=False,
                  start_head=False, end_head=False,
@@ -140,7 +154,7 @@ class PolyLine(BaseGeometry):
     def serialize(self):
         data = {
             "type": "line",
-            "points": self.points,
+            "points": [list(p) for p in self.points],
             "radius": self.radius,
             "closed": self.closed
         }

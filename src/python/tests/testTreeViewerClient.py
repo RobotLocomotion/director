@@ -5,7 +5,7 @@ import subprocess
 import numpy as np
 import lcm
 from director.thirdparty import transformations
-from director.viewerclient import Visualizer, Box, GeometryData, Sphere
+from director.viewerclient import Visualizer, Box, GeometryData, Sphere, PointCloud, PolyLine
 
 
 if __name__ == '__main__':
@@ -53,5 +53,14 @@ if __name__ == '__main__':
         vis.settransform(transformations.rotation_matrix(theta, [0, 0, 1]))
         time.sleep(0.01)
     sphere_vis.delete()
+
+    pointcloud_vis = vis["pointcloud"]
+    pointcloud_vis.setgeometry(PointCloud(
+        np.random.rand(10, 3),
+        {"rgb": np.random.rand(10, 3)}))
+
+    vis["polyline"].setgeometry(PolyLine(
+        points=np.random.rand(15, 3),
+        end_head=True))
 
     vis_process.terminate()
