@@ -540,7 +540,7 @@ if(USE_PERCEPTION)
 
   ExternalProject_Add(cv-utils
     GIT_REPOSITORY https://github.com/patmarion/cv-utils.git
-    GIT_TAG 9ee0128
+    GIT_TAG c4939fedf66c767de15607adde3aff44ab2b503b
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
