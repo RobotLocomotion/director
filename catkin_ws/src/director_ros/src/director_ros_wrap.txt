@@ -1,0 +1,12 @@
+#include <ddROSInterface.h>
+#include <ddVTKObjectMap.h>
+
+ddROSInterface::ddROSInterface()
+void ddROSInterface::addPointcloudSubscriber(const QString&)
+void ddROSInterface::addImageSubscriber(const QString&)
+void ddROSInterface::initNode()
+bool ddROSInterface::rosCheckMaster()
+void ddROSInterface::rosRequestShutdown()
+void ddROSInterface::startSpinner()
+void ddROSInterface::stopSpinner()
+ddVTKObjectMap* ddROSInterface::vtkObjectMap()

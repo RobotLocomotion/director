@@ -9,6 +9,7 @@ option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
 option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
 option(USE_PERCEPTION "Build director features that require OpenCV, PCL, cv-utils, and libbot as dependencies." OFF)
+option(USE_ROS "Build components that depend on ROS." OFF)
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
@@ -613,3 +614,18 @@ ExternalProject_Add(director
     QtPropertyBrowser
 
   )
+
+
+if (USE_ROS)
+  ExternalProject_Add(director_ros
+    SOURCE_DIR ${Superbuild_SOURCE_DIR}/../../catkin_ws/src
+    DOWNLOAD_COMMAND ""
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/director_ros-build/devel/lib/libddROSPlugin${CMAKE_SHARED_LIBRARY_SUFFIX} ${install_prefix}/lib
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${vtk_args}
+      #${python_args} # catkin fails if you let it find python3
+      ${qt_args}
+    DEPENDS director
+  )
+endif()

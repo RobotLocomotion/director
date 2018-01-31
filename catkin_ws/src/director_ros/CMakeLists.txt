@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(director_ros)
 
+set(CMAKE_CXX_STANDARD 14)
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -159,6 +161,49 @@ target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${DIRECTOR_LIBRARIES}
 )
+
+set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddROSPluginDecorators.h)
+set(wrap_files src/director_ros_wrap.txt)
+
+qt4_wrap_cpp(moc_srcs
+    ${decorator_file}
+    src/ddROSInterface.h
+    )
+
+set(sources
+    src/ddROSInterface.cpp
+    src/ddROSPlugin.cpp
+    )
+
+set(deps
+
+  ${DIRECTOR_LIBRARIES}
+  ${PYTHONQT_LIBRARY}
+  ${QT_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
+
+set(library_name ddROSPlugin)
+add_library(${library_name} ${sources} ${moc_srcs})
+target_link_libraries(${library_name} ${deps})
+target_include_directories(${library_name} PRIVATE ${PYTHONQT_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+
+
+
+set(PYTHONQT_WRAP_SCRIPT "${DIRECTOR_SOURCE_DIR}/src/app/WrapPythonQt.py")
+
+# custom command for PythonQt wrapping
+find_package(PythonInterp REQUIRED)
+add_custom_command(OUTPUT ${decorator_file}
+    COMMAND ${PYTHON_EXECUTABLE} ${PYTHONQT_WRAP_SCRIPT}
+    -i ${wrap_files} -o "${decorator_file}"
+    --class-prefixes vtk dd QVTK --qt-class-prefixes dd QVTK
+    --module-name ddROSPlugin
+    DEPENDS ${director_depends} ${wrap_files} ${PYTHONQT_WRAP_SCRIPT}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+
 
 #############
 ## Install ##
