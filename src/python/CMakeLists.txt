@@ -124,6 +124,7 @@ set(python_files
   director/surprisetask.py
   director/switchplanner.py
   director/tasklaunchpanel.py
+  director/taskrunner.py
   director/tdx.py
   director/teleoppanel.py
   director/motionplanningpanel.py
