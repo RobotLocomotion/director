@@ -402,6 +402,8 @@ def findPathToAncestor(fromItem, toItem):
         fromItem = parent
     return path
 
+import zmq
+from director import taskrunner
 
 class TreeViewer(object):
     name = "Remote Tree Viewer"
@@ -416,6 +418,24 @@ class TreeViewer(object):
         self.enable()
         self.sendStatusMessage(
             0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REP)
+        self.socket.bind("tcp://*:5555")
+        print "starting zmq thread"
+        self.taskRunner = taskrunner.TaskRunner()
+        self.taskRunner.callOnThread(self.runZmq)
+
+    def runZmq(self):
+        while True:
+            message = self.socket.recv()
+            print "got message:", message
+            data = json.loads(message)
+            # self.socket.send("foo")
+            response = self.handleViewerRequest(data)
+            print "response:", response
+            self.socket.send(json.dumps(response.toJson()))
+            print "sent response"
+
 
     def _addSubscriber(self):
         self.subscriber = lcmUtils.addSubscriber(
