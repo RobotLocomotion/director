@@ -412,7 +412,7 @@ import Queue
 class TreeViewer(object):
     name = "Remote Tree Viewer"
 
-    def __init__(self, view, zmqUrl="tcp://*:6891"):
+    def __init__(self, view, zmqUrl=None):
 
         self.subscriber = None
         self.view = view
@@ -422,12 +422,11 @@ class TreeViewer(object):
         self.enable()
         self.sendStatusMessage(
             0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
-        if zmqUrl is not None:
+        if zmqUrl:
             self.context = zmq.Context()
             self.socket = self.context.socket(zmq.REP)
-            # self.socket.setsockopt(zmq.SUBSCRIBE, "treeviewer")
+            # self.socket.setsockopt(zmq.SUBSCRIBE, "")
             self.socket.bind(zmqUrl)
-            print "socket bound to", zmqUrl
             self.responseQueue = Queue.Queue()
             self.taskRunner = taskrunner.TaskRunner()
             self.taskRunner.callOnThread(self.runZmq)
@@ -435,18 +434,18 @@ class TreeViewer(object):
     def runZmq(self):
         while True:
             message = self.socket.recv()
-            print "got message"
             data = msgpack.unpackb(message, object_hook=mnp.decode)
-            self.taskRunner.callOnMain(lambda: self.handleZmq(data))
-            self.socket.send(json.dumps(self.responseQueue.get()))
-            print "sent response"
+            # self.handleZmq(data)
+            self.socket.send("received")
+            self.taskRunner.callOnMain(self.handleZmq, data)
+            # self.socket.send(json.dumps(self.responseQueue.get()))
 
     def handleZmq(self, data):
         try:
             response = self.handleViewerRequest(data)
-            self.responseQueue.put(response.toDict())
+            # self.responseQueue.put(response.toDict())
         except Exception as e:
-            self.responseQueue.put({"status": "error", "message": str(e)})
+            # self.responseQueue.put({"status": "error", "message": str(e)})
             raise
 
     def _addSubscriber(self):

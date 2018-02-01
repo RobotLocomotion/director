@@ -463,7 +463,7 @@ class MainWindowPanelFactory(object):
     def initTreeViewer(self, fields):
 
         from director import treeviewer
-        treeViewer = treeviewer.TreeViewer(fields.view)
+        treeViewer = treeviewer.TreeViewer(fields.view, zmqUrl=drcargs.args().treeviewer_url)
 
         applogic.MenuActionToggleHelper('Tools', treeViewer.name, treeViewer.isEnabled, treeViewer.setEnabled)
 

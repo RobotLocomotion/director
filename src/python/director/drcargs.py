@@ -170,6 +170,9 @@ class DRCArgParser(object):
                             default=[], action='append', metavar='filename',
                             help='python scripts to run at startup')
 
+        parser.add_argument('--treeviewer-url', type=str,
+                            dest='treeviewer_url', default='tcp://*:57370')
+
 
 _argParser = None
 def getGlobalArgParser():
