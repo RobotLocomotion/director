@@ -570,7 +570,6 @@ class FrameTraceVisualizer(object):
         self.frame = frame
         self.traceName = '%s trace' % frame.getProperty('Name')
         self.lastPosition = np.array(frame.transform.GetPosition())
-        self.lineCell = vtk.vtkLine()
         frame.connectFrameModified(self.onFrameModified)
 
     def getTraceData(self):
@@ -578,31 +577,32 @@ class FrameTraceVisualizer(object):
         if not t:
             pts = vtk.vtkPoints()
             pts.SetDataTypeToDouble()
-            pts.InsertNextPoint(self.frame.transform.GetPosition())
+            pts.InsertNextPoint(self.lastPosition)
             pd = vtk.vtkPolyData()
+            pd.Allocate(1, 1)
             pd.SetPoints(pts)
-            pd.SetLines(vtk.vtkCellArray())
+            polyline = vtk.vtkPolyLine()
+            pd.InsertNextCell(polyline.GetCellType(), polyline.GetPointIds())
+            idArray = pd.GetLines().GetData()
+            idArray.InsertNextValue(0)
             t = showPolyData(pd, self.traceName, parent=self.frame)
         return t
 
     def addPoint(self, point):
         traceData = self.getTraceData()
         pd = traceData.polyData
-
         pd.GetPoints().InsertNextPoint(point)
         numberOfPoints = pd.GetNumberOfPoints()
-        line = self.lineCell
-        ids = line.GetPointIds()
-        ids.SetId(0, numberOfPoints-2)
-        ids.SetId(1, numberOfPoints-1)
-        pd.GetLines().InsertNextCell(line.GetPointIds())
-
+        idArray = pd.GetLines().GetData()
+        idArray.InsertNextValue(numberOfPoints-1)
+        idArray.SetValue(0, numberOfPoints)
         pd.Modified()
         traceData._renderAllViews()
 
     def onFrameModified(self, frame):
         position = np.array(frame.transform.GetPosition())
         if not np.allclose(position, self.lastPosition):
+            self.lastPosition = position
             self.addPoint(position)
 
 
