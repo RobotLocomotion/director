@@ -18,6 +18,7 @@ class MainWindowApp(object):
 
         self.mainWindow = QtGui.QMainWindow()
         self.mainWindow.resize(768 * (16/9.0), 768)
+        self.mainWindow.setAttribute(QtCore.Qt.WA_ShowWithoutActivating)
         self.settings = QtCore.QSettings()
 
         self.fileMenu = self.mainWindow.menuBar().addMenu('&File')
