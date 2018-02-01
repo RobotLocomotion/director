@@ -52,7 +52,6 @@ class TaskRunner(object):
 
     def callOnMain(self, func, *args, **kwargs):
         self.pendingTasks.append(lambda: func(*args, **kwargs))
-        self.timer.start()
 
     def callOnThread(self, func, *args, **kwargs):
         t = Thread(target=lambda: func(*args, **kwargs))
