@@ -408,6 +408,7 @@ import msgpack_numpy as mnp
 from director import taskrunner
 import time
 import Queue
+from director.timercallback import TimerCallback
 
 class TreeViewer(object):
     name = "Remote Tree Viewer"
@@ -425,28 +426,28 @@ class TreeViewer(object):
         if zmqUrl:
             self.context = zmq.Context()
             self.socket = self.context.socket(zmq.REP)
-            # self.socket.setsockopt(zmq.SUBSCRIBE, "")
             self.socket.bind(zmqUrl)
-            self.responseQueue = Queue.Queue()
+            self.msgQueue = Queue.Queue()
             self.taskRunner = taskrunner.TaskRunner()
-            self.taskRunner.callOnThread(self.runZmq)
+            self.taskRunner.callOnThread(self.listenZmq)
+            self.zmqTimer = TimerCallback(callback=self.handleZmq, targetFps=60)
+            self.zmqTimer.start()
 
-    def runZmq(self):
-        while True:
-            message = self.socket.recv()
-            data = msgpack.unpackb(message, object_hook=mnp.decode)
-            # self.handleZmq(data)
-            self.socket.send("received")
-            self.taskRunner.callOnMain(self.handleZmq, data)
-            # self.socket.send(json.dumps(self.responseQueue.get()))
+    def listenZmq(self):
+        # Wait for the main window to show up
+        while not self.view.parent().isVisible():
+            time.sleep(0.1)
+        # Handle ZMQ messages until the main window is closed
+        while self.view.parent().isVisible():
+            if self.socket.poll(100):
+                message = self.socket.recv()
+                data = msgpack.unpackb(message, object_hook=mnp.decode)
+                self.socket.send("received")
+                self.msgQueue.put(data)
 
-    def handleZmq(self, data):
-        try:
-            response = self.handleViewerRequest(data)
-            # self.responseQueue.put(response.toDict())
-        except Exception as e:
-            # self.responseQueue.put({"status": "error", "message": str(e)})
-            raise
+    def handleZmq(self):
+        while not self.msgQueue.empty():
+            self.handleViewerRequest(self.msgQueue.get())
 
     def _addSubscriber(self):
         self.subscriber = lcmUtils.addSubscriber(
