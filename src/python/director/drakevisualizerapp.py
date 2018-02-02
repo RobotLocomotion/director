@@ -25,7 +25,7 @@ def main(globalsDict=None):
 
     options = fact.getDefaultOptions()
     fact.setDependentOptions(options,
-        useTreeViewer=HAVE_LCMRL,
+        useTreeViewer=True,
         useDrakeVisualizer=True,
         useLCMGLRenderer=True)
 
