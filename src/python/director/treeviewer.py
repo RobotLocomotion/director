@@ -1,11 +1,19 @@
 import json
 import math
 import os
+import Queue
 import re
 import time
 import warnings
 import numpy as np
 from collections import namedtuple
+
+try:
+    import msgpack
+    import zmq
+    ZMQ_AVAILABLE = True
+except ImportError:
+    ZMQ_AVAILABLE = False
 
 from director import objectmodel as om
 from director import applogic as app
@@ -19,7 +27,8 @@ from director import vtkAll as vtk
 from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
-from director.shallowCopy import shallowCopy
+from director import taskrunner
+from director.timercallback import TimerCallback
 
 import robotlocomotion as lcmrl
 
@@ -402,13 +411,50 @@ def findPathToAncestor(fromItem, toItem):
         fromItem = parent
     return path
 
-import zmq
-import msgpack
-import msgpack_numpy as mnp
-from director import taskrunner
-import time
-import Queue
-from director.timercallback import TimerCallback
+def tostr(x):
+    """
+    This code is taken directly from https://github.com/lebedov/msgpack-numpy
+    originally written by Lev E. Givon and distributed under the terms of the
+    BSD 3-clause license.
+    """
+    if sys.version_info >= (3, 0):
+        if isinstance(x, bytes):
+            return x.decode()
+        else:
+            return str(x)
+    else:
+        return x
+
+def msgpack_numpy_decode(obj, chain=None):
+    """
+    Decoder for deserializing numpy data types using msgpack-numpy format.
+    This code is taken directly from https://github.com/lebedov/msgpack-numpy
+    originally written by Lev E. Givon and distributed under the terms of the
+    BSD 3-clause license.
+    """
+
+    try:
+        if b'nd' in obj:
+            if obj[b'nd'] is True:
+                # Check if b'kind' is in obj to enable decoding of data
+                # serialized with older versions (#20):
+                if b'kind' in obj and obj[b'kind'] == b'V':
+                    descr = [tuple(tostr(t) if type(t) is bytes else t for t in d) \
+                             for d in obj[b'type']]
+                else:
+                    descr = obj[b'type']
+                return np.fromstring(obj[b'data'],
+                            dtype=np.dtype(descr)).reshape(obj[b'shape'])
+            else:
+                descr = obj[b'type']
+                return np.fromstring(obj[b'data'],
+                            dtype=np.dtype(descr))[0]
+        elif b'complex' in obj:
+            return complex(tostr(obj[b'data']))
+        else:
+            return obj if chain is None else chain(obj)
+    except KeyError:
+        return obj if chain is None else chain(obj)
 
 class TreeViewer(object):
     name = "Remote Tree Viewer"
@@ -424,19 +470,22 @@ class TreeViewer(object):
         self.sendStatusMessage(
             0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
         if zmqUrl:
-            self.context = zmq.Context()
-            self.socket = self.context.socket(zmq.REP)
-            self.socket.bind(zmqUrl)
-            self.msgQueue = Queue.Queue()
-            self.taskRunner = taskrunner.TaskRunner()
-            self.taskRunner.callOnThread(self.listenZmq)
-            self.zmqTimer = TimerCallback(callback=self.handleZmq, targetFps=60)
-            self.zmqTimer.start()
+            if ZMQ_AVAILABLE:
+                self.context = zmq.Context()
+                self.socket = self.context.socket(zmq.REP)
+                self.socket.bind(zmqUrl)
+                self.msgQueue = Queue.Queue()
+                self.taskRunner = taskrunner.TaskRunner()
+                self.taskRunner.callOnThread(self.listenZmq)
+                self.zmqTimer = TimerCallback(callback=self.handleZmq, targetFps=60)
+                self.zmqTimer.start()
+            else:
+                warnings.warn("A TreeViewer ZMQ URL was specified, but the python zmq and msgpack libraries are not available. ZMQ connection will not be possible.")
 
     def listenZmq(self):
         while True:
             message = self.socket.recv()
-            data = msgpack.unpackb(message, object_hook=mnp.decode)
+            data = msgpack.unpackb(message, object_hook=msgpack_numpy_decode)
             self.socket.send("received")
             self.msgQueue.put(data)
 
