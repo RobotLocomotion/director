@@ -434,16 +434,11 @@ class TreeViewer(object):
             self.zmqTimer.start()
 
     def listenZmq(self):
-        # Wait for the main window to show up
-        while not self.view.parent().isVisible():
-            time.sleep(0.1)
-        # Handle ZMQ messages until the main window is closed
-        while self.view.parent().isVisible():
-            if self.socket.poll(100):
-                message = self.socket.recv()
-                data = msgpack.unpackb(message, object_hook=mnp.decode)
-                self.socket.send("received")
-                self.msgQueue.put(data)
+        while True:
+            message = self.socket.recv()
+            data = msgpack.unpackb(message, object_hook=mnp.decode)
+            self.socket.send("received")
+            self.msgQueue.put(data)
 
     def handleZmq(self):
         while not self.msgQueue.empty():

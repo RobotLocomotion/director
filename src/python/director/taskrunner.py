@@ -56,6 +56,7 @@ class TaskRunner(object):
 
     def callOnThread(self, func, *args, **kwargs):
         t = Thread(target=lambda: func(*args, **kwargs))
+        t.daemon = True  # daemon kwarg doesn't exist in python 2.7
         self.threads.append(t)
         t.start()
         self.timer.start()
