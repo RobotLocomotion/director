@@ -26,7 +26,8 @@ def main(globalsDict=None):
     args = drcargs.args()
     options = fact.getDefaultOptions()
     fact.setDependentOptions(options,
-        useTreeViewer=(HAVE_LCMRL and args.treeviewer_lcm) or args.treeviewer_zmq_url,
+        useLCMTreeViewer=HAVE_LCMRL and args.treeviewer_lcm,
+        useZMQTreeViewer=args.treeviewer_zmq_url,
         useDrakeVisualizer=args.drakevisualizer_lcm,
         useLCMGLRenderer=args.lcmgl_renderer)
 
