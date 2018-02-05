@@ -8,16 +8,8 @@ import warnings
 import numpy as np
 from collections import namedtuple
 
-try:
-    import msgpack
-    import zmq
-    ZMQ_AVAILABLE = True
-except ImportError:
-    ZMQ_AVAILABLE = False
-
 from director import objectmodel as om
 from director import applogic as app
-from director import lcmUtils
 from director import transformUtils
 from director.debugVis import DebugData
 from director import ioUtils
@@ -30,7 +22,20 @@ from director import packagepath
 from director import taskrunner
 from director.timercallback import TimerCallback
 
-import robotlocomotion as lcmrl
+try:
+    import msgpack
+    import zmq
+    HAVE_MSGPACK_ZMQ = True
+except ImportError:
+    HAVE_MSGPACK_ZMQ = False
+
+try:
+    import robotlocomotion as lcmrl
+    from director import lcmUtils
+    HAVE_LCMRL = True
+except ImportError:
+    HAVE_LCMRL = False
+
 
 from PythonQt import QtGui
 
@@ -459,28 +464,28 @@ def msgpack_numpy_decode(obj, chain=None):
 class TreeViewer(object):
     name = "Remote Tree Viewer"
 
-    def __init__(self, view, zmqUrl=None):
+    def __init__(self, view, zmqUrl=None, useLcm=True):
 
         self.subscriber = None
         self.view = view
         self.itemToPathCache = {}
         self.pathToItemCache = {}
         self.client_id_regex = re.compile(r'\<(.*)\>')
-        self.enable()
-        self.sendStatusMessage(
-            0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
+
+        if useLcm:
+            warnings.warn("The TreeViewer LCM protocol is deprecated. Please switch to the new ZeroMQ/MsgPack protocol, which should offer much better performance and reliability.")
+            self.enable()
+            self.sendStatusMessage(
+                0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
         if zmqUrl:
-            if ZMQ_AVAILABLE:
-                self.context = zmq.Context()
-                self.socket = self.context.socket(zmq.REP)
-                self.socket.bind(zmqUrl)
-                self.msgQueue = Queue.Queue()
-                self.taskRunner = taskrunner.TaskRunner()
-                self.taskRunner.callOnThread(self.listenZmq)
-                self.zmqTimer = TimerCallback(callback=self.handleZmq, targetFps=60)
-                self.zmqTimer.start()
-            else:
-                warnings.warn("A TreeViewer ZMQ URL was specified, but the python zmq and msgpack libraries are not available. ZMQ connection will not be possible.")
+            self.context = zmq.Context()
+            self.socket = self.context.socket(zmq.REP)
+            self.socket.bind(zmqUrl)
+            self.msgQueue = Queue.Queue()
+            self.taskRunner = taskrunner.TaskRunner()
+            self.taskRunner.callOnThread(self.listenZmq)
+            self.zmqTimer = TimerCallback(callback=self.handleZmq, targetFps=60)
+            self.zmqTimer.start()
 
     def listenZmq(self):
         while True:
