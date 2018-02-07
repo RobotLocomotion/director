@@ -28,7 +28,7 @@ try:
     import zmq
     HAVE_ZMQ = True
 except ImportError:
-    HAVE_MSGPACK_ZMQ = False
+    HAVE_ZMQ = False
 
 try:
     import robotlocomotion as lcmrl
