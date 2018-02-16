@@ -1,7 +1,10 @@
 import os
 import subprocess
+
 import zmq
-import msgpack
+
+from director.thirdparty import umsgpack
+
 
 if __name__ == '__main__':
     vis_binary = os.path.join(os.path.dirname(sys.executable),
@@ -28,7 +31,7 @@ if __name__ == '__main__':
             "delete": []
     }
     print("sending")
-    socket.send(msgpack.packb(data))
+    socket.send(umsgpack.packb(data))
     print("waiting for reply")
     print(socket.recv())
 
