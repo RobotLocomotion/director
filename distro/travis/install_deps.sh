@@ -20,6 +20,7 @@ install_ubuntu_deps_common()
     python-numpy \
     python-scipy \
     python-yaml \
+    python-zmq \
     wget \
     xvfb
 
@@ -71,8 +72,9 @@ install_osx_deps()
   brew install glib # for lcm
   brew ls --versions python || brew install python
   brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
+  brew install zeromq
 
-  pip install coverage lxml PyYAML Sphinx sphinx_rtd_theme
+  pip install coverage lxml PyYAML Sphinx sphinx_rtd_theme pyzmq
 }
 
 
