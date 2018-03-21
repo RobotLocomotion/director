@@ -10,7 +10,7 @@ class VTKDRCFILTERS_EXPORT vtkRobustNormalEstimator : public vtkPolyDataAlgorith
 
 public:
   vtkTypeMacro(vtkRobustNormalEstimator, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
 
   static vtkRobustNormalEstimator *New();
 
@@ -49,15 +49,17 @@ protected:
 
   virtual int RequestData(vtkInformation *request,
                           vtkInformationVector **inputVector,
-                          vtkInformationVector *outputVector);
+                          vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
 
 
   vtkRobustNormalEstimator();
-  virtual ~vtkRobustNormalEstimator();
+  virtual ~vtkRobustNormalEstimator() VTKDRCFILTERS_OVERRIDE;
 
 private:
-  vtkRobustNormalEstimator(const vtkRobustNormalEstimator&);  // Not implemented.
-  void operator=(const vtkRobustNormalEstimator&);  // Not implemented.
+  vtkRobustNormalEstimator(const vtkRobustNormalEstimator&)
+    VTKDRCFILTERS_DELETE_FUNCTION;
+  void operator=(const vtkRobustNormalEstimator&)
+    VTKDRCFILTERS_DELETE_FUNCTION;
 };
 
 #endif

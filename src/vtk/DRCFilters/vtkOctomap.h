@@ -48,7 +48,7 @@ public:
   // Description:
   // Standard methods for the class.
   vtkTypeMacro(vtkOctomap,vtkProp);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
 
   void UpdateOctomapData(const char* data);
 
@@ -61,15 +61,16 @@ public:
 
   // Description:
   // Methods supporting, and required by, the rendering process.
-  virtual void ReleaseGraphicsResources(vtkWindow*);
-  virtual int RenderOpaqueGeometry(vtkViewport*);
-  virtual int RenderOverlay(vtkViewport*);
-  virtual int RenderTranslucentPolygonalGeometry(vtkViewport*);
-  virtual int HasTranslucentPolygonalGeometry();
+  virtual void ReleaseGraphicsResources(vtkWindow*) VTKDRCFILTERS_OVERRIDE;
+  virtual int RenderOpaqueGeometry(vtkViewport*) VTKDRCFILTERS_OVERRIDE;
+  virtual int RenderOverlay(vtkViewport*) VTKDRCFILTERS_OVERRIDE;
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport*)
+    VTKDRCFILTERS_OVERRIDE;
+  virtual int HasTranslucentPolygonalGeometry() VTKDRCFILTERS_OVERRIDE;
 
 
     // use this drawer id if loading files or none is specified in msg
-    static const unsigned int DEFAULT_OCTREE_ID  = 0; 
+    static const unsigned int DEFAULT_OCTREE_ID  = 0;
 
 
     void addOctree(octomap::AbstractOcTree* tree, int id, octomap::pose6d origin);
@@ -78,7 +79,7 @@ public:
 
 protected:
   vtkOctomap();
-  ~vtkOctomap();
+  virtual ~vtkOctomap() VTKDRCFILTERS_OVERRIDE;
 
 private:
 
@@ -96,8 +97,8 @@ private:
   class vtkInternal;
   vtkInternal* Internal;
 
-  vtkOctomap(const vtkOctomap&);  //Not implemented
-  void operator=(const vtkOctomap&);  //Not implemented
+  vtkOctomap(const vtkOctomap&) VTKDRCFILTERS_DELETE_FUNCTION;
+  void operator=(const vtkOctomap&) VTKDRCFILTERS_DELETE_FUNCTION;
 };
 
 #endif

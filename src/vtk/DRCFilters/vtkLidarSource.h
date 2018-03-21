@@ -29,7 +29,7 @@ class VTKDRCFILTERS_EXPORT vtkLidarSource : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkLidarSource, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
 
   static vtkLidarSource *New();
 
@@ -73,22 +73,22 @@ protected:
 
   virtual int RequestInformation(vtkInformation *request,
                          vtkInformationVector **inputVector,
-                         vtkInformationVector *outputVector);
+                         vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
 
   virtual int RequestData(vtkInformation *request,
                           vtkInformationVector **inputVector,
-                          vtkInformationVector *outputVector);
+                          vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
 
   vtkLidarSource();
-  virtual ~vtkLidarSource();
+  virtual ~vtkLidarSource() VTKDRCFILTERS_OVERRIDE;
 
   double DistanceRange[2];
   double EdgeAngleThreshold;
   double HeightRange[2];
 
 private:
-  vtkLidarSource(const vtkLidarSource&);  // Not implemented.
-  void operator=(const vtkLidarSource&);  // Not implemented.
+  vtkLidarSource(const vtkLidarSource&) VTKDRCFILTERS_DELETE_FUNCTION;
+  void operator=(const vtkLidarSource&) VTKDRCFILTERS_DELETE_FUNCTION;
 
   class vtkInternal;
   vtkInternal * Internal;

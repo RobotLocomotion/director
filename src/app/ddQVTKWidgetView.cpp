@@ -37,7 +37,7 @@ public:
   static vtkCustomRubberBandStyle *New();
   vtkTypeMacro(vtkCustomRubberBandStyle, vtkInteractorStyleRubberBand3D);
 
-  virtual void OnRightButtonDown()
+  virtual void OnRightButtonDown() DD_APP_OVERRIDE
   {
     if(this->Interaction == NONE)
       {
