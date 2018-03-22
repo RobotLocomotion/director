@@ -62,28 +62,28 @@ public:
   static vtkInteractorStyleTerrain2 *New();
 
   vtkTypeMacro(vtkInteractorStyleTerrain2,vtkInteractorStyle);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
 
   // Description:
   // Event bindings controlling the effects of pressing mouse buttons
   // or moving the mouse.
-  virtual void OnMouseMove();
-  virtual void OnLeftButtonDown();
-  virtual void OnLeftButtonUp();
-  virtual void OnMiddleButtonDown();
-  virtual void OnMiddleButtonUp();
-  virtual void OnRightButtonDown();
-  virtual void OnRightButtonUp();
+  virtual void OnMouseMove() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnLeftButtonDown() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnLeftButtonUp() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnMiddleButtonDown() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnMiddleButtonUp() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnRightButtonDown() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnRightButtonUp() VTKDRCFILTERS_OVERRIDE;
 
   // Description:
   // Override the "fly-to" (f keypress) for images.
-  virtual void OnChar();
+  virtual void OnChar() VTKDRCFILTERS_OVERRIDE;
 
   // These methods for the different interactions in different modes
   // are overridden in subclasses to perform the correct motion.
-  virtual void Rotate();
-  virtual void Pan();
-  virtual void Dolly();
+  virtual void Rotate() VTKDRCFILTERS_OVERRIDE;
+  virtual void Pan() VTKDRCFILTERS_OVERRIDE;
+  virtual void Dolly() VTKDRCFILTERS_OVERRIDE;
 
   // Description:
   // Turn on/off the latitude/longitude lines.
@@ -93,7 +93,7 @@ public:
 
 protected:
   vtkInteractorStyleTerrain2();
-  ~vtkInteractorStyleTerrain2();
+  virtual ~vtkInteractorStyleTerrain2() VTKDRCFILTERS_OVERRIDE;
 
   // Internal helper attributes
   int LatLongLines;
@@ -105,13 +105,15 @@ protected:
 
   void SelectRepresentation();
   void CreateLatLong();
-  
+
   double MotionFactor;
 
 private:
-  vtkInteractorStyleTerrain2(const vtkInteractorStyleTerrain2&);  // Not implemented.
-  void operator=(const vtkInteractorStyleTerrain2&);  // Not implemented.
-  
+  vtkInteractorStyleTerrain2(const vtkInteractorStyleTerrain2&)
+    VTKDRCFILTERS_DELETE_FUNCTION;
+  void operator=(const vtkInteractorStyleTerrain2&)
+    VTKDRCFILTERS_DELETE_FUNCTION;
+
 };
 
 #endif

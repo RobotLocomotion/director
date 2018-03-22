@@ -30,7 +30,7 @@ class VTKDRCFILTERS_EXPORT vtkMapServerSource : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkMapServerSource, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
 
   static vtkMapServerSource *New();
 
@@ -66,22 +66,22 @@ protected:
 
   virtual int RequestInformation(vtkInformation *request,
                          vtkInformationVector **inputVector,
-                         vtkInformationVector *outputVector);
+                         vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
 
   virtual int RequestData(vtkInformation *request,
                           vtkInformationVector **inputVector,
-                          vtkInformationVector *outputVector);
+                          vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
 
   vtkMapServerSource();
-  virtual ~vtkMapServerSource();
+  virtual ~vtkMapServerSource() VTKDRCFILTERS_OVERRIDE;
 
   double DistanceRange[2];
   double EdgeAngleThreshold;
   double HeightRange[2];
 
 private:
-  vtkMapServerSource(const vtkMapServerSource&);  // Not implemented.
-  void operator=(const vtkMapServerSource&);  // Not implemented.
+  vtkMapServerSource(const vtkMapServerSource&) VTKDRCFILTERS_DELETE_FUNCTION;
+  void operator=(const vtkMapServerSource&) VTKDRCFILTERS_DELETE_FUNCTION;
 
   class vtkInternal;
   vtkInternal * Internal;

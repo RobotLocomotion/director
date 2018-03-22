@@ -35,25 +35,25 @@ public:
   static vtkPickCenteredInteractorStyle *New();
 
   vtkTypeMacro(vtkPickCenteredInteractorStyle,vtkInteractorStyle);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
 
   // Description:
   // Event bindings controlling the effects of pressing mouse buttons
   // or moving the mouse.
-  virtual void OnMouseMove();
-  virtual void OnLeftButtonDown();
-  virtual void OnLeftButtonUp();
-  virtual void OnMiddleButtonDown();
-  virtual void OnMiddleButtonUp();
-  virtual void OnRightButtonDown();
-  virtual void OnRightButtonUp();
-  virtual void OnChar();
+  virtual void OnMouseMove() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnLeftButtonDown() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnLeftButtonUp() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnMiddleButtonDown() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnMiddleButtonUp() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnRightButtonDown() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnRightButtonUp() VTKDRCFILTERS_OVERRIDE;
+  virtual void OnChar() VTKDRCFILTERS_OVERRIDE;
 
   // These methods for the different interactions in different modes
   // are overridden in subclasses to perform the correct motion.
-  virtual void Rotate();
-  virtual void Pan();
-  virtual void Dolly();
+  virtual void Rotate() VTKDRCFILTERS_OVERRIDE;
+  virtual void Pan() VTKDRCFILTERS_OVERRIDE;
+  virtual void Dolly() VTKDRCFILTERS_OVERRIDE;
 
   vtkGetMacro(MotionFactor, double);
   vtkSetMacro(MotionFactor, double);
@@ -65,15 +65,17 @@ public:
 
 protected:
   vtkPickCenteredInteractorStyle();
-  ~vtkPickCenteredInteractorStyle();
+  virtual ~vtkPickCenteredInteractorStyle() VTKDRCFILTERS_OVERRIDE;
 
   double MotionFactor;
   double CustomCenterOfRotation[3];
 
 private:
-  vtkPickCenteredInteractorStyle(const vtkPickCenteredInteractorStyle&);  // Not implemented.
-  void operator=(const vtkPickCenteredInteractorStyle&);  // Not implemented.
-  
+  vtkPickCenteredInteractorStyle(const vtkPickCenteredInteractorStyle&)
+    VTKDRCFILTERS_DELETE_FUNCTION;
+  void operator=(const vtkPickCenteredInteractorStyle&)
+    VTKDRCFILTERS_DELETE_FUNCTION;
+
 };
 
 #endif

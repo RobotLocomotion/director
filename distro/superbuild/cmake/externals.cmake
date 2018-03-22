@@ -582,6 +582,7 @@ endif()
 # director
 
 ExternalProject_Add(director
+  ${cmake3_args}
   SOURCE_DIR ${Superbuild_SOURCE_DIR}/../..
   DOWNLOAD_COMMAND ""
   ${cmake3_args}
