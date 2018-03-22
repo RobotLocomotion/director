@@ -528,6 +528,7 @@ if(USE_OPENNI2_LCM)
   ExternalProject_Add(openni2-camera-lcm
     GIT_REPOSITORY https://github.com/openhumanoids/openni2-camera-lcm
     GIT_TAG 6bd5573
+    ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       -DINSTALL_BOT_SPY:BOOL=OFF
@@ -583,6 +584,7 @@ endif()
 ExternalProject_Add(director
   SOURCE_DIR ${Superbuild_SOURCE_DIR}/../..
   DOWNLOAD_COMMAND ""
+  ${cmake3_args}
   CMAKE_CACHE_ARGS
 
     -DUSE_LCM:BOOL=${USE_LCM}
