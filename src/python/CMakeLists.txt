@@ -95,6 +95,7 @@ set(python_files
   director/pointpicker.py
   director/pointselector.py
   director/polarisplatformplanner.py
+  director/profiler.py
   director/propertyanimation.py
   director/propertyset.py
   director/pydrakeik.py
