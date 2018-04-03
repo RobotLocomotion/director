@@ -167,13 +167,13 @@ class PropertySet(object):
 
     def __getattribute__(self, name):
         try:
+            return object.__getattribute__(self, name)
+        except AttributeError as exc:
             alternateNames = object.__getattribute__(self, '_alternateNames')
             if name in alternateNames:
                 return object.__getattribute__(self, 'getProperty')(alternateNames[name])
             else:
-                raise AttributeError()
-        except AttributeError:
-            return object.__getattribute__(self, name)
+                raise exc
 
 
 class PropertyPanelHelper(object):
