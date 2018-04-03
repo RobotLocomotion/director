@@ -134,15 +134,16 @@ class PropertySet(object):
         self._properties = OrderedDict([items[i] for i in inds])
 
     def setProperty(self, propertyName, propertyValue):
+        previousValue = self._properties[propertyName]
         propertyValue = fromQColor(propertyName, propertyValue)
+        if propertyValue == previousValue:
+          return
 
         names = self.getPropertyAttribute(propertyName, 'enumNames')
         if names and type(propertyValue) != int:
             propertyValue = names.index(propertyValue)
 
-        self.oldPropertyValue = (propertyName, self.getProperty(propertyName))
         self._properties[propertyName] = propertyValue
-        self.oldPropertyValue = None
         self.callbacks.process(self.PROPERTY_CHANGED_SIGNAL, self, propertyName)
 
     def getPropertyAttribute(self, propertyName, propertyAttribute):
