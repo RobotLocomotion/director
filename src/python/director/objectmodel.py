@@ -1,5 +1,6 @@
 import os
 import re
+from collections import defaultdict
 import PythonQt
 from PythonQt import QtCore, QtGui
 from director.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper, PropertyPanelConnector
@@ -181,6 +182,8 @@ class ObjectModelTree(object):
         self._treeWidget = None
         self._propertiesPanel = None
         self._objects = {}
+        self._itemToName = {}
+        self._nameToItems = defaultdict(set)
         self._blockSignals = False
         self._propertyConnector = None
         self.actions = []
@@ -244,14 +247,15 @@ class ObjectModelTree(object):
     def findObjectByName(self, name, parent=None):
         if parent:
             return self.findChildByName(parent, name)
-        for obj in self._objects.values():
-            if obj.getProperty('Name') == name:
-                return obj
+        items = self._nameToItems.get(name)
+        if items:
+            return self._getObjectForItem(next(iter(items)))
 
     def findChildByName(self, parent, name):
-        for child in self.getObjectChildren(parent):
-            if child.getProperty('Name') == name:
-                return child
+        parentItem = self._getItemForObject(parent)
+        for item in self._nameToItems[name]:
+          if item.parent() == parentItem:
+            return self._getObjectForItem(item)
 
     def _onTreeSelectionChanged(self):
 
@@ -283,7 +287,12 @@ class ObjectModelTree(object):
 
     def updateObjectName(self, obj):
         item = self._getItemForObject(obj)
-        item.setText(0, obj.getProperty('Name'))
+        oldName = self._itemToName[item]
+        self._nameToItems[oldName].remove(item)
+        name = obj.getProperty('Name')
+        self._itemToName[item] = name
+        self._nameToItems[name].add(item)
+        item.setText(0, name)
 
     def _onPropertyValueChanged(self, obj, propertyName):
 
@@ -316,6 +325,9 @@ class ObjectModelTree(object):
         obj.onRemoveFromObjectModel()
         obj._tree = None
 
+        name = self._itemToName.pop(item)
+        self._nameToItems[name].remove(item)
+
         if item.parent():
             item.parent().removeChild(item)
         else:
@@ -346,6 +358,8 @@ class ObjectModelTree(object):
         obj._tree = self
 
         self._objects[item] = obj
+        self._itemToName[item] = objName
+        self._nameToItems[objName].add(item)
         self.updateVisIcon(obj)
 
         if parentItem is None:
