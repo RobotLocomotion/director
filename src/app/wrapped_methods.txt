@@ -10,6 +10,7 @@ vtkRenderer* ddQVTKWidgetView::renderer() const;
 vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const;
 vtkLightKit* ddQVTKWidgetView::lightKit() const;
 vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const;
+QTimer* ddQVTKWidgetView::renderTimer() const;
 QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 void ddQVTKWidgetView::installImageInteractor();
 void ddQVTKWidgetView::addCustomBounds(const QList<double>&);
