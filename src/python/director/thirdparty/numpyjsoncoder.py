@@ -15,7 +15,7 @@ class NumpyEncoder(json.JSONEncoder):
             if np.prod(obj.shape) <= 16 and obj.dtype == np.float64:
                 return dict(__ndarray__=obj.tolist())
             else:
-                data_b64 = base64.b64encode(obj.data)
+                data_b64 = str(base64.b64encode(obj.data))
                 return dict(__ndarray__=data_b64,
                             dtype=str(obj.dtype),
                             shape=obj.shape)
