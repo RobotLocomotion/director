@@ -32,6 +32,8 @@ public:
   QVTKOpenGLWidget* vtkWidget() const;
   vtkOrientationMarkerWidget* orientationMarkerWidget() const;
 
+  QTimer* renderTimer() const;
+
   void installImageInteractor();
 
   void addCustomBounds(const QList<double>& bounds);

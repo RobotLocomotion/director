@@ -206,6 +206,12 @@ QVTKOpenGLWidget* ddQVTKWidgetView::vtkWidget() const
 }
 
 //-----------------------------------------------------------------------------
+QTimer* ddQVTKWidgetView::renderTimer() const
+{
+  return &this->Internal->RenderTimer;
+}
+
+//-----------------------------------------------------------------------------
 void ddQVTKWidgetView::render()
 {
   if (!this->Internal->RenderPending)
