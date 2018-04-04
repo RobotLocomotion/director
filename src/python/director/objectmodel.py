@@ -181,7 +181,8 @@ class ObjectModelTree(object):
     def __init__(self):
         self._treeWidget = None
         self._propertiesPanel = None
-        self._objects = {}
+        self._objectToItem = {}
+        self._itemToObject = {}
         self._itemToName = {}
         self._nameToItems = defaultdict(set)
         self._blockSignals = False
@@ -215,7 +216,7 @@ class ObjectModelTree(object):
 
     def getActiveObject(self):
         item = self._getSelectedItem()
-        return self._objects[item] if item is not None else None
+        return self._itemToObject[item] if item is not None else None
 
     def setActiveObject(self, obj):
         item = self._getItemForObject(obj)
@@ -230,19 +231,17 @@ class ObjectModelTree(object):
         self.getTreeWidget().setCurrentItem(None)
 
     def getObjects(self):
-        return self._objects.values()
+        return self._itemToObject.values()
 
     def _getSelectedItem(self):
         items = self.getTreeWidget().selectedItems()
         return items[0] if len(items) == 1 else None
 
     def _getItemForObject(self, obj):
-        for item, itemObj in self._objects.iteritems():
-            if itemObj == obj:
-                return item
+        return self._objectToItem[obj]
 
     def _getObjectForItem(self, item):
-        return self._objects[item]
+        return self._itemToObject[item]
 
     def findObjectByName(self, name, parent=None):
         if parent:
@@ -252,7 +251,7 @@ class ObjectModelTree(object):
             return self._getObjectForItem(next(iter(items)))
 
     def findChildByName(self, parent, name):
-        parentItem = self._getItemForObject(parent)
+        parentItem = self._getItemForObject(parent) if parent else None
         for item in self._nameToItems[name]:
           if item.parent() == parentItem:
             return self._getObjectForItem(item)
@@ -305,7 +304,7 @@ class ObjectModelTree(object):
 
     def _onItemClicked(self, item, column):
 
-        obj = self._objects[item]
+        obj = self._itemToObject[item]
 
         if column == 1 and obj.hasProperty('Visible'):
             obj.setProperty('Visible', not obj.getProperty('Visible'))
@@ -316,11 +315,7 @@ class ObjectModelTree(object):
         while item.childCount():
             self._removeItemFromObjectModel(item.child(0))
 
-        try:
-            obj = self._getObjectForItem(item)
-        except KeyError:
-            return
-
+        obj = self._getObjectForItem(item)
         obj.callbacks.process(obj.REMOVED_FROM_OBJECT_MODEL, self, obj)
         obj.onRemoveFromObjectModel()
         obj._tree = None
@@ -334,22 +329,17 @@ class ObjectModelTree(object):
             tree = self.getTreeWidget()
             tree.takeTopLevelItem(tree.indexOfTopLevelItem(item))
 
-        del self._objects[item]
-
+        del self._itemToObject[item]
+        del self._objectToItem[obj]
 
     def removeFromObjectModel(self, obj):
-        if obj is None:
-            return
-
-        item = self._getItemForObject(obj)
-        if item:
-            self._removeItemFromObjectModel(item)
-
+        if obj:
+            self._removeItemFromObjectModel(self._getItemForObject(obj))
 
     def addToObjectModel(self, obj, parentObj=None):
         assert obj._tree is None
 
-        parentItem = self._getItemForObject(parentObj)
+        parentItem = self._getItemForObject(parentObj) if parentObj else None
         objName = obj.getProperty('Name')
 
         item = QtGui.QTreeWidgetItem(parentItem, [objName])
@@ -357,7 +347,8 @@ class ObjectModelTree(object):
 
         obj._tree = self
 
-        self._objects[item] = obj
+        self._objectToItem[obj] = item
+        self._itemToObject[item] = obj
         self._itemToName[item] = objName
         self._nameToItems[objName].add(item)
         self.updateVisIcon(obj)
@@ -372,14 +363,12 @@ class ObjectModelTree(object):
 
     def collapse(self, obj):
         item = self._getItemForObject(obj)
-        if item:
-            self.getTreeWidget().collapseItem(item)
+        self.getTreeWidget().collapseItem(item)
 
 
     def expand(self, obj):
         item = self._getItemForObject(obj)
-        if item:
-            self.getTreeWidget().expandItem(item)
+        self.getTreeWidget().expandItem(item)
 
 
     def addContainer(self, name, parentObj=None):
