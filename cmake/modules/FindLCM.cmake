@@ -43,9 +43,12 @@ macro(pkg_config_find_module varname pkgname header library pathsuffix)
 endmacro()
 
 
-pkg_config_find_module(LCM lcm lcm/lcm.h lcm lcm)
+find_package(LCM QUIET CONFIG)
+if(NOT LCM_FOUND)
+  pkg_config_find_module(LCM lcm lcm/lcm.h lcm lcm)
 
-if(LCM_STATIC_LIBRARIES)
-  find_package(GLib2)
-  list(APPEND LCM_STATIC_LIBRARIES ${GLib2_LIBRARIES})
+  if(LCM_STATIC_LIBRARIES)
+    find_package(GLib2)
+    list(APPEND LCM_STATIC_LIBRARIES ${GLib2_LIBRARIES})
+  endif()
 endif()
