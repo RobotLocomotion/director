@@ -1001,7 +1001,7 @@ class GeneralEndEffectorTeleopPanel(object):
             graspToWorld.Concatenate(endEffectorLinkFrame)
             reachGoal = graspToWorld
 
-        om.removeFromObjectModel('reach goal')
+        
         goalFrame = vis.showFrame(reachGoal, 'reach goal', scale=0.1, parent=EndEffectorTeleopPanel.getConstraintFrameFolder())
         goalFrame.setProperty('Edit', True)
 
