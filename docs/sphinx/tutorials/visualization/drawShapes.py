@@ -1,6 +1,6 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp.debugVis import DebugData
-import ddapp.visualization as vis
+from director.consoleapp import ConsoleApp
+from director.debugVis import DebugData
+import director.visualization as vis
 
 # initialize application components
 app = ConsoleApp()
