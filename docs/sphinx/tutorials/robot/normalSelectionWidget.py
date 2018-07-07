@@ -1,8 +1,8 @@
-from ddapp import roboturdf
-from ddapp.consoleapp import ConsoleApp
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
-from ddapp import objectmodel as om
+from director import roboturdf
+from director.consoleapp import ConsoleApp
+from director import visualization as vis
+from director.debugVis import DebugData
+from director import objectmodel as om
 import numpy as np
 
 import PythonQt
