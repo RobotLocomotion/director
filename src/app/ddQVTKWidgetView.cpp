@@ -92,7 +92,17 @@ public:
 
 
 //-----------------------------------------------------------------------------
+ddQVTKWidgetView::ddQVTKWidgetView(bool disable_anti_alias, QWidget* parent) : ddViewBase(parent)
+{
+  init(disable_anti_alias);
+}
+
 ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
+{
+  init(false);
+}
+
+void ddQVTKWidgetView::init(bool disable_anti_alias)
 {
   this->Internal = new ddInternal;
 
@@ -107,10 +117,13 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
 #else
   this->Internal->VTKWidget->SetUseTDx(true);
   this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 #endif
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
-  this->Internal->RenderWindow->SetMultiSamples(8);
+  if (disable_anti_alias){
+    this->Internal->RenderWindow->SetMultiSamples(0);
+  } else {
+    this->Internal->RenderWindow->SetMultiSamples(8);
+  }
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
   this->Internal->RenderWindow->StereoRenderOff();
@@ -134,9 +147,6 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->Renderer = vtkSmartPointer<vtkRenderer>::New();
   //this->Internal->Renderer->SetLayer(1);
   this->Internal->RenderWindow->AddRenderer(this->Internal->Renderer);
-
-
-
 
   vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
 
