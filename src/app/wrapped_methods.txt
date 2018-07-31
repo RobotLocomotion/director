@@ -5,6 +5,7 @@ ddQVTKWidgetView::ddQVTKWidgetView();
 ddQVTKWidgetView::~ddQVTKWidgetView();
 vtkCamera* ddQVTKWidgetView::camera() const;
 double ddQVTKWidgetView::getAverageFramesPerSecond();
+static void ddQVTKWidgetView::setAntiAliasing(bool);
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
 vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const;

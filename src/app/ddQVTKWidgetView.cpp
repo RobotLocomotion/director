@@ -53,6 +53,7 @@ public:
 
 vtkStandardNewMacro(vtkCustomRubberBandStyle);
 
+bool ddQVTKWidgetView::antiAliasingEnabled = true;
 
 //-----------------------------------------------------------------------------
 class ddQVTKWidgetView::ddInternal
@@ -110,7 +111,13 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 #endif
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
-  this->Internal->RenderWindow->SetMultiSamples(8);
+
+  if (antiAliasingEnabled){
+    this->Internal->RenderWindow->SetMultiSamples(8);
+  } else {
+    this->Internal->RenderWindow->SetMultiSamples(0);
+  }
+
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
   this->Internal->RenderWindow->StereoRenderOff();
@@ -253,6 +260,12 @@ void ddQVTKWidgetView::onRenderTimer()
 double ddQVTKWidgetView::getAverageFramesPerSecond()
 {
   return this->Internal->FPSCounter.averageFPS();
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::setAntiAliasing(bool enabled)
+{
+  antiAliasingEnabled = enabled;
 }
 
 //-----------------------------------------------------------------------------

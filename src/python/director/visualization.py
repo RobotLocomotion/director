@@ -8,6 +8,7 @@ from director import callbacks
 from director import frameupdater
 from director.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui
+import PythonQt
 import numpy as np
 import os
 import colorsys
@@ -1212,6 +1213,17 @@ def findPickedObject(displayPoint, view):
     pickedPoint, pickedProp, pickedDataset = pickProp(displayPoint, view)
     obj = getObjectByProp(pickedProp)
     return obj, pickedPoint
+
+"""
+Toggles whether anti-aliasing is enabled or not.
+This sets a static variable in the ddQVTKWidgeView
+so this controls the setting for all views created in the current
+executable. Must be called before constructing a ddQTKWidgetView
+
+Anti-aliasing is enabled by default
+"""
+def setAntiAliasing(enabled):
+    PythonQt.dd.ddQVTKWidgetView.setAntiAliasing(enabled)
 
 
 def enableEyeDomeLighting(view):
