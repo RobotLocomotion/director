@@ -42,6 +42,8 @@ public:
 
   double getAverageFramesPerSecond();
 
+  static void setAntiAliasing(bool enabled);
+
 signals:
 
   void computeBoundsRequest(ddQVTKWidgetView* view);
@@ -69,6 +71,8 @@ protected:
 
   class ddInternal;
   ddInternal* Internal;
+
+  static bool antiAliasingEnabled;
 
   Q_DISABLE_COPY(ddQVTKWidgetView);
 };
