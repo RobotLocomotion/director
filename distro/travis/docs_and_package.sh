@@ -3,7 +3,7 @@
 set -xe
 
 scriptDir=$(cd $(dirname $0) && pwd)
-
+versionString=$($TRAVIS_BUILD_DIR/build/install/bin/directorPython -c 'import director.version as ver; print(ver.gitDescribe())')
 
 make_docs()
 {
@@ -22,21 +22,21 @@ make_docs()
   tar -czf doxygen_docs.tar.gz doxygen_docs
   tar -czf python_coverage.tar.gz python_coverage
 
-  $scriptDir/bintray_upload.sh $TRAVIS_BUILD_DIR/docs/*.tar.gz
+  $scriptDir/bintray_upload.sh $verionString $TRAVIS_BUILD_DIR/docs/*.tar.gz
 }
 
 make_linux_package()
 {
   cd $TRAVIS_BUILD_DIR/distro/package
   ./make_linux_package.sh 2>&1 > log.txt || cat log.txt
-  $scriptDir/bintray_upload.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
+  $scriptDir/bintray_upload.sh $versionString $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
 
 make_mac_package()
 {
   cd $TRAVIS_BUILD_DIR/distro/package
   ./make_mac_package.sh 2>&1 > log.txt || cat log.txt
-  $scriptDir/bintray_upload.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
+  $scriptDir/bintray_upload.sh $versionString $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
 
 make_package()
