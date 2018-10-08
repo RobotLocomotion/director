@@ -3,11 +3,14 @@ option(USE_LCM "Build with lcm." OFF)
 option(USE_LCMGL "Build with lcm-gl." OFF)
 option(USE_OCTOMAP "Build with octomap." OFF)
 option(USE_APRILTAGS "Build with apriltags lcm driver." OFF)
-option(USE_KINECT "Build with kinect lcm driver." OFF)
+option(USE_OPENNI2_LCM "Build with openni2 lcm driver." OFF)
 option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
+option(USE_SIGNAL_SCOPE "Build with signal-scope." OFF)
 option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
+option(USE_PERCEPTION "Build director features that require OpenCV, PCL, cv-utils, and libbot as dependencies." OFF)
+option(USE_ROS "Build components that depend on ROS." OFF)
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
@@ -308,7 +311,7 @@ ExternalProject_Add(ctkPythonConsole
 if(DD_QT_VERSION EQUAL 4)
   set(QtPropertyBrowser_TAG baf10af)
 else()
-  set(QtPropertyBrowser_TAG 5ca603a)
+  set(QtPropertyBrowser_TAG 72a0272)
 endif()
 
 ExternalProject_Add(QtPropertyBrowser
@@ -467,7 +470,7 @@ if(USE_PCL AND NOT USE_SYSTEM_PCL)
   ExternalProject_Add(
     pcl
     GIT_REPOSITORY http://github.com/pointcloudlibrary/pcl.git
-    GIT_TAG pcl-1.8.0
+    GIT_TAG pcl-1.8.1
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${eigen_args}
@@ -501,7 +504,7 @@ if(USE_PCL)
 
 ExternalProject_Add(PointCloudLibraryPlugin
   GIT_REPOSITORY https://github.com/patmarion/PointCloudLibraryPlugin.git
-  GIT_TAG 84de916
+  GIT_TAG 2c46eb9
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${eigen_args}
@@ -521,11 +524,12 @@ endif()
 ###############################################################################
 # camera driver
 
-if(USE_KINECT)
+if(USE_OPENNI2_LCM)
 
   ExternalProject_Add(openni2-camera-lcm
     GIT_REPOSITORY https://github.com/openhumanoids/openni2-camera-lcm
     GIT_TAG 6bd5573
+    ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       -DINSTALL_BOT_SPY:BOOL=OFF
@@ -533,24 +537,18 @@ if(USE_KINECT)
       ${lcm_depends}
     )
 
+endif()
+
+if(USE_PERCEPTION)
 
   ExternalProject_Add(cv-utils
     GIT_REPOSITORY https://github.com/patmarion/cv-utils.git
-    GIT_TAG 9ee0128
+    GIT_TAG c4939fedf66c767de15607adde3aff44ab2b503b
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
     DEPENDS
       ${lcm_depends} ${pcl_depends}
     )
-
-  #ExternalProject_Add(kinect
-  #  GIT_REPOSITORY https://github.com/openhumanoids/kinect.git
-  #  GIT_TAG 3e94f58
-  #  CMAKE_CACHE_ARGS
-  #    ${default_cmake_args}
-  #  DEPENDS
-  #    ${lcm_depends} ${libbot_depends}
-  #  )
 
   set(cvutils_depends cv-utils)
 
@@ -582,11 +580,32 @@ endif()
 
 
 ###############################################################################
+# signal-scope
+
+if(USE_SIGNAL_SCOPE)
+
+  ExternalProject_Add(signal-scope
+    GIT_REPOSITORY https://github.com/openhumanoids/signal-scope.git
+    GIT_TAG 62fe2f4
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+      ${qt_args}
+    DEPENDS
+      ctkPythonConsole 
+      PythonQt
+  )
+
+endif()
+
+###############################################################################
 # director
 
 ExternalProject_Add(director
+  ${cmake3_args}
   SOURCE_DIR ${Superbuild_SOURCE_DIR}/../..
   DOWNLOAD_COMMAND ""
+  ${cmake3_args}
   CMAKE_CACHE_ARGS
 
     -DUSE_LCM:BOOL=${USE_LCM}
@@ -596,6 +615,7 @@ ExternalProject_Add(director
     -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_DRAKE:BOOL=${USE_DRAKE}
     -DDD_QT_VERSION:STRING=${DD_QT_VERSION}
+    -DUSE_PERCEPTION:BOOL=${USE_PERCEPTION}
     ${default_cmake_args}
     ${eigen_args}
     ${boost_args}
@@ -617,3 +637,18 @@ ExternalProject_Add(director
     QtPropertyBrowser
 
   )
+
+
+if (USE_ROS)
+  ExternalProject_Add(director_ros
+    SOURCE_DIR ${Superbuild_SOURCE_DIR}/../../catkin_ws/src
+    DOWNLOAD_COMMAND ""
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/director_ros-build/devel/lib/libddROSPlugin${CMAKE_SHARED_LIBRARY_SUFFIX} ${install_prefix}/lib
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${vtk_args}
+      #${python_args} # catkin fails if you let it find python3
+      ${qt_args}
+    DEPENDS director
+  )
+endif()

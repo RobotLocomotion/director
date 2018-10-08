@@ -42,7 +42,8 @@ class SceneLoader(object):
                 if len(col.name)>0 and len(link.collisions)>1:
                     name+='-'+col.name
                 if col.geometry_type=='mesh':
-                    print 'Mesh geometry is unsupported - SKIPPING!'
+                    desc = dict(classname='MeshAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=color, Filename=col.geometry_data['uri'], Scale=map(float, col.geometry_data['scale'].split(' ')))
+                    self.affordanceManager.newAffordanceFromDescription(desc)
                 if col.geometry_type=='image':
                     print 'image geometry is unsupported - SKIPPING!'
                 if col.geometry_type=='height_map':

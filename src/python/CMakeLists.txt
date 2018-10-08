@@ -95,6 +95,7 @@ set(python_files
   director/pointpicker.py
   director/pointselector.py
   director/polarisplatformplanner.py
+  director/profiler.py
   director/propertyanimation.py
   director/propertyset.py
   director/pydrakeik.py
@@ -124,6 +125,7 @@ set(python_files
   director/surprisetask.py
   director/switchplanner.py
   director/tasklaunchpanel.py
+  director/taskrunner.py
   director/tdx.py
   director/teleoppanel.py
   director/motionplanningpanel.py

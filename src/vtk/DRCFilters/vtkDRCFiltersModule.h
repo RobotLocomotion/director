@@ -11,4 +11,12 @@
 #  define VTKDRCFILTERS_EXPORT
 #endif
 
+#if __cplusplus >= 201103L
+# define VTKDRCFILTERS_DELETE_FUNCTION =delete
+# define VTKDRCFILTERS_OVERRIDE override
+#else
+# define VTKDRCFILTERS_DELETE_FUNCTION
+# define VTKDRCFILTERS_OVERRIDE
+#endif
+
 #endif

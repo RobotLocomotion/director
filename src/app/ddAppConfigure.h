@@ -11,4 +11,12 @@
 #  define DD_APP_EXPORT
 #endif
 
+#if __cplusplus >= 201103L
+# define DD_APP_DELETE_FUNCTION =delete
+# define DD_APP_OVERRIDE override
+#else
+# define DD_APP_DELETE_FUNCTION
+# define DD_APP_OVERRIDE
+#endif
+
 #endif

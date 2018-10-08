@@ -8,8 +8,10 @@ set(python_tests_core
   testAffordancePanel.py
   testCameraControl.py
   testConsoleApp.py
+  testDebugVis.py
   testDepthScanner.py
   testFrameSync.py
+  testFrameTrace.py
   testHeatMap.py
   testImageView.py
   testMainWindowApp.py
@@ -19,6 +21,7 @@ set(python_tests_core
   testPointSelector.py
   testPythonConsole.py
   testTaskQueue.py
+  testTaskRunner.py
   testTransformations.py
   testUndoRedo.py
 )

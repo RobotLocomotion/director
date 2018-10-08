@@ -180,7 +180,7 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(bot_core::pointcloud_
        {
          unsigned char color[3];
          unpackColor(msg.channels[j][i], color);
-         rgbArray->SetTupleValue(i, color);
+         rgbArray->SetTypedTuple(i, color);
        }
        rgbArray->SetNumberOfTuples(nr_points);
        polyData->GetPointData()->AddArray(rgbArray.GetPointer());

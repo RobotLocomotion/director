@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 2.8.7)
 # Drake Designer
 project(DD)
 
+if(POLICY CMP0028)
+  # Double colon in target name means ALIAS or IMPORTED target.
+  cmake_policy(SET CMP0028 NEW)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 # set project variables
@@ -42,6 +47,7 @@ option(USE_DRC_MAPS "Build director with drc maps dependency." OFF)
 option(USE_DRC_PLANE_SEG "Build director with drc plane segmentation." OFF)
 option(USE_OCTOMAP "Build director with octomap dependency." OFF)
 option(USE_COLLECTIONS "Build director with collections dependency." OFF)
+option(USE_PERCEPTION "Build director features that require OpenCV, PCL, cv-utils, and libbot as dependencies." OFF)
 
 use_cpp11()
 setup_qt()

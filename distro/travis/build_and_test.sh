@@ -41,5 +41,6 @@ make -j $nproc
 
 # test
 cd $TRAVIS_BUILD_DIR/build/src/director-build
-cmake -DSITE:STRING=${site_name} -DBUILDNAME:STRING=${build_name} .
+cmake_command=$(grep CMAKE_COMMAND CMakeCache.txt | cut -d = -f 2)
+$cmake_command -DSITE:STRING=${site_name} -DBUILDNAME:STRING=${build_name} .
 ctest -j 1 --dashboard Experimental --track travis --output-on-failure

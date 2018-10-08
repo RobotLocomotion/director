@@ -1259,7 +1259,7 @@ void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
 
   vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
-  for (const auto & rb: this->Internal->Model->bodies)
+  for (const auto & rb: this->Internal->Model->get_bodies())
   {
     std::string linkNameString = rb->get_name();
     QString linkName = QString::fromStdString(linkNameString);

@@ -32,6 +32,8 @@ public:
   QVTKOpenGLWidget* vtkWidget() const;
   vtkOrientationMarkerWidget* orientationMarkerWidget() const;
 
+  QTimer* renderTimer() const;
+
   void installImageInteractor();
 
   void addCustomBounds(const QList<double>& bounds);
@@ -39,6 +41,8 @@ public:
   void setLightKitEnabled(bool enabled);
 
   double getAverageFramesPerSecond();
+
+  static void setAntiAliasing(bool enabled);
 
 signals:
 
@@ -67,6 +71,8 @@ protected:
 
   class ddInternal;
   ddInternal* Internal;
+
+  static bool antiAliasingEnabled;
 
   Q_DISABLE_COPY(ddQVTKWidgetView);
 };

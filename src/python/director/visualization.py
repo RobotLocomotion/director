@@ -2,11 +2,13 @@ import director.objectmodel as om
 import director.applogic as app
 from shallowCopy import shallowCopy
 import director.vtkAll as vtk
+from director import filterUtils
 from director import transformUtils
 from director import callbacks
 from director import frameupdater
 from director.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui
+import PythonQt
 import numpy as np
 import os
 import colorsys
@@ -569,7 +571,6 @@ class FrameTraceVisualizer(object):
         self.frame = frame
         self.traceName = '%s trace' % frame.getProperty('Name')
         self.lastPosition = np.array(frame.transform.GetPosition())
-        self.lineCell = vtk.vtkLine()
         frame.connectFrameModified(self.onFrameModified)
 
     def getTraceData(self):
@@ -577,31 +578,32 @@ class FrameTraceVisualizer(object):
         if not t:
             pts = vtk.vtkPoints()
             pts.SetDataTypeToDouble()
-            pts.InsertNextPoint(self.frame.transform.GetPosition())
+            pts.InsertNextPoint(self.lastPosition)
             pd = vtk.vtkPolyData()
+            pd.Allocate(1, 1)
             pd.SetPoints(pts)
-            pd.SetLines(vtk.vtkCellArray())
+            polyline = vtk.vtkPolyLine()
+            pd.InsertNextCell(polyline.GetCellType(), polyline.GetPointIds())
+            idArray = pd.GetLines().GetData()
+            idArray.InsertNextValue(0)
             t = showPolyData(pd, self.traceName, parent=self.frame)
         return t
 
     def addPoint(self, point):
         traceData = self.getTraceData()
         pd = traceData.polyData
-
         pd.GetPoints().InsertNextPoint(point)
         numberOfPoints = pd.GetNumberOfPoints()
-        line = self.lineCell
-        ids = line.GetPointIds()
-        ids.SetId(0, numberOfPoints-2)
-        ids.SetId(1, numberOfPoints-1)
-        pd.GetLines().InsertNextCell(line.GetPointIds())
-
+        idArray = pd.GetLines().GetData()
+        idArray.InsertNextValue(numberOfPoints-1)
+        idArray.SetValue(0, numberOfPoints)
         pd.Modified()
         traceData._renderAllViews()
 
     def onFrameModified(self, frame):
         position = np.array(frame.transform.GetPosition())
         if not np.allclose(position, self.lastPosition):
+            self.lastPosition = position
             self.addPoint(position)
 
 
@@ -937,13 +939,14 @@ def addChildFrame(obj, initialTransform=None):
     '''
 
     if obj.getChildFrame():
-        return
+        return obj.getChildFrame()
 
     if initialTransform:
-        pd = transformPolyData(obj.polyData, initialTransform.GetLinearInverse())
+        pd = filterUtils.transformPolyData(obj.polyData, initialTransform.GetLinearInverse())
         obj.setPolyData(pd)
-
-    t = obj.actor.GetUserTransform()
+        t = initialTransform
+    else:
+        t = obj.actor.GetUserTransform()
 
     if t is None:
         t = vtk.vtkTransform()
@@ -1210,6 +1213,17 @@ def findPickedObject(displayPoint, view):
     pickedPoint, pickedProp, pickedDataset = pickProp(displayPoint, view)
     obj = getObjectByProp(pickedProp)
     return obj, pickedPoint
+
+"""
+Toggles whether anti-aliasing is enabled or not.
+This sets a static variable in the ddQVTKWidgeView
+so this controls the setting for all views created in the current
+executable. Must be called before constructing a ddQTKWidgetView
+
+Anti-aliasing is enabled by default
+"""
+def setAntiAliasing(enabled):
+    PythonQt.dd.ddQVTKWidgetView.setAntiAliasing(enabled)
 
 
 def enableEyeDomeLighting(view):
