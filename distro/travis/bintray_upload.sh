@@ -9,10 +9,10 @@ fi
 
 scriptDir=$(cd $(dirname $0) && pwd)
 cd $scriptDir
-version=$(git describe)
+version=$1
 
 
-for filename in "$@"
+for filename in "${@:2}"
 do
   echo "uploading file: $filename"
   curl -T $filename -u patmarion:$encrypted_bintray_api_key https://api.bintray.com/content/patmarion/director/director/${version}/$(basename $filename)

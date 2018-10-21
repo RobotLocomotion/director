@@ -36,6 +36,9 @@ branches:
     - master
     - test
 
+git:
+  depth: 500
+
 install: true
 
 script:
