@@ -16,4 +16,7 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 fi
 
 $scriptDir/build_and_test.sh
+
+export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/install/lib
+
 $scriptDir/docs_and_package.sh

@@ -20,12 +20,17 @@ if [ "$USE_LIBBOT" = "ON" ]; then
 fi
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-  osid=$( cat /etc/os-release | grep "^ID=" | sed s/ID=// )
-  osversion=$( cat /etc/os-release | grep "VERSION_ID=" | sed s/VERSION_ID=// | sed 's/"\(.*\)"/\1/' )
-  site_name=docker-$osid-$osversion
+
+  ubuntu_version=$(lsb_release --release --short)
+  site_name=docker-ubuntu-$ubuntu_version
   USE_SYSTEM_VTK=OFF
   nproc=$(nproc)
-  qt_version=4
+  if [ "$ubuntu_version" = "18.04" ]; then
+    qt_version=5
+  else
+    qt_version=4
+  fi
+
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   osx_version=$(sw_vers -productVersion)
   xcode_version=$(xcodebuild -version | grep Xcode | sed s/Xcode\ //)
@@ -45,4 +50,9 @@ make -j $nproc
 cd $TRAVIS_BUILD_DIR/build/src/director-build
 cmake_command=$(grep CMAKE_COMMAND CMakeCache.txt | cut -d = -f 2)
 $cmake_command -DSITE:STRING=${site_name} -DBUILDNAME:STRING=${build_name} .
+
+# TODO
+# this was added for ubuntu18 on travis-ci but shouldn't be required, need to debug.
+export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/build/install/lib
+
 ctest -j 1 --dashboard Experimental --track travis --output-on-failure -V

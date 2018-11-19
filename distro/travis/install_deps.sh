@@ -1,6 +1,22 @@
 #!/bin/bash
 set -ex
 
+install_qt4_deps()
+{
+  apt-get install -y \
+    libqt4-dev
+}
+
+install_qt5_deps()
+{
+  apt-get install -y \
+    qtbase5-dev \
+    qtbase5-private-dev \
+    qttools5-dev \
+    qtmultimedia5-dev \
+    libqt5x11extras5-dev
+}
+
 install_ubuntu_deps_common()
 {
   apt-get update
@@ -9,7 +25,7 @@ install_ubuntu_deps_common()
     cmake \
     git \
     libglib2.0-dev \
-    libqt4-dev \
+    freeglut3-dev \
     libx11-dev \
     libxext-dev \
     libxt-dev \
@@ -48,6 +64,12 @@ install_ubuntu_deps()
     apt-get install -y libgl1-mesa-dev-lts-xenial
   else
     apt-get install -y libgl1-mesa-dev
+  fi
+
+  if [ "$ubuntu_version" = "18.04" ]; then
+    install_qt5_deps
+  else
+    install_qt4_deps
   fi
 
   # cleanup to make the docker image smaller

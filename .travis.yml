@@ -2,6 +2,9 @@ matrix:
   include:
 
     - os: linux
+      env: UBUNTU_TEST_VERSION=18
+
+    - os: linux
       env: UBUNTU_TEST_VERSION=16
 
     - os: linux

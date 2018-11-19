@@ -332,20 +332,7 @@ elseif(USE_PRECOMPILED_VTK)
 
   set(url_base "http://patmarion.com/bottles")
 
-  find_program(LSB_RELEASE lsb_release)
-  mark_as_advanced(LSB_RELEASE)
-  set(ubuntu_version)
-  if(LSB_RELEASE)
-    execute_process(COMMAND ${LSB_RELEASE} -is
-        OUTPUT_VARIABLE osname
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(osname STREQUAL Ubuntu)
-      execute_process(COMMAND ${LSB_RELEASE} -rs
-          OUTPUT_VARIABLE ubuntu_version
-          OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
-  endif()
-
+  get_ubuntu_version()
   if (ubuntu_version EQUAL 14.04)
     if(DD_QT_VERSION EQUAL 4)
       set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python3.4-ubuntu14.04.tar.gz)
@@ -361,6 +348,14 @@ elseif(USE_PRECOMPILED_VTK)
     else()
       set(vtk_package_url ${url_base}/vtk7.1-qt5.5-python3.5-ubuntu16.04.tar.gz)
       set(vtk_package_md5 00000000000000000000000000000000)
+    endif()
+  elseif(ubuntu_version EQUAL 18.04)
+    if(DD_QT_VERSION EQUAL 4)
+      message(FATAL_ERROR "Compiling director with Qt4 is not supported on Ubuntu 18.04. "
+               "Please set DD_QT_VERSION to 5.")
+    else()
+      set(vtk_package_url ${url_base}/vtk8.1-qt5.9-python2.7-ubuntu18.04.tar.gz)
+      set(vtk_package_md5 184f9cbb7d95756b4bdae74043611f17)
     endif()
   else()
     message(FATAL_ERROR "USE_PRECOMPILED_VTK requires Ubuntu 14.04 or 16.04 "
