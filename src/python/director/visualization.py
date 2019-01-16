@@ -1096,7 +1096,7 @@ def pickImage(displayPoint, view, obj=None):
 
 def pickProp(displayPoint, view):
 
-    for tolerance in (0.0, 0.005, 0.01):
+    for tolerance in (0.005, 0.01):
         pickType = 'render' if tolerance == 0.0 else 'cells'
         pickData = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
         pickedPoint = pickData.pickedPoint

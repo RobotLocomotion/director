@@ -246,7 +246,7 @@ class MeshAffordanceItem(AffordanceItem):
                     transform.Scale(scale)
 
                     transformFilter = vtk.vtkTransformPolyDataFilter()
-                    transformFilter.SetInput(polyData)
+                    transformFilter.SetInputData(polyData)
                     transformFilter.SetTransform(transform)
                     transformFilter.Update()
 
