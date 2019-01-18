@@ -30,6 +30,7 @@ include_directories(${CTK_PYTHONCONSOLE_INCLUDE_DIRS})
 include_directories(${PYTHONQT_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
 
+set(hdrs)
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
 # Configure whether to use the QVTKWidget or the QVTKOpenGLWidget
@@ -41,6 +42,7 @@ if((${Qt5Core_VERSION} VERSION_GREATER "5.4.0") AND
 endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ddQVTKOpenGLWidgetConfigure.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/ddQVTKOpenGLWidgetConfigure.h)
+list(APPEND hdrs ${CMAKE_CURRENT_BINARY_DIR}/ddQVTKOpenGLWidgetConfigure.h)
 
 if(USE_QVTKWIDGET)
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/wrapped_methods_qvtk.txt
@@ -119,6 +121,36 @@ set(srcs
   vtkTDxInteractorStyleCallback.cxx
   )
 
+list(APPEND hdrs
+  ddAppConfigure.h
+  ddEmptyView.h
+  ddFPSCounter.h
+  ddGLWidgetView.h
+  ddGroupBoxHider.h
+  ddMacrosManager.h
+  ddMainWindow.h
+  ddObjectTree.h
+  ddPropertiesPanel.h
+  ddPythonApp.h
+  ddPythonEventFilter.h
+  ddPythonManager.h
+  ddPythonQtWrapperFactory.h
+  ddPythonUndoCommand.h
+  ddQVTKWidgetView.h
+  ddSignalMap.h
+  ddSpreadsheetView.h
+  ddTaskSelection.h
+  ddViewBase.h
+  ddViewManager.h
+  ddViewMenu.h
+  ddVTKObjectMap.h
+  py3main.h
+  QtVariantProperty.h
+  QVTKOpenGLInit.h
+  vtkSimpleActorInteractor.h
+  vtkTDxInteractorStyleCallback.h
+  )
+
 set(deps
   ${QT_LIBRARIES}
   ${CTK_PYTHONCONSOLE_LIBRARIES}
@@ -168,6 +200,12 @@ if (USE_DRAKE)
 
   configure_file(ddDrakeVersion.h.in ddDrakeVersion.h)
 
+  list(APPEND hdrs
+    ${CMAKE_CURRENT_BINARY_DIR}/ddDrakeVersion.h
+    ddDrakeModel.h
+    ddDrakeWrapper.h
+  )
+
   list(APPEND wrap_files
     wrapped_methods_drake.txt
   )
@@ -192,6 +230,11 @@ if (USE_LCM)
   list(APPEND srcs
     ${moc_srcs}
     ddLCMThread.cpp
+  )
+
+  list(APPEND hdrs
+    ddLCMSubscriber.h
+    ddLCMThread.h
   )
 
   if(NOT BUILD_SHARED_LIBS AND LCM_STATIC_LIBRARIES)
@@ -232,6 +275,11 @@ if (USE_PERCEPTION)
 
   set(moc_srcs)
   qt_wrap_cpp(moc_srcs
+    ddBotImageQueue.h
+    ddPointCloudLCM.h
+  )
+
+  list(APPEND hdrs
     ddBotImageQueue.h
     ddPointCloudLCM.h
   )
@@ -302,3 +350,5 @@ add_custom_command(OUTPUT ${decorator_file}
   --auto-class-includes --module-name dd
   DEPENDS ${wrap_files} WrapPythonQt.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+install_headers(${hdrs})
