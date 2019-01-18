@@ -352,3 +352,4 @@ add_custom_command(OUTPUT ${decorator_file}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 install_headers(${hdrs})
+install(FILES WrapPythonQt.py DESTINATION ${DD_INSTALL_CONFIG_DIR})
