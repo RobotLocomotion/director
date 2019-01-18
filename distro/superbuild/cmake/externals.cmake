@@ -586,11 +586,12 @@ if(USE_SIGNAL_SCOPE)
 
   ExternalProject_Add(signal-scope
     GIT_REPOSITORY https://github.com/openhumanoids/signal-scope.git
-    GIT_TAG 62fe2f4
+    GIT_TAG a0bc791
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
       ${qt_args}
+      -DUSED_QTVERSION:STRING=${DD_QT_VERSION}
     DEPENDS
       ctkPythonConsole 
       PythonQt
