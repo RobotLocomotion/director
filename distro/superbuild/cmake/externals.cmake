@@ -397,7 +397,8 @@ else()
 
   ExternalProject_Add(vtk
     GIT_REPOSITORY git://vtk.org/VTK.git
-    GIT_TAG v8.0.0
+    GIT_TAG v8.2.0.rc2
+
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
@@ -411,7 +412,7 @@ else()
       -DVTK_WRAP_PYTHON:BOOL=ON
     )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-8.2)
   set(vtk_depends vtk)
 
 endif()
