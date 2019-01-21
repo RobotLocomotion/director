@@ -34,6 +34,27 @@ def readPolyData(filename, computeNormals=False):
     else:
         return polyData
 
+def readPlyFile(filename):
+    """
+    Usese plyfile python pacakage to read a ply file.
+    Gets around issues with pcl having a bad ply writer for pointclouds
+    :param filename:
+    :type filename: str
+    :return: vtkPolyData
+    :rtype:
+    """
+
+    from plyfile import PlyData
+
+    plydata = PlyData.read(filename)
+    vertex_data = plydata['vertex'].data # numpy array with fields ['x', 'y', 'z']
+    pts = np.zeros([vertex_data.size, 3])
+    pts[:, 0] = vertex_data['x']
+    pts[:, 1] = vertex_data['y']
+    pts[:, 2] = vertex_data['z']
+
+    return vnp.numpyToPolyData(pts)
+
 
 def readMultiBlock(filename):
     '''Reads a .vtm file and returns a list of vtkPolyData objects'''
