@@ -85,6 +85,9 @@ class ViewEventFilter(object):
             self._rightMouseStart = QtCore.QPoint(event.pos())
             self.onRightMousePress(event)
 
+        elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.MiddleButton:
+            self.onMiddleMousePress(event)
+
         elif event.type() == QtCore.QEvent.MouseMove:
 
             if self._rightMouseStart is not None:
@@ -133,6 +136,9 @@ class ViewEventFilter(object):
         pass
 
     def onRightMousePress(self, event):
+        pass
+
+    def onMiddleMousePress(self, event):
         pass
 
     def onLeftMouseRelease(self, event):
