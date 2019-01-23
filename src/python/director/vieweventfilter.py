@@ -1,6 +1,8 @@
 import PythonQt
 from PythonQt import QtCore, QtGui
 import director.visualization as vis
+import director.vtkAll as vtk
+
 
 class ViewEventFilter(object):
 
@@ -8,21 +10,34 @@ class ViewEventFilter(object):
 
     def __init__(self, view):
         self.view = view
+        self.eventFilter = None
         self._leftMouseStart = None
         self._rightMouseStart = None
         self._handlers = {}
+
+        if (vtk.VTK_MAJOR_VERSION, vtk.VTK_MINOR_VERSION) >= (8, 2):
+            self._filterObject = QtGui.QApplication.instance()
+            self._filterClassName = 'QVTKOpenGLWindow'
+        else:
+            self._filterObject = self.view.vtkWidget()
+            self._filterClassName = None
+
+
         self.installEventFilter()
 
     def installEventFilter(self):
+        if self.eventFilter is not None:
+            return
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
-        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
-        self.view.vtkWidget().installEventFilter(self.eventFilter)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self._filterEvent)
         for eventType in self.getFilteredEvents():
             self.eventFilter.addFilteredEventType(eventType)
+        self._filterObject.installEventFilter(self.eventFilter)
 
     def removeEventFilter(self):
-        self.view.vtkWidget().removeEventFilter(self.eventFilter)
-        self.eventFilter.disconnect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+        self._filterObject.removeEventFilter(self.eventFilter)
+        self.eventFilter.disconnect('handleEvent(QObject*, QEvent*)', self._filterEvent)
+        self.eventFilter = None
 
     def getFilteredEvents(self):
         return [QtCore.QEvent.MouseButtonDblClick,
@@ -51,6 +66,11 @@ class ViewEventFilter(object):
 
     def consumeEvent(self):
         self.eventFilter.setEventHandlerResult(True)
+
+    def _filterEvent(self, obj, event):
+        if self._filterClassName and self._filterClassName != type(obj).__name__:
+            return
+        self.filterEvent(obj, event)
 
     def filterEvent(self, obj, event):
 
