@@ -597,7 +597,7 @@ class FrameTraceVisualizer(object):
         idArray = pd.GetLines().GetData()
         idArray.InsertNextValue(numberOfPoints-1)
         idArray.SetValue(0, numberOfPoints)
-        pd.Modified()
+        pd.GetPoints().Modified()
         traceData._renderAllViews()
 
     def onFrameModified(self, frame):
