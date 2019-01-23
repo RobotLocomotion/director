@@ -21,6 +21,7 @@ set(python_files
   director/camerabookmarks.py
   director/cameracontrol.py
   director/cameracontrolpanel.py
+  director/camerainteractor.py
   director/cameraview.py
   director/colorize.py
   director/componentgraph.py
