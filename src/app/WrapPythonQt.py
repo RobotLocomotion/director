@@ -10,13 +10,17 @@ def wrap(args):
     outFileName = args.output_file
     exportSymbol = args.export_symbol
     exportHeader = args.export_header
+    decoratorClassName = args.class_name
     classNamePrefixes = args.class_prefixes
     qtClassNamePrefixes = args.qt_class_prefixes
     moduleName = args.module_name
     autoClassIncludes = args.auto_class_includes
 
-    if not outFileName.endswith('.h'):
-        raise Exception('Error: output file extension must be .h')
+    if not decoratorClassName:
+        if not outFileName.endswith('.h'):
+            raise Exception('Error: when output class name is not provided then the'
+                            ' output file extension must be .h')
+        decoratorClassName = os.path.basename(outFileName).replace('.h', '')
 
     lines = []
     for inFileName in inFileNames:
@@ -131,8 +135,6 @@ def wrap(args):
     classRegisters = "\n".join(['    this->registerClassForPythonQt(&%s::staticMetaObject);' % className
                                 for className in sortedClasses if className.startswith(qtClassNamePrefixes)])
 
-    decoratorClassName = os.path.basename(outFileName).replace('.h', '')
-
     outFile = open(outFileName, 'w')
     outFile.write('''
 #ifndef __%s_h
@@ -187,6 +189,8 @@ def main():
     parser.add_argument('--input-file', '-i', nargs='+', required=True, help='A text file with method signatures, one per line.')
     parser.add_argument('--output-file', '-o', required=True, help='The output filename.  The file extension should be .h')
     parser.add_argument('--module-name', default='', help='The Python module name under which Qt classes will be registered.')
+    parser.add_argument('--class-name', default='', help='The C++ class name of the generated decorator.'
+                                                         ' If empty, it will be computed from the output filename.')
     parser.add_argument('--export-symbol', default='', help='An export symbol that will be added to the class declaration.')
     parser.add_argument('--export-header', default='', help='A header filename that defines an export symbol.')
     parser.add_argument('--class-prefixes', nargs='*', help='A list of class name prefixes.')
