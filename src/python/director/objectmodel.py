@@ -553,3 +553,20 @@ def init(objectTree=None, propertiesPanel=None):
     propertiesPanel = propertiesPanel or PythonQt.dd.ddPropertiesPanel()
 
     _t.init(objectTree, propertiesPanel)
+
+def addParentPropertySync(obj):
+    parent = obj.parent()
+    if parent is None:
+        return
+    if not hasattr(parent, '_syncedProperties'):
+        def onPropertyChanged(propertySet, propertyName):
+            if propertyName in parent._syncedProperties:
+                for obj in parent.children():
+                    obj.setProperty(propertyName, propertySet.getProperty(propertyName))
+        parent._syncedProperties = set()
+        parent.properties.connectPropertyChanged(onPropertyChanged)
+    for propertyName in obj.properties.propertyNames():
+        if propertyName in parent._syncedProperties:
+            continue
+        parent._syncedProperties.add(propertyName)
+        parent.properties.addProperty(propertyName, obj.properties.getProperty(propertyName), attributes=obj.properties._attributes[propertyName])
