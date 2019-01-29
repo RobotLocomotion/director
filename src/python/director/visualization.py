@@ -716,6 +716,24 @@ class FrameSync(object):
         self._blockCallbacks = False
 
 
+def setCameraToParallelProjection(camera):
+    viewAngle = np.radians(camera.GetViewAngle())
+    viewDistance = np.linalg.norm(np.array(camera.GetFocalPoint()) - np.array(camera.GetPosition()))
+    desiredParallelScale = np.tan(viewAngle * 0.5)  * viewDistance
+    camera.SetParallelScale(desiredParallelScale)
+    camera.ParallelProjectionOn()
+
+
+def setCameraToPerspectiveProjection(camera):
+    parallelScale = camera.GetParallelScale()
+    viewAngle = np.radians(camera.GetViewAngle())
+    desiredViewDistance = parallelScale / np.tan(viewAngle * 0.5)
+    focalPoint = np.array(camera.GetFocalPoint())
+    desiredCameraPosition = focalPoint + desiredViewDistance * np.array(camera.GetViewPlaneNormal())
+    camera.SetPosition(desiredCameraPosition)
+    camera.ParallelProjectionOff()
+
+
 class ViewOptionsItem(om.ObjectModelItem):
 
     def __init__(self, view):
@@ -749,9 +767,9 @@ class ViewOptionsItem(om.ObjectModelItem):
         elif propertyName == 'Camera projection':
 
             if self.getPropertyEnumValue(propertyName) == 'Perspective':
-                self.view.camera().ParallelProjectionOff()
+                setCameraToPerspectiveProjection(self.view.camera())
             else:
-                self.view.camera().ParallelProjectionOn()
+                setCameraToParallelProjection(self.view.camera())
 
         elif propertyName == 'Orientation widget':
 
