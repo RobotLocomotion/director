@@ -517,6 +517,9 @@ def getActiveObject():
 def setActiveObject(obj):
     _t.setActiveObject(obj)
 
+getSelectedObject = getActiveObject
+setSelectedObject = setActiveObject
+
 def clearSelection():
     _t.clearSelection()
 
