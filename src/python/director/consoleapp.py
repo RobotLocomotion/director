@@ -107,6 +107,10 @@ class ConsoleApp(object):
     def processEvents():
         QtCore.QCoreApplication.instance().processEvents()
 
+    @staticmethod
+    def registerStartupCallback(func, priority=1):
+        ConsoleApp._startupCallbacks.setdefault(priority, []).append(func)
+
     def showObjectModel(self):
 
         if not self.objectModelWidget:

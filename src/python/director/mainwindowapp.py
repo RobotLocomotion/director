@@ -123,7 +123,7 @@ class MainWindowApp(object):
         return action
 
     def registerStartupCallback(self, func, priority=1):
-        consoleapp.ConsoleApp._startupCallbacks.setdefault(priority, []).append(func)
+        consoleapp.ConsoleApp.registerStartupCallback(func, priority)
 
     def _restoreWindowState(self, key):
         appsettings.restoreState(self.settings, self.mainWindow, key)
