@@ -147,7 +147,7 @@ class RigidBodyTreeCompatNew(object):
 
     @staticmethod
     def makePackageMap(packagePaths):
-        packageMap = pydrake.rbtree.PackageMap()
+        packageMap = pydrake.multibody.parsers.PackageMap()
         for path in packagePaths:
             if os.path.exists(path):
                 packageMap.Add(os.path.basename(path), path)
@@ -155,10 +155,10 @@ class RigidBodyTreeCompatNew(object):
 
     @staticmethod
     def addModelInstanceFromUrdfString(rbt, urdfString, packageMap, baseDir):
-        floatingBaseType = pydrake.rbtree.kRollPitchYaw
+        floatingBaseType = pydrakerbt.FloatingBaseType.kRollPitchYaw
         weldFrame = None
 
-        pydrake.rbtree.AddModelInstanceFromUrdfStringSearchingInRosPackages(
+        pydrakerbt.AddModelInstanceFromUrdfStringSearchingInRosPackages(
           urdfString,
           packageMap,
           baseDir,
@@ -205,9 +205,15 @@ class RigidBodyTreeCompatOld(object):
         rbt.addRobotFromURDFString(urdfString, packageMap, baseDir)
 
 
-if hasattr(pydrake.rbtree.RigidBodyTree, 'get_num_bodies'):
+try:
+    import pydrake.multibody.parsers
+    import pydrake.multibody.rigid_body_tree as pydrakerbt
+    from pydrake.multibody.rigid_body_tree import RigidBodyTree
     rbt = RigidBodyTreeCompatNew
-else:
+except ImportError as e:
+    print("ImportError caught, falling back to old RBT compat.")
+    print("Error was: %s" % str(e))
+    from pydrake.rbtree import RigidBodyTree
     rbt = RigidBodyTreeCompatOld
 
 
@@ -240,7 +246,7 @@ class PyDrakeIkServer(object):
         urdfString = open(urdfFile, 'r').read()
         baseDir = str(os.path.dirname(urdfFile))
 
-        rigidBodyTree = pydrake.rbtree.RigidBodyTree()
+        rigidBodyTree = RigidBodyTree()
         rbt.addModelInstanceFromUrdfString(rigidBodyTree, urdfString, packageMap, baseDir)
         return rigidBodyTree
 
