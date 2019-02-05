@@ -159,7 +159,8 @@ class MainWindowAppFactory(object):
             'Grid': ['View', 'ObjectModel'],
             'MainWindow' : ['View', 'ObjectModel'],
             'AdjustedClippingRange' : ['View'],
-            'ScriptLoader' : ['MainWindow', 'Globals']}
+            'RunScriptFunction' : ['Globals'],
+            'ScriptLoader' : ['MainWindow', 'RunScriptFunction']}
 
         disabledComponents = []
 
@@ -287,6 +288,7 @@ class MainWindowAppFactory(object):
 
         from PythonQt import QtCore, QtGui
         from director import objectmodel as om
+        from director import consoleapp
         from director import visualization as vis
         from director import applogic
         from director import transformUtils
@@ -298,6 +300,8 @@ class MainWindowAppFactory(object):
         from director.timercallback import TimerCallback
         from director.fieldcontainer import FieldContainer
         import numpy as np
+        import os
+        import sys
 
         modules = dict(locals())
         del modules['fields']
@@ -313,27 +317,35 @@ class MainWindowAppFactory(object):
             globalsDict = dict()
         return FieldContainer(globalsDict=globalsDict)
 
+    def initRunScriptFunction(self, fields):
+
+        globalsDict = fields.globalsDict
+
+        def runScript(filename, commandLineArgs=None):
+            commandLineArgs = commandLineArgs or []
+            args = dict(__file__=filename,
+                        _argv=[filename] + commandLineArgs,
+                        _fields=fields)
+            prev_args = {}
+            for k, v in args.items():
+                if k in globalsDict:
+                    prev_args[k] = globalsDict[k]
+                globalsDict[k] = v
+            try:
+                execfile(filename, globalsDict)
+            finally:
+                for k in args.keys():
+                    del globalsDict[k]
+                for k, v in prev_args.items():
+                    globalsDict[k] = v
+
+        return FieldContainer(runScript=runScript)
+
+
     def initScriptLoader(self, fields):
         def loadScripts():
             for scriptArgs in fields.commandLineArgs.scripts:
-                filename = scriptArgs[0]
-                globalsDict = fields.globalsDict
-                args = dict(__file__=filename,
-                            _argv=scriptArgs,
-                            _fields=fields)
-                prev_args = {}
-                for k, v in args.items():
-                    if k in globalsDict:
-                        prev_args[k] = globalsDict[k]
-                    globalsDict[k] = v
-                try:
-                    execfile(filename, globalsDict)
-                finally:
-                    for k in args.keys():
-                        del globalsDict[k]
-                    for k, v in prev_args.items():
-                        globalsDict[k] = v
-
+                fields.runScript(scriptArgs[0], scriptArgs[1:])
         fields.app.registerStartupCallback(loadScripts)
 
 
