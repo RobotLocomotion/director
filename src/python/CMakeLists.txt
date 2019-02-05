@@ -43,6 +43,7 @@ set(python_files
   director/frameupdater.py
   director/fieldcontainer.py
   director/filterUtils.py
+  director/flags.py
   director/footstepsdriver.py
   director/footstepsdriverpanel.py
   director/framevisualization.py
