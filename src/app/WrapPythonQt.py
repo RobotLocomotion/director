@@ -141,7 +141,7 @@ def wrap(args):
 #define __%s_h
 
 #include <QObject>
-#include "PythonQt.h"
+#include <PythonQt.h>
 
 %s
 %s
