@@ -952,7 +952,9 @@ def addChildFrame(obj, initialTransform=None):
         t = vtk.vtkTransform()
         t.PostMultiply()
 
-    frame = showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False)
+    frame = showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False, view=None)
+    for view in obj.views:
+        frame.addToView(view)
     obj.actor.SetUserTransform(t)
 
     return frame
