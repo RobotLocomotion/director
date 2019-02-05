@@ -190,13 +190,16 @@ class PolyDataItem(om.ObjectModelItem):
             self.colorBy(arrayName, scalarRange=(rangeMin, rangeMax))
 
     def _updateSurfaceProperty(self):
-        enableSurfaceMode = self.polyData.GetNumberOfPolys() or self.polyData.GetNumberOfStrips()
+        hasPolys = self.polyData.GetNumberOfPolys() or self.polyData.GetNumberOfStrips()
+        hasLines = self.polyData.GetNumberOfLines()
+
+        enableSurfaceMode = hasPolys or hasLines
         self.properties.setPropertyAttribute('Surface Mode', 'hidden', not enableSurfaceMode)
 
-        enableLineWidth = enableSurfaceMode or self.polyData.GetNumberOfLines()
+        enableLineWidth = enableSurfaceMode
         self.properties.setPropertyAttribute('Line Width', 'hidden', not enableLineWidth)
 
-        enablePointSize = enableSurfaceMode or not enableLineWidth
+        enablePointSize = True
         self.properties.setPropertyAttribute('Point Size', 'hidden', not enablePointSize)
 
     def _updateColorBy(self, retainColorMap=False):
