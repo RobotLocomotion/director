@@ -24,6 +24,9 @@ class OutputConsole(object):
     def showDock(self):
         self.dockWidget.show()
 
+    def toggleDock(self):
+        self.dockWidget.setVisible(not self.dockWidget.visible)
+
     def appendText(self, text, color=None, bold=False):
         '''Add text to the output console.  The color arg should be a string that is a valid CSS color
            string, for example: red, or #FF0000, or rgb(255,0,0).'''
@@ -46,6 +49,6 @@ class OutputConsole(object):
         formatter = HtmlFormatter()
         codeHtml = highlight(code, lexer, formatter)
 
-        doc = self.textEdit.document()
+        doc = self.textEdit.document
         doc.defaultStyleSheet = formatter.get_style_defs()
         doc.setHtml(codeHtml)
