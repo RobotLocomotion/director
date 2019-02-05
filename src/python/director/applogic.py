@@ -283,6 +283,11 @@ def showInfoMessage(message, title='Info'):
     QtGui.QMessageBox.information(getMainWindow(), title, message)
 
 
+def boolPrompt(title, message):
+    result = QtGui.QMessageBox.question(getMainWindow(), title, message)
+    return result == QtGui.QMessageBox.Yes
+
+
 def showViewTabContextMenu(view, tabBar, menuPosition):
 
     def onPopOut():
