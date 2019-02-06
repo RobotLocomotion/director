@@ -212,6 +212,7 @@ class MainWindowAppFactory(object):
         organizationName = 'RobotLocomotion'
         applicationName = 'DirectorMainWindow'
         windowTitle = 'Director App'
+        windowIcon = ':/images/drake_logo.png'
 
         if hasattr(fields, 'organizationName'):
             organizationName = fields.organizationName
@@ -219,6 +220,8 @@ class MainWindowAppFactory(object):
             applicationName = fields.applicationName
         if hasattr(fields, 'windowTitle'):
             windowTitle = fields.windowTitle
+        if hasattr(fields, 'windowIcon'):
+            windowIcon = fields.windowIcon
 
         MainWindowApp.applicationInstance().setOrganizationName(organizationName)
         MainWindowApp.applicationInstance().setApplicationName(applicationName)
@@ -228,7 +231,7 @@ class MainWindowAppFactory(object):
 
         app.mainWindow.setCentralWidget(fields.view)
         app.mainWindow.setWindowTitle(windowTitle)
-        app.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
+        app.mainWindow.setWindowIcon(QtGui.QIcon(windowIcon))
 
         sceneBrowserDock = app.addWidgetToDock(fields.objectModel.getTreeWidget(),
                               QtCore.Qt.LeftDockWidgetArea, visible=True)
