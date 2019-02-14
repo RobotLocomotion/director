@@ -5,6 +5,7 @@ import PythonQt
 from PythonQt import QtCore, QtGui
 from director.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper, PropertyPanelConnector
 from director import callbacks
+import functools
 
 class Icons(object):
 
@@ -22,6 +23,7 @@ class Icons(object):
   Collections = ':/images/rubix_cube.jpg'
 
   @staticmethod
+  @functools.lru_cache()
   def getIcon(iconId):
       '''
       Return a QIcon given an icon id as a string or int.
