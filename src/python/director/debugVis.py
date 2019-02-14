@@ -60,13 +60,22 @@ class DebugData(object):
         self.addPolyData(polyData, color)
 
     def addFrame(self, frame, scale, tubeRadius=0.0):
-        origin = np.array([0.0, 0.0, 0.0])
-        axes = [[scale, 0.0, 0.0], [0.0, scale, 0.0], [0.0, 0.0, scale]]
-        colors = [[1,0,0], [0,1,0], [0,0,1]]
-        frame.TransformPoint(origin, origin)
-        for axis, color in zip(axes, colors):
-            frame.TransformVector(axis, axis)
-            self.addLine(origin, origin+axis, radius=tubeRadius, color=color)
+        axes = vtk.vtkAxes()
+        axes.ComputeNormalsOff()
+        axes.SetScaleFactor(scale)
+        transformFilter=vtk.vtkTransformPolyDataFilter()
+        transformFilter.SetTransform(frame)
+        transformFilter.SetInputConnection(axes.GetOutputPort())
+        transformFilter.Update()
+        polyData = transformFilter.GetOutput()
+        colors = np.array(
+            [[255, 0, 0], [255, 0, 0],
+            [0, 255, 0], [0, 255, 0],
+            [0, 0, 255], [0, 0, 255]], dtype=np.uint8)
+        vnp.addNumpyToVtk(polyData, colors, 'RGB255')
+        if tubeRadius:
+            polyData = applyTubeFilter(polyData, tubeRadius)
+        self.addPolyData(polyData, color=None)
 
     def addCircle(self, origin, normal, radius, color=[1,1,1]):
         self.addCone(origin, normal, radius, height=0, color=color, fill=False)
