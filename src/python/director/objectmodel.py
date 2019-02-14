@@ -49,6 +49,7 @@ class ObjectModelItem(object):
 
         #print 'init called on:', self
         self._tree = None
+        self.actionDelegates = []
         self.callbacks = callbacks.CallbackRegistry([self.REMOVED_FROM_OBJECT_MODEL])
         self.properties = properties or PropertySet()
         self.properties.connectPropertyChanged(self._onPropertyChanged)
@@ -104,6 +105,11 @@ class ObjectModelItem(object):
 
     def getActionNames(self):
         actions = ['Rename']
+        for delegate in self.actionDelegates:
+            delegateActions = delegate.getActionNames()
+            if delegateActions:
+                actions.append('')
+                actions.extend(delegateActions)
         return actions
 
     def onAction(self, action):
@@ -119,6 +125,11 @@ class ObjectModelItem(object):
 
             if result:
                 self.rename(inputDialog.textValue())
+
+        for delegate in self.actionDelegates:
+            consumed = delegate.onAction(self, action)
+            if consumed:
+                break
 
     def rename(self, name, renameChildren=True):
         oldName = self.getProperty('Name')
@@ -525,6 +536,9 @@ def clearSelection():
 
 def getObjects():
     return _t.getObjects()
+
+def getTopLevelObjects():
+    return _t.getTopLevelObjects()
 
 def findObjectByName(name, parent=None):
     return _t.findObjectByName(name, parent)
