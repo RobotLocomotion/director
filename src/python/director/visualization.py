@@ -1530,35 +1530,9 @@ def setAntiAliasing(enabled):
 
 
 def enableEyeDomeLighting(view):
-
-    seq = vtk.vtkSequencePass()
-    opaque = vtk.vtkOpaquePass()
-
-    peeling = vtk.vtkDepthPeelingPass()
-    peeling.SetMaximumNumberOfPeels(200)
-    peeling.SetOcclusionRatio(0.1)
-
-    translucent = vtk.vtkTranslucentPass()
-    peeling.SetTranslucentPass(translucent)
-
-    volume = vtk.vtkVolumetricPass()
-    overlay = vtk.vtkOverlayPass()
-    lights = vtk.vtkLightsPass()
-
-    passes=vtk.vtkRenderPassCollection()
-    passes.AddItem(lights)
-    passes.AddItem(opaque)
-    #passes.AddItem(peeling)
-    passes.AddItem(translucent)
-    #passes.AddItem(volume)
-    #passes.AddItem(overlay)
-    seq.SetPasses(passes)
-
+    standardPass = vtk.vtkRenderStepsPass()
     edlPass = vtk.vtkEDLShading()
-    cameraPass = vtk.vtkCameraPass()
-
-    edlPass.SetDelegatePass(cameraPass)
-    cameraPass.SetDelegatePass(seq)
+    edlPass.SetDelegatePass(standardPass)
     view.renderer().SetPass(edlPass)
 
 
