@@ -261,10 +261,42 @@ class ObjectModelTree(object):
         if items:
             return self._getObjectForItem(next(iter(items)))
 
+    def findObjectByPath(self, path, separator='/'):
+        return self.findObjectByPathList(path.split(separator))
+
+    def findObjectByPathList(self, pathList):
+        try:
+            rootName = pathList[0]
+        except IndexError:
+            return None
+
+        if not rootName:
+            try:
+                rootName = pathList[1]
+            except IndexError:
+                return None
+            obj = self.findTopLevelObjectByName(rootName)
+            pathList = pathList[2:]
+        else:
+            obj = self.findObjectByName(rootName)
+            pathList = pathList[1:]
+        if obj is None:
+            return None
+        for name in pathList:
+            obj = obj.findChild(name)
+            if obj is None:
+                return None
+        return obj
+
     def findChildByName(self, parent, name):
         parentItem = self._getItemForObject(parent) if parent else None
         for item in self._nameToItems[name]:
           if item.parent() == parentItem:
+            return self._getObjectForItem(item)
+
+    def findTopLevelObjectByName(self, name):
+        for item in self._nameToItems[name]:
+          if item.parent() is None:
             return self._getObjectForItem(item)
 
     def _onTreeSelectionChanged(self):
@@ -542,6 +574,15 @@ def getTopLevelObjects():
 
 def findObjectByName(name, parent=None):
     return _t.findObjectByName(name, parent)
+
+def findObjectByPathList(pathList):
+    return _t.findObjectByPathList(pathList)
+
+def findObjectByPath(path, separator='/'):
+    return _t.findObjectByPath(path, separator)
+
+def findTopLevelObjectByName(name):
+    return _t.findTopLevelObjectByName(name)
 
 def removeFromObjectModel(obj):
     _t.removeFromObjectModel(obj)
