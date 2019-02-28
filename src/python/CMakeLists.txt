@@ -142,6 +142,7 @@ set(python_files
   director/undoredo.py
   director/utime.py
   director/uuidutil.py
+  director/valueslider.py
   director/valvedemo.py
   director/version.py.in
   director/viconvisualizer.py
