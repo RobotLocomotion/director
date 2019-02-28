@@ -75,8 +75,8 @@ class ObjectModelItem(object):
     def getPropertyEnumValue(self, propertyName):
         return self.properties.getPropertyEnumValue(propertyName)
 
-    def addProperty(self, propertyName, propertyValue, attributes=None):
-        self.properties.addProperty(propertyName, propertyValue, attributes)
+    def addProperty(self, propertyName, propertyValue, attributes=None, index=None):
+        self.properties.addProperty(propertyName, propertyValue, attributes, index)
 
     def removeProperty(self, propertyName):
         self.properties.removeProperty(propertyName)

@@ -112,16 +112,16 @@ class PropertySet(object):
         del self._attributes[propertyName]
         del self._alternateNames[cleanPropertyName(propertyName)]
 
-    def addProperty(self, propertyName, propertyValue, attributes=None):
+    def addProperty(self, propertyName, propertyValue, attributes=None, index=None):
         alternateName = cleanPropertyName(propertyName)
         if propertyName not in self._properties and alternateName in self._alternateNames:
             raise ValueError('Adding this property would conflict with a different existing property with alternate name {:s}'.format(alternateName))
-
         propertyValue = fromQColor(propertyName, propertyValue)
-
         self._properties[propertyName] = propertyValue
         self._attributes[propertyName] = attributes or PropertyAttributes()
         self._alternateNames[alternateName] = propertyName
+        if index is not None:
+            self.setPropertyIndex(propertyName, index)
         self.callbacks.process(self.PROPERTY_ADDED_SIGNAL, self, propertyName)
 
     def setPropertyIndex(self, propertyName, newIndex):
