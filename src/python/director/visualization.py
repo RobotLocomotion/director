@@ -547,10 +547,11 @@ class TextItem(om.ObjectModelItem):
 
 
 def updateText(text, name, **kwargs):
-
-    obj = om.findObjectByName(name)
-    obj = obj or showText(text, name, **kwargs)
-    obj.setProperty('Text', text)
+    obj = om.findObjectByName(name, parent=getParentObj(kwargs.get('parent')))
+    if obj is None:
+        obj or showText(text, name, **kwargs)
+    else:
+        obj.setProperty('Text', text)
     return obj
 
 
@@ -563,17 +564,12 @@ def showText(text, name, fontSize=18, position=(10, 10), parent=None, view=None)
     item.setProperty('Font Size', fontSize)
     item.setProperty('Position', list(position))
 
-    if isinstance(parent, str):
-        parentObj = om.getOrCreateContainer(parent)
-    else:
-        parentObj = parent
-
-    om.addToObjectModel(item, parentObj)
+    om.addToObjectModel(item, getParentObj(parent))
     return item
 
 
 def updateImage(image, name, **kwargs):
-    obj = om.findObjectByName(name)
+    obj = om.findObjectByName(name, parent=getParentObj(kwargs.get('parent')))
     if obj is None:
         obj = showImage(image, name, **kwargs)
     else:
@@ -586,12 +582,7 @@ def showImage(image, name, parent=None, view=None):
     assert view
 
     item = Image2DItem(name, image, view=view)
-    if isinstance(parent, str):
-        parentObj = om.getOrCreateContainer(parent)
-    else:
-        parentObj = parent
-
-    om.addToObjectModel(item, parentObj)
+    om.addToObjectModel(item, getParentObj(parent))
     return item
 
 
@@ -1163,19 +1154,28 @@ def createScalarBarWidget(view, lookupTable, title):
     return w
 
 
-def updatePolyData(polyData, name, **kwargs):
+def getParentObj(parent):
+    if isinstance(parent, str):
+        return om.getOrCreateContainer(parent)
+    else:
+        return parent
 
-    obj = om.findObjectByName(name)
-    obj = obj or showPolyData(polyData, name, **kwargs)
-    obj.setPolyData(polyData)
+
+def updatePolyData(polyData, name, **kwargs):
+    obj = om.findObjectByName(name, parent=getParentObj(kwargs.get('parent')))
+    if obj is None:
+        obj = showPolyData(polyData, name, **kwargs)
+    else:
+        obj.setPolyData(polyData)
     return obj
 
 
 def updateFrame(frame, name, **kwargs):
-
-    obj = om.findObjectByName(name)
-    obj = obj or showFrame(frame, name, **kwargs)
-    obj.copyFrame(frame)
+    obj = om.findObjectByName(name, parent=getParentObj(kwargs.get('parent')))
+    if obj is None:
+        obj = showFrame(frame, name, **kwargs)
+    else:
+        obj.copyFrame(frame)
     return obj
 
 
@@ -1184,23 +1184,11 @@ def showFrame(frame, name, view=None, parent='data', scale=0.35, visible=True):
     view = view or app.getCurrentRenderView()
     assert view
 
-    if isinstance(parent, str):
-        parentObj = om.getOrCreateContainer(parent)
-    else:
-        parentObj = parent
-
     item = FrameItem(name, frame, view)
-    om.addToObjectModel(item, parentObj)
+    om.addToObjectModel(item, getParentObj(parent))
     item.setProperty('Visible', visible)
     item.setProperty('Scale', scale)
     return item
-
-
-def getParentObj(parent):
-    if isinstance(parent, str):
-        return om.getOrCreateContainer(parent)
-    else:
-        return parent
 
 
 def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parent='data', cls=None):
