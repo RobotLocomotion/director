@@ -458,7 +458,9 @@ def cropToBounds(polyData, transform, bounds):
     origin = np.array(transform.GetPosition())
     axes = transformUtils.getAxesFromTransform(transform)
 
-    for axis, bound in zip(axes, bounds):
+    for idx in range(3):
+        axis = axes[idx]
+        bound = bounds[:, idx]
         axis = np.array(axis)/np.linalg.norm(axis)
         polyData = cropToLineSegment(polyData, origin + axis*bound[0], origin + axis*bound[1])
 
