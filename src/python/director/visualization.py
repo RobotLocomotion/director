@@ -597,7 +597,7 @@ class FrameTraceVisualizer(object):
         idArray = pd.GetLines().GetData()
         idArray.InsertNextValue(numberOfPoints-1)
         idArray.SetValue(0, numberOfPoints)
-        pd.Modified()
+        pd.GetPoints().Modified()
         traceData._renderAllViews()
 
     def onFrameModified(self, frame):
@@ -952,7 +952,9 @@ def addChildFrame(obj, initialTransform=None):
         t = vtk.vtkTransform()
         t.PostMultiply()
 
-    frame = showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False)
+    frame = showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False, view=None)
+    for view in obj.views:
+        frame.addToView(view)
     obj.actor.SetUserTransform(t)
 
     return frame

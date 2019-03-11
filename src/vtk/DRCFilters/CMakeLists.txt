@@ -23,36 +23,41 @@ set(EXTRA_SRCS
 
 #####
 
-set(GLSL_RESOURCES_DIR
-    edl_resources/Shaders
+option(USE_EDL_SHADERS OFF)
+if(USE_EDL_SHADERS)
+
+  set(GLSL_RESOURCES_DIR
+      edl_resources/Shaders
+      )
+
+  set(GLSL_SRCS
+    edl_compose
+    edl_shade
+    bilateral_filter
+    depth_compose
     )
 
-set(GLSL_SRCS
-  edl_compose
-  edl_shade
-  bilateral_filter
-  depth_compose
-  )
+  # -----------------------------------------------------------------------------
+  # Create custom commands to encode each glsl file into a C string literal
+  # in a header file
+  # -----------------------------------------------------------------------------
+  if(NOT TARGET vtkEncodeString)
+    message(SEND_ERROR "The required vtkEncodeString executable was not found.\nThis may indicate an error in your VTK install or configuration.")
+  endif()
 
-# -----------------------------------------------------------------------------
-# Create custom commands to encode each glsl file into a C string literal
-# in a header file
-# -----------------------------------------------------------------------------
-if(NOT TARGET vtkEncodeString)
-  message(SEND_ERROR "The required vtkEncodeString executable was not found.\nThis may indicate an error in your VTK install or configuration.")
+  foreach(file ${GLSL_SRCS})
+    set(src ${CMAKE_CURRENT_SOURCE_DIR}/${GLSL_RESOURCES_DIR}/${file}.glsl)
+    set(res ${CMAKE_CURRENT_BINARY_DIR}/${file}.cxx)
+    add_custom_command(
+      OUTPUT ${res}
+      DEPENDS ${src}
+      COMMAND vtkEncodeString
+      ARGS ${res} ${src} ${file}
+      )
+    set(EXTRA_SRCS ${EXTRA_SRCS} ${res})
+  endforeach(file)
+
 endif()
-
-foreach(file ${GLSL_SRCS})
-  set(src ${CMAKE_CURRENT_SOURCE_DIR}/${GLSL_RESOURCES_DIR}/${file}.glsl)
-  set(res ${CMAKE_CURRENT_BINARY_DIR}/${file}.cxx)
-  add_custom_command(
-    OUTPUT ${res}
-    DEPENDS ${src}
-    COMMAND vtkEncodeString
-    ARGS ${res} ${src} ${file}
-    )
-  set(EXTRA_SRCS ${EXTRA_SRCS} ${res})
-endforeach(file)
 
 
 #####
@@ -186,6 +191,7 @@ endif()
 
 include_directories(${PYTHON_INCLUDE_DIR})
 include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
+add_custom_target(${library_name}Hierarchy)
 wrap_python(${library_name} "${sources}")
 set_target_properties(${library_name}Python
   PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")

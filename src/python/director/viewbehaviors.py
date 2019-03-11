@@ -136,6 +136,7 @@ def toggleFrameWidget(displayPoint, view):
 
 class ViewBehaviors(vieweventfilter.ViewEventFilter):
 
+    CONSUMED_KEYS = ('r', 's', 'w', 'l', '3', 'p', 'f')
 
     def onLeftDoubleClick(self, event):
 
@@ -163,6 +164,8 @@ class ViewBehaviors(vieweventfilter.ViewEventFilter):
             consumed = True
             self.view.resetCamera()
             self.view.render()
+        else:
+            consumed = key in self.CONSUMED_KEYS
 
         if consumed:
             self.consumeEvent()
@@ -173,8 +176,7 @@ class ViewBehaviors(vieweventfilter.ViewEventFilter):
 
         # prevent these keys from going to vtkRenderWindow's default key press handler
         key = str(event.text()).lower()
-        if key in ['r', 's', 'w', 'l', '3']:
-            consumed = True
+        consumed = key in ViewBehaviors.CONSUMED_KEYS
 
         if consumed:
             self.consumeEvent()
