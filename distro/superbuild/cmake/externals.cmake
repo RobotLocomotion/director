@@ -397,7 +397,7 @@ else()
 
   ExternalProject_Add(vtk
     GIT_REPOSITORY git://vtk.org/VTK.git
-    GIT_TAG v8.2.0.rc2
+    GIT_TAG v8.2.0
 
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
