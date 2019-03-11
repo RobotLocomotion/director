@@ -244,13 +244,7 @@ class MeshAffordanceItem(AffordanceItem):
                 if not scale == [1, 1, 1]:
                     transform = vtk.vtkTransform()
                     transform.Scale(scale)
-
-                    transformFilter = vtk.vtkTransformPolyDataFilter()
-                    transformFilter.SetInput(polyData)
-                    transformFilter.SetTransform(transform)
-                    transformFilter.Update()
-
-                    polyData = transformFilter.GetOutput()
+                    polyData = filterUtils.transformPolyData(polyData, transform)
             else:
                 # use axes as a placeholder mesh
                 d = DebugData()
