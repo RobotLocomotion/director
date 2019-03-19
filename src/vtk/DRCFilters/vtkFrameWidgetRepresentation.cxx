@@ -160,7 +160,7 @@ DataRep MakeAxis(double length, double handleRadius, int axis, bool useTubeFilte
 
   vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
   sphere->SetCenter(length + length*0.5, 0, 0);
-  sphere->SetRadius(0.02);
+  sphere->SetRadius(0.057 * length);
   sphere->SetThetaResolution(32);
   sphere->SetPhiResolution(32);
   sphere->Update();
@@ -253,7 +253,7 @@ public:
     this->Actors.clear();
 
     useTubeFilter = true;
-    double handleRadius = 0.0025;
+    double handleRadius = 0.015 * scale;
     bool useDisk = false;
 
     if (useDisk)
