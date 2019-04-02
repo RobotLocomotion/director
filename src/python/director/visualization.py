@@ -872,10 +872,10 @@ def updatePolyData(polyData, name, **kwargs):
     return obj
 
 
-def updateFrame(frame, name, **kwargs):
+def updateFrame(frame, name, parent=None, **kwargs):
 
-    obj = om.findObjectByName(name)
-    obj = obj or showFrame(frame, name, **kwargs)
+    obj = om.findObjectByName(name, parent=parent)
+    obj = obj or showFrame(frame, name, parent=parent, **kwargs)
     obj.copyFrame(frame)
     return obj
 
