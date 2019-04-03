@@ -337,6 +337,140 @@ class PolyDataItem(om.ObjectModelItem):
         view.render()
 
 
+class Image2DItem(om.ObjectModelItem):
+
+    def __init__(self, name, image, view):
+
+        om.ObjectModelItem.__init__(self, name, om.Icons.Robot)
+
+        self.views = []
+        self.image = image
+
+        defaultWidth = 300
+
+        self.actor = vtk.vtkLogoRepresentation()
+        self.actor.SetImage(image)
+        self.actor.GetImageProperty().SetOpacity(1.0)
+
+        actors = vtk.vtkPropCollection()
+        self.actor.GetActors2D(actors)
+        self.texture = actors.GetItemAsObject(0).GetTexture()
+
+        self.addProperty('Visible', True)
+        self.addProperty('Anchor', 1,
+                         attributes=om.PropertyAttributes(enumNames=['Top Left', 'Top Right', 'Bottom Left', 'Bottom Right']))
+        self.addProperty('Width', defaultWidth,
+                         attributes=om.PropertyAttributes(minimum=0, maximum=9999, singleStep=50))
+        self.addProperty('Alpha', 1.0,
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1))
+
+        #defaultHeight = self._getHeightForWidth(defaultWidth)
+        #self.addProperty('Height', defaultHeight,
+        #                 attributes=om.PropertyAttributes(minimum=0, maximum=9999, singleStep=10))
+
+        if view is not None:
+            self.addToView(view)
+
+    def _renderAllViews(self):
+        for view in self.views:
+            view.render()
+
+    def hasDataSet(self, dataSet):
+        return dataSet == self.image
+
+    def setImage(self, image):
+        self.image = image
+        self.actor.SetImage(image)
+
+        # also set the image on the texture, otherwise
+        # the texture input won't update until the next
+        # render where this actor is visible
+        self.texture.SetInputData(image)
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
+
+    def addToView(self, view):
+        if view in self.views:
+            return
+        self.views.append(view)
+
+        self._updatePositionCoordinates(view)
+
+        view.renderer().AddActor(self.actor)
+        view.render()
+
+    def _getHeightForWidth(self, image, width):
+        w, h, _ = image.GetDimensions()
+        aspect = w/float(h)
+        return int(np.round(width / aspect))
+
+    def _updatePositionCoordinates(self, view):
+
+        width = self.getProperty('Width')
+        height = self._getHeightForWidth(self.image, width)
+
+        pc0 = vtk.vtkCoordinate()
+        pc1 = self.actor.GetPositionCoordinate()
+        pc2 = self.actor.GetPosition2Coordinate()
+
+        for pc in [pc0, pc1, pc2]:
+            pc.SetViewport(view.renderer())
+
+        pc0.SetReferenceCoordinate(None)
+        pc0.SetCoordinateSystemToNormalizedDisplay()
+        pc1.SetReferenceCoordinate(pc0)
+        pc1.SetCoordinateSystemToDisplay()
+
+        anchor = self.getPropertyEnumValue('Anchor')
+        if anchor == 'Top Left':
+            pc0.SetValue(0.0, 1.0)
+            pc1.SetValue(0.0, -height)
+
+        elif anchor == 'Top Right':
+            pc0.SetValue(1.0, 1.0)
+            pc1.SetValue(-width, -height)
+
+        elif anchor == 'Bottom Left':
+            pc0.SetValue(0.0, 0.0)
+            pc1.SetValue(0.0, 0.0)
+
+        elif anchor == 'Bottom Right':
+            pc0.SetValue(1.0, 0.0)
+            pc1.SetValue(-width, 0.0)
+
+        pc2.SetCoordinateSystemToDisplay()
+        pc2.SetReferenceCoordinate(pc1)
+        pc2.SetValue(width, height)
+
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+        if propertyName == 'Alpha':
+            self.actor.GetImageProperty().SetOpacity(self.getProperty(propertyName))
+        elif propertyName == 'Visible':
+            self.actor.SetVisibility(self.getProperty(propertyName))
+        elif propertyName in ('Width', 'Height', 'Anchor'):
+            if self.views:
+                self._updatePositionCoordinates(self.views[0])
+        self._renderAllViews()
+
+    def onRemoveFromObjectModel(self):
+        om.ObjectModelItem.onRemoveFromObjectModel(self)
+        self.removeFromAllViews()
+
+    def removeFromAllViews(self):
+        for view in list(self.views):
+            self.removeFromView(view)
+        assert len(self.views) == 0
+
+    def removeFromView(self, view):
+        assert view in self.views
+        self.views.remove(view)
+        view.renderer().RemoveActor(self.actor)
+        view.render()
+
+
 class TextItem(om.ObjectModelItem):
 
     def __init__(self, name, text='', view=None):
@@ -429,6 +563,29 @@ def showText(text, name, fontSize=18, position=(10, 10), parent=None, view=None)
     item.setProperty('Font Size', fontSize)
     item.setProperty('Position', list(position))
 
+    if isinstance(parent, str):
+        parentObj = om.getOrCreateContainer(parent)
+    else:
+        parentObj = parent
+
+    om.addToObjectModel(item, parentObj)
+    return item
+
+
+def updateImage(image, name, **kwargs):
+    obj = om.findObjectByName(name)
+    if obj is None:
+        obj = showImage(image, name, **kwargs)
+    else:
+        obj.setImage(image)
+    return obj
+
+
+def showImage(image, name, parent=None, view=None):
+    view = view or app.getCurrentRenderView()
+    assert view
+
+    item = Image2DItem(name, image, view=view)
     if isinstance(parent, str):
         parentObj = om.getOrCreateContainer(parent)
     else:
@@ -1409,7 +1566,7 @@ def disableEyeDomeLighting(view):
     view.renderer().SetPass(None)
 
 
-def showImage(filename):
+def showQLabelImage(filename):
     '''
     Returns a QLabel displaying the image contents of given filename.
     Make sure to assign the label, it will destruct when it goes out
@@ -1423,3 +1580,5 @@ def showImage(filename):
     imageLabel.resize(imageLabel.pixmap.size())
     imageLabel.setWindowTitle(os.path.basename(filename))
     imageLabel.show()
+    return imageLabel
+
