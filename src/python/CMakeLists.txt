@@ -21,6 +21,7 @@ set(python_files
   director/camerabookmarks.py
   director/cameracontrol.py
   director/cameracontrolpanel.py
+  director/camerainteractor.py
   director/cameraview.py
   director/colorize.py
   director/componentgraph.py
@@ -42,6 +43,7 @@ set(python_files
   director/frameupdater.py
   director/fieldcontainer.py
   director/filterUtils.py
+  director/flags.py
   director/footstepsdriver.py
   director/footstepsdriverpanel.py
   director/framevisualization.py
@@ -140,6 +142,7 @@ set(python_files
   director/undoredo.py
   director/utime.py
   director/uuidutil.py
+  director/valueslider.py
   director/valvedemo.py
   director/version.py.in
   director/viconvisualizer.py

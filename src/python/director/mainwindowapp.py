@@ -123,7 +123,7 @@ class MainWindowApp(object):
         return action
 
     def registerStartupCallback(self, func, priority=1):
-        consoleapp.ConsoleApp._startupCallbacks.setdefault(priority, []).append(func)
+        consoleapp.ConsoleApp.registerStartupCallback(func, priority)
 
     def _restoreWindowState(self, key):
         appsettings.restoreState(self.settings, self.mainWindow, key)
@@ -159,7 +159,8 @@ class MainWindowAppFactory(object):
             'Grid': ['View', 'ObjectModel'],
             'MainWindow' : ['View', 'ObjectModel'],
             'AdjustedClippingRange' : ['View'],
-            'ScriptLoader' : ['MainWindow', 'Globals']}
+            'RunScriptFunction' : ['Globals'],
+            'ScriptLoader' : ['MainWindow', 'RunScriptFunction']}
 
         disabledComponents = []
 
@@ -211,6 +212,7 @@ class MainWindowAppFactory(object):
         organizationName = 'RobotLocomotion'
         applicationName = 'DirectorMainWindow'
         windowTitle = 'Director App'
+        windowIcon = ':/images/drake_logo.png'
 
         if hasattr(fields, 'organizationName'):
             organizationName = fields.organizationName
@@ -218,6 +220,8 @@ class MainWindowAppFactory(object):
             applicationName = fields.applicationName
         if hasattr(fields, 'windowTitle'):
             windowTitle = fields.windowTitle
+        if hasattr(fields, 'windowIcon'):
+            windowIcon = fields.windowIcon
 
         MainWindowApp.applicationInstance().setOrganizationName(organizationName)
         MainWindowApp.applicationInstance().setApplicationName(applicationName)
@@ -227,7 +231,7 @@ class MainWindowAppFactory(object):
 
         app.mainWindow.setCentralWidget(fields.view)
         app.mainWindow.setWindowTitle(windowTitle)
-        app.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
+        app.mainWindow.setWindowIcon(QtGui.QIcon(windowIcon))
 
         sceneBrowserDock = app.addWidgetToDock(fields.objectModel.getTreeWidget(),
                               QtCore.Qt.LeftDockWidgetArea, visible=True)
@@ -287,6 +291,7 @@ class MainWindowAppFactory(object):
 
         from PythonQt import QtCore, QtGui
         from director import objectmodel as om
+        from director import consoleapp
         from director import visualization as vis
         from director import applogic
         from director import transformUtils
@@ -298,6 +303,8 @@ class MainWindowAppFactory(object):
         from director.timercallback import TimerCallback
         from director.fieldcontainer import FieldContainer
         import numpy as np
+        import os
+        import sys
 
         modules = dict(locals())
         del modules['fields']
@@ -313,27 +320,35 @@ class MainWindowAppFactory(object):
             globalsDict = dict()
         return FieldContainer(globalsDict=globalsDict)
 
+    def initRunScriptFunction(self, fields):
+
+        globalsDict = fields.globalsDict
+
+        def runScript(filename, commandLineArgs=None):
+            commandLineArgs = commandLineArgs or []
+            args = dict(__file__=filename,
+                        _argv=[filename] + commandLineArgs,
+                        _fields=fields)
+            prev_args = {}
+            for k, v in args.items():
+                if k in globalsDict:
+                    prev_args[k] = globalsDict[k]
+                globalsDict[k] = v
+            try:
+                execfile(filename, globalsDict)
+            finally:
+                for k in args.keys():
+                    del globalsDict[k]
+                for k, v in prev_args.items():
+                    globalsDict[k] = v
+
+        return FieldContainer(runScript=runScript)
+
+
     def initScriptLoader(self, fields):
         def loadScripts():
             for scriptArgs in fields.commandLineArgs.scripts:
-                filename = scriptArgs[0]
-                globalsDict = fields.globalsDict
-                args = dict(__file__=filename,
-                            _argv=scriptArgs,
-                            _fields=fields)
-                prev_args = {}
-                for k, v in args.items():
-                    if k in globalsDict:
-                        prev_args[k] = globalsDict[k]
-                    globalsDict[k] = v
-                try:
-                    execfile(filename, globalsDict)
-                finally:
-                    for k in args.keys():
-                        del globalsDict[k]
-                    for k, v in prev_args.items():
-                        globalsDict[k] = v
-
+                fields.runScript(scriptArgs[0], scriptArgs[1:])
         fields.app.registerStartupCallback(loadScripts)
 
 

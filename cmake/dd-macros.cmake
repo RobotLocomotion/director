@@ -113,3 +113,7 @@ endmacro()
 macro(setup_pkg_config_path)
   set(ENV{PKG_CONFIG_PATH} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 endmacro()
+
+macro(install_headers)
+  install(FILES ${ARGN} DESTINATION ${DD_INSTALL_INCLUDE_DIR})
+endmacro()

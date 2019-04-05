@@ -12,7 +12,7 @@
 class ddVTKObjectMap::ddInternal
 {
 public:
-  QMap<QString, vtkObjectBase*> Map;
+  QMap<QString, QList<vtkObjectBase*>> Map;
   QMutex Mutex;
 };
 
@@ -29,31 +29,63 @@ ddVTKObjectMap::~ddVTKObjectMap()
 }
 
 //-----------------------------------------------------------------------------
-QVariant ddVTKObjectMap::take(const QString& key) const
+QVariant ddVTKObjectMap::takeAll(const QString& key) const
 {
   QMutexLocker locker(&this->Internal->Mutex);
-  PythonQtObjectPtr pythonPtr;
-  vtkObjectBase* obj = this->Internal->Map.take(key);
-  if (obj)
+  QList<QVariant> pyList;
+  QList<vtkObjectBase*> objList = this->Internal->Map.take(key);
+  foreach(vtkObjectBase* obj, objList)
   {
     PythonQtObjectPtr pythonPtr;
     pythonPtr.setNewRef(vtkPythonUtil::GetObjectFromPointer(obj));
+    pyList.append(QVariant::fromValue(pythonPtr));
     obj->Delete();
-    return QVariant::fromValue(pythonPtr);
   }
-  return QVariant();
+  return pyList;
+}
+
+//-----------------------------------------------------------------------------
+QVariant ddVTKObjectMap::take(const QString& key) const
+{
+  QList<QVariant> pyList = this->takeAll(key).value<QList<QVariant>>();
+  return pyList.count() ?  QVariant::fromValue(pyList.last()) : QVariant();
 }
 
 //-----------------------------------------------------------------------------
 void ddVTKObjectMap::put(const QString& key, vtkObjectBase* obj)
 {
   this->Internal->Mutex.lock();
-  vtkObjectBase* prev = this->Internal->Map.value(key);
-  if (prev)
+  foreach(vtkObjectBase* obj, this->Internal->Map.take(key))
   {
-    prev->Delete();
+    obj->Delete();
   }
-  this->Internal->Map[key] = obj;
+  QList<vtkObjectBase*> newList;
+  newList.append(obj);
+  this->Internal->Map[key] = newList;
   this->Internal->Mutex.unlock();
   emit this->objectAssigned(key);
+}
+
+
+//-----------------------------------------------------------------------------
+void ddVTKObjectMap::putAppend(const QString& key, vtkObjectBase* obj, bool sendSignal)
+{
+  this->Internal->Mutex.lock();
+  if (this->Internal->Map.contains(key))
+  {
+    this->Internal->Map[key].append(obj);
+  }
+  else
+  {
+    QList<vtkObjectBase*> newList;
+    newList.append(obj);
+    this->Internal->Map[key] = newList;
+  }
+
+  this->Internal->Mutex.unlock();
+
+  if (sendSignal)
+  {
+    emit this->objectAssigned(key);
+  }
 }

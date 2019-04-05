@@ -41,8 +41,9 @@ if [ ! -f "$patchelfExe" ]; then
 fi
 
 cd $scriptDir
-echo 'running fixup_elf script'
-python fixup_elf.py $superbuildInstallDir $patchelfExe
-
 cp -r $superbuildInstallDir $packageName
+echo 'running fixup_elf script'
+
+python fixup_elf.py $packageName $superbuildInstallDir $patchelfExe
 tar -czf $packageName.tar.gz $packageName
+rm -r $packageName

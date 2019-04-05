@@ -37,6 +37,15 @@ def numpyToImageData(img, flip=True, vtktype=vtk.VTK_UNSIGNED_CHAR):
     return image
 
 
+def getNumpyImageFromVtk(vtkimg, flip=True):
+    img = numpy_support.vtk_to_numpy(vtkimg.GetPointData().GetScalars())
+    w, h, _ = vtkimg.GetDimensions()
+    img.shape = (h, w, -1)
+    if flip:
+        img = np.flipud(img)
+    return img
+
+
 def getNumpyFromVtk(dataObj, arrayName='Points', arrayType='points'):
     assert arrayType in ('points', 'cells')
 

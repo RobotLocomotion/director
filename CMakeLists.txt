@@ -11,10 +11,12 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 # set project variables
+include(cmake/dd-version.cmake)
 set(DD_INSTALL_BIN_DIR bin)
 set(DD_INSTALL_DOC_DIR share/doc/director)
 set(DD_INSTALL_LIB_DIR lib)
 set(DD_INSTALL_INCLUDE_DIR include/director)
+set(DD_INSTALL_CONFIG_DIR ${DD_INSTALL_LIB_DIR}/cmake/director-${DD_VERSION})
 set(DD_TARGETS_NAME director-targets)
 
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DD_INSTALL_BIN_DIR}")
@@ -34,7 +36,6 @@ option(BUILD_TESTING "Build director with tests enabled." ON)
 # include cmake scripts
 include(cmake/dd-macros.cmake)
 include(cmake/dd-testing.cmake)
-include(cmake/dd-version.cmake)
 
 # dependency options
 option(USE_PORTMIDI "Build director with portmidi dependency." OFF)

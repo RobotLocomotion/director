@@ -13,6 +13,7 @@ set(python_tests_core
   testFrameSync.py
   testFrameTrace.py
   testHeatMap.py
+  testImageItem.py
   testImageView.py
   testMainWindowApp.py
   testObjectModel.py

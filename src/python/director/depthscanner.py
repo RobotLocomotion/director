@@ -1,12 +1,16 @@
+from director import applogic
 from director import imageview
 from director import vtkAll as vtk
+from director import filterUtils
 from director import transformUtils
 from director import visualization as vis
 from director import viewbehaviors
 from director import vtkNumpy as vnp
 from director.debugVis import DebugData
 from director.timercallback import TimerCallback
+from director.fieldcontainer import FieldContainer
 import PythonQt
+from PythonQt import QtCore
 import numpy as np
 
 
@@ -37,6 +41,7 @@ class DepthScanner(object):
         self.depthImage = None
         self.pointCloudObj = None
         self.renderObserver = None
+        self.parentFolder = 'depth scanner'
 
         self.windowToDepthBuffer = vtk.vtkWindowToImageFilter()
         self.windowToDepthBuffer.SetInput(self.view.renderWindow())
@@ -59,6 +64,7 @@ class DepthScanner(object):
         self._block = False
         self.singleShotTimer = TimerCallback()
         self.singleShotTimer.callback = self.update
+        self._updateFunc = None
 
     def getDepthBufferImage(self):
         return self.windowToDepthBuffer.GetOutput()
@@ -86,8 +92,8 @@ class DepthScanner(object):
         lut.Build()
 
         self.depthScaleFilter = vtk.vtkImageShiftScale()
-        self.depthScaleFilter.SetScale(1000)
-        self.depthScaleFilter.SetOutputScalarTypeToUnsignedShort()
+        self.depthScaleFilter.SetScale(1.0)
+        self.depthScaleFilter.SetOutputScalarTypeToDouble()
 
         self.depthImageLookupTable = lut
         self.imageMapToColors = vtk.vtkImageMapToColors()
@@ -113,6 +119,9 @@ class DepthScanner(object):
                     self.singleShotTimer.singleShot(0)
             self.renderObserver = self.view.renderWindow().AddObserver('EndEvent', onEndRender)
 
+        if not self.pointCloudView.visible and not self.imageView.view.visible:
+            return
+
         self._block = True
         self.view.forceRender()
         self.updateBufferImages()
@@ -129,11 +138,112 @@ class DepthScanner(object):
         #self.imageView.view.render()
 
         if not self.pointCloudObj:
-            self.pointCloudObj = vis.showPolyData(polyData, 'point cloud', colorByName='rgb', view=self.pointCloudView)
+            self.pointCloudObj = vis.showPolyData(polyData, 'point cloud', colorByName='rgb', view=self.pointCloudView, parent=self.parentFolder)
         else:
             self.pointCloudObj.setPolyData(polyData)
         self.pointCloudView.render()
+        if self._updateFunc:
+            self._updateFunc()
 
+    def addViewsToDock(self, app):
+        for view in [self.imageView.view, self.pointCloudView]:
+            dock = app.addWidgetToDock(view, QtCore.Qt.RightDockWidgetArea)
+            dock.setMinimumWidth(300)
+            dock.setMinimumHeight(300)
+
+
+def getCameraFrustumMesh(view, rayLength=1.0):
+
+    origin = np.array(view.camera().GetPosition())
+
+    def getCameraRay(displayPoint):
+        _, ray = vis.getRayFromDisplayPoint(view, displayPoint)
+        ray = ray-origin
+        ray /= np.linalg.norm(ray)
+        return ray
+
+    viewWidth, viewHeight = view.renderWindow().GetSize()
+
+    rays = [getCameraRay(x) for x in [[0.0, 0.0], [viewWidth, 0.0], [viewWidth, viewHeight], [0.0, viewHeight]]]
+
+    rays = [rayLength*r for r in rays]
+    camPos = origin
+    lineRadius = 0.0
+    color = [1.0, 1.0, 1.0]
+
+    d = DebugData()
+    d.addLine(camPos, camPos+rays[0], radius=lineRadius, color=color)
+    d.addLine(camPos, camPos+rays[1], radius=lineRadius, color=color)
+    d.addLine(camPos, camPos+rays[2], radius=lineRadius, color=color)
+    d.addLine(camPos, camPos+rays[3], radius=lineRadius, color=color)
+    d.addLine(camPos+rays[0], camPos+rays[1], radius=lineRadius, color=color)
+    d.addLine(camPos+rays[1], camPos+rays[2], radius=lineRadius, color=color)
+    d.addLine(camPos+rays[2], camPos+rays[3], radius=lineRadius, color=color)
+    d.addLine(camPos+rays[3], camPos+rays[0], radius=lineRadius, color=color)
+    pd = d.getPolyData()
+    return pd
+
+
+def getCameraTransform(camera):
+    return transformUtils.getLookAtTransform(
+              camera.GetFocalPoint(),
+              camera.GetPosition(),
+              camera.GetViewUp())
+
+
+def initCameraFrustumVisualizer(depthScanner):
+
+    cameraObj = vis.showPolyData(vtk.vtkPolyData(), 'camera', parent=depthScanner.parentFolder, view=depthScanner.pointCloudView)
+    cameraFrame = vis.addChildFrame(cameraObj)
+    cameraFrame.setProperty('Scale', 50)
+    cameraObj.setProperty('Visible', False)
+    pointCloudToCamera = transformUtils.frameFromPositionAndRPY((0,0,0,), (-90, 90, 0)).GetLinearInverse()
+
+    def updateCameraMesh():
+        scale = cameraObj.getChildFrame().getProperty('Scale') * 10.0
+        rayLength = scale
+        d = DebugData()
+        d.addCube(dimensions=[0.04, 0.08, 0.06], center=[-0.02, 0.0, 0.0], color=[1,0.5,0])
+        d.addLine([0.0, 0.0, 0.0], [0.01, 0.0, 0.0], radius=0.023, color=[1,0.5,0])
+        cameraModelMesh = d.getPolyData()
+
+        t = vtk.vtkTransform()
+        t.Scale(scale, scale, scale)
+        cameraModelMesh = filterUtils.transformPolyData(cameraModelMesh, t)
+
+        cameraMesh = getCameraFrustumMesh(depthScanner.view, rayLength)
+        cameraMesh = filterUtils.transformPolyData(cameraMesh, getCameraTransform(depthScanner.view.camera()).GetLinearInverse())
+        cameraMesh = filterUtils.appendPolyData([cameraMesh, cameraModelMesh])
+        cameraObj.setPolyData(cameraMesh)
+
+    def onCameraModified():
+        cameraToWorld = getCameraTransform(depthScanner.view.camera())
+        depthScanner.pointCloudObj.actor.SetUserTransform(transformUtils.concatenateTransforms([pointCloudToCamera, cameraToWorld]))
+        cameraFrame.copyFrame(cameraToWorld)
+
+    def enableFrustum():
+        updateCameraMesh()
+        cameraObj.setProperty('Visible', True)
+        onCameraModified()
+        depthScanner._updateFunc = onCameraModified
+        applogic.setCameraTerrainModeEnabled(depthScanner.pointCloudView, True)
+        applogic.resetCamera(viewDirection=[1, 1, -0.4], view=depthScanner.pointCloudView)
+        depthScanner.pointCloudView.camera().SetViewUp([0, 0, 1])
+
+    def disableFrustum():
+        cameraObj.setProperty('Visible', False)
+        depthScanner.pointCloudObj.actor.SetUserTransform(None)
+        depthScanner._updateFunc = None
+        applogic.setCameraTerrainModeEnabled(depthScanner.pointCloudView, False)
+        applogic.resetCamera(viewDirection=[0, 0, -1], view=depthScanner.pointCloudView)
+        depthScanner.pointCloudView.camera().SetViewUp([0, 1, 0])
+
+    return FieldContainer(
+        updateCameraMesh=updateCameraMesh,
+        onCameraModified=onCameraModified,
+        enableFrustum=enableFrustum,
+        disableFrustum=disableFrustum
+        )
 
 
 def main(globalsDict=None):
@@ -166,14 +276,7 @@ def main(globalsDict=None):
 
     depthScanner = DepthScanner(view)
     depthScanner.update()
-
-    dock = app.app.addWidgetToDock(depthScanner.imageView.view, QtCore.Qt.RightDockWidgetArea)
-    dock.setMinimumWidth(300)
-    dock.setMinimumHeight(300)
-
-    dock = app.app.addWidgetToDock(depthScanner.pointCloudView, QtCore.Qt.RightDockWidgetArea)
-    dock.setMinimumWidth(300)
-    dock.setMinimumHeight(300)
+    depthScanner.addViewsToDock(app.app)
 
 
     # add some test data

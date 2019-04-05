@@ -110,3 +110,4 @@ QVariant ddSignalMap::value(const QString&) const;
 
 ddVTKObjectMap::ddVTKObjectMap();
 QVariant ddVTKObjectMap::take(const QString&);
+QVariant ddVTKObjectMap::takeAll(const QString&);

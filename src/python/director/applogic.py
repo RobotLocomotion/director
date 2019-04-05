@@ -9,6 +9,7 @@ from PythonQt import QtGui
 from director import getDRCBaseDir as getDRCBase
 from director import botspy
 from director import openscope
+from director.timercallback import TimerCallback
 import functools
 
 _mainWindow = None
@@ -282,6 +283,11 @@ def showInfoMessage(message, title='Info'):
     QtGui.QMessageBox.information(getMainWindow(), title, message)
 
 
+def boolPrompt(title, message):
+    result = QtGui.QMessageBox.question(getMainWindow(), title, message)
+    return result == QtGui.QMessageBox.Yes
+
+
 def showViewTabContextMenu(view, tabBar, menuPosition):
 
     def onPopOut():
@@ -290,6 +296,11 @@ def showViewTabContextMenu(view, tabBar, menuPosition):
     menu = QtGui.QMenu(tabBar)
     menu.addAction('Pop out').connect('triggered()', onPopOut)
     menu.popup(menuPosition)
+
+
+def showWaitCursorWithTimeout(timeout=0.0):
+    QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+    TimerCallback(callback=QtGui.QApplication.restoreOverrideCursor).singleShot(timeout)
 
 
 def onTabWidgetContextMenu(mouseClick):

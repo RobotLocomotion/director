@@ -17,6 +17,16 @@ set(sources
   vtkPickCenteredInteractorStyle.cxx
   )
 
+set(headers
+  vtkDepthImageUtils.h
+  vtkDRCFiltersModule.h
+  vtkFrameWidget.h
+  vtkFrameWidgetRepresentation.h
+  vtkGridSource.h
+  vtkInteractorStyleTerrain2.h
+  vtkPickCenteredInteractorStyle.h
+  )
+
 # extra source files to compile but do not python wrap
 set(EXTRA_SRCS
   )
@@ -99,6 +109,12 @@ if (USE_DRC)
     vtkLidarSource.cxx
   )
 
+  list(APPEND headers
+    vtkMultisenseSource.h
+    vtkMultisenseUtils.h
+    vtkLidarSource.h
+  )
+
   list(APPEND deps
     ${LIBBOT_LIBRARIES}
     ${LCM_LIBRARIES}
@@ -115,6 +131,7 @@ if (USE_DRC_MAPS)
   find_package(PCL REQUIRED)
 
   list(APPEND sources vtkMapServerSource.cxx)
+  list(APPEND headers vtkMapServerSource.h)
   include_directories(${PCL_INCLUDE_DIRS})
   include_directories(${MAPS_INCLUDE_DIRS})
   list(APPEND deps ${MAPS_LIBRARIES} ${PCL_LIBRARIES})
@@ -130,6 +147,12 @@ if (USE_DRC_PLANE_SEG)
     vtkSurfaceFitter.cxx
   )
 
+  list(APPEND headers
+    vtkPlaneSegmentation.h
+    vtkRobustNormalEstimator.h
+    vtkSurfaceFitter.h
+  )
+
   include_directories(${PLANE_SEG_INCLUDE_DIRS})
   include_directories(${PCL_INCLUDE_DIRS})
   list(APPEND deps ${PLANE_SEG_LIBRARIES} ${PCL_LIBRARIES})
@@ -140,6 +163,7 @@ if(USE_LCMGL)
   find_package(LibBot REQUIRED MODULE)
   include_directories(${LIBBOT_INCLUDE_DIRS})
   list(APPEND sources vtkLCMGLProp.cxx)
+  list(APPEND headers vtkLCMGLProp.h)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
 
 endif()
@@ -150,6 +174,7 @@ if(USE_OCTOMAP)
 
   find_library(OCTOVIS_LIBRARY octovis)
   list(APPEND sources vtkOctomap.cxx)
+  list(APPEND headers vtkOctomap.h)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES} ${OCTOVIS_LIBRARY})
 
   list(APPEND pkg_deps
@@ -161,6 +186,7 @@ endif()
 if (USE_COLLECTIONS)
 
   list(APPEND sources vtkCollections.cxx)
+  list(APPEND headers vtkCollections.h)
   list(APPEND deps ${OPENGL_LIBRARIES})
 
   list(APPEND pkg_deps
@@ -197,3 +223,4 @@ set_target_properties(${library_name}Python
   PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
 target_link_libraries(${library_name}Python ${PYTHON_LIBRARIES})
 target_link_libraries(${library_name}PythonD ${PYTHON_LIBRARIES})
+install_headers(${headers})

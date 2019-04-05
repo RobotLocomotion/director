@@ -11,11 +11,13 @@ def findElfFiles(searchPath, recursive=True):
 
 def main():
 
-    baseDir = sys.argv[1]
-    patchElfCommand = sys.argv[2]
+    workDir = sys.argv[1]
+    baseDir = sys.argv[2]
+    patchElfCommand = sys.argv[3]
 
-    assert os.path.isfile(patchElfCommand)
+    assert os.path.isdir(workDir)
     assert os.path.isdir(baseDir)
+    assert os.path.isfile(patchElfCommand)
 
 
     files = findElfFiles(baseDir)
@@ -54,7 +56,9 @@ def main():
         newRpath = ':'.join(newPaths)
         print '  new rpath:', newRpath
 
-        subprocess.check_output('"%s" --set-rpath "%s" --force-rpath "%s"' % (patchElfCommand, newRpath.replace('$', '\\$'), elfFile), shell=True)
+        newElfFile = os.path.join(workDir, os.path.relpath(elfFile, baseDir))
+        assert os.path.isfile(newElfFile)
+        subprocess.check_output('"%s" --set-rpath "%s" --force-rpath "%s"' % (patchElfCommand, newRpath.replace('$', '\\$'), newElfFile), shell=True)
 
 
 if __name__ == '__main__':

@@ -49,6 +49,7 @@ class ObjectModelItem(object):
 
         #print 'init called on:', self
         self._tree = None
+        self.actionDelegates = []
         self.callbacks = callbacks.CallbackRegistry([self.REMOVED_FROM_OBJECT_MODEL])
         self.properties = properties or PropertySet()
         self.properties.connectPropertyChanged(self._onPropertyChanged)
@@ -74,8 +75,8 @@ class ObjectModelItem(object):
     def getPropertyEnumValue(self, propertyName):
         return self.properties.getPropertyEnumValue(propertyName)
 
-    def addProperty(self, propertyName, propertyValue, attributes=None):
-        self.properties.addProperty(propertyName, propertyValue, attributes)
+    def addProperty(self, propertyName, propertyValue, attributes=None, index=None):
+        self.properties.addProperty(propertyName, propertyValue, attributes, index)
 
     def removeProperty(self, propertyName):
         self.properties.removeProperty(propertyName)
@@ -104,6 +105,11 @@ class ObjectModelItem(object):
 
     def getActionNames(self):
         actions = ['Rename']
+        for delegate in self.actionDelegates:
+            delegateActions = delegate.getActionNames()
+            if delegateActions:
+                actions.append('')
+                actions.extend(delegateActions)
         return actions
 
     def onAction(self, action):
@@ -119,6 +125,11 @@ class ObjectModelItem(object):
 
             if result:
                 self.rename(inputDialog.textValue())
+
+        for delegate in self.actionDelegates:
+            consumed = delegate.onAction(self, action)
+            if consumed:
+                break
 
     def rename(self, name, renameChildren=True):
         oldName = self.getProperty('Name')
@@ -250,10 +261,42 @@ class ObjectModelTree(object):
         if items:
             return self._getObjectForItem(next(iter(items)))
 
+    def findObjectByPath(self, path, separator='/'):
+        return self.findObjectByPathList(path.split(separator))
+
+    def findObjectByPathList(self, pathList):
+        try:
+            rootName = pathList[0]
+        except IndexError:
+            return None
+
+        if not rootName:
+            try:
+                rootName = pathList[1]
+            except IndexError:
+                return None
+            obj = self.findTopLevelObjectByName(rootName)
+            pathList = pathList[2:]
+        else:
+            obj = self.findObjectByName(rootName)
+            pathList = pathList[1:]
+        if obj is None:
+            return None
+        for name in pathList:
+            obj = obj.findChild(name)
+            if obj is None:
+                return None
+        return obj
+
     def findChildByName(self, parent, name):
         parentItem = self._getItemForObject(parent) if parent else None
         for item in self._nameToItems[name]:
           if item.parent() == parentItem:
+            return self._getObjectForItem(item)
+
+    def findTopLevelObjectByName(self, name):
+        for item in self._nameToItems[name]:
+          if item.parent() is None:
             return self._getObjectForItem(item)
 
     def _onTreeSelectionChanged(self):
@@ -517,14 +560,29 @@ def getActiveObject():
 def setActiveObject(obj):
     _t.setActiveObject(obj)
 
+getSelectedObject = getActiveObject
+setSelectedObject = setActiveObject
+
 def clearSelection():
     _t.clearSelection()
 
 def getObjects():
     return _t.getObjects()
 
+def getTopLevelObjects():
+    return _t.getTopLevelObjects()
+
 def findObjectByName(name, parent=None):
     return _t.findObjectByName(name, parent)
+
+def findObjectByPathList(pathList):
+    return _t.findObjectByPathList(pathList)
+
+def findObjectByPath(path, separator='/'):
+    return _t.findObjectByPath(path, separator)
+
+def findTopLevelObjectByName(name):
+    return _t.findTopLevelObjectByName(name)
 
 def removeFromObjectModel(obj):
     _t.removeFromObjectModel(obj)
@@ -553,3 +611,20 @@ def init(objectTree=None, propertiesPanel=None):
     propertiesPanel = propertiesPanel or PythonQt.dd.ddPropertiesPanel()
 
     _t.init(objectTree, propertiesPanel)
+
+def addParentPropertySync(obj):
+    parent = obj.parent()
+    if parent is None:
+        return
+    if not hasattr(parent, '_syncedProperties'):
+        def onPropertyChanged(propertySet, propertyName):
+            if propertyName in parent._syncedProperties:
+                for obj in parent.children():
+                    obj.setProperty(propertyName, propertySet.getProperty(propertyName))
+        parent._syncedProperties = set()
+        parent.properties.connectPropertyChanged(onPropertyChanged)
+    for propertyName in obj.properties.propertyNames():
+        if propertyName in parent._syncedProperties:
+            continue
+        parent._syncedProperties.add(propertyName)
+        parent.properties.addProperty(propertyName, obj.properties.getProperty(propertyName), attributes=obj.properties._attributes[propertyName])
