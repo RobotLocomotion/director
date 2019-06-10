@@ -2,20 +2,17 @@ matrix:
   include:
 
     - os: linux
-      env: UBUNTU_TEST_VERSION=14 USE_LCM=ON MAKE_PACKAGE=ON MAKE_DOCS=ON
+      env: UBUNTU_TEST_VERSION=16
 
     - os: linux
-      env: UBUNTU_TEST_VERSION=16 USE_LCM=ON MAKE_PACKAGE=ON
+      env: UBUNTU_TEST_VERSION=16 USE_LCM=ON MAKE_PACKAGE=ON MAKE_DOCS=ON
 
     - os: linux
-      env: UBUNTU_TEST_VERSION=14
-
-    - os: linux
-      env: UBUNTU_TEST_VERSION=14 USE_LCM=ON USE_LCMGL=ON USE_LIBBOT=ON
+      env: UBUNTU_TEST_VERSION=16 USE_LCM=ON USE_LCMGL=ON USE_LIBBOT=ON
 
     - os: osx
-      osx_image: xcode7.3
-      env: USE_LCM=ON USE_LIBBOT=OFF USE_LCMGL=OFF MAKE_PACKAGE=ON
+      osx_image: xcode10.2
+      env: USE_LCM=OFF USE_LIBBOT=OFF USE_LCMGL=OFF MAKE_PACKAGE=ON
 
 
 language: generic
