@@ -30,20 +30,19 @@ mkdir -p $superbuildInstallDir/share
 
 cp -r $superbuildInstallDir/{bin,lib,include,share} $bundleDir/Contents/MacOS/
 cp $(which python) $binDir/
-touch $binDir/qt.conf
+#touch $binDir/qt.conf
 
 mkdir -p $sitePackagesDir
-cp -r /usr/local/opt/vtk7/lib/python${pythonVersion}/site-packages/vtk $sitePackagesDir/
-cp -r /usr/local/lib/python${pythonVersion}/site-packages/numpy $sitePackagesDir/
-cp -r /usr/local/lib/python${pythonVersion}/site-packages/scipy $sitePackagesDir/
-cp -r /usr/local/lib/python${pythonVersion}/site-packages/yaml $sitePackagesDir/
-cp -r /usr/local/lib/python${pythonVersion}/site-packages/lxml $sitePackagesDir/
+#cp -r /usr/local/lib/python${pythonVersion}/site-packages/vtk* $sitePackagesDir/
+#cp -r /usr/local/lib/python${pythonVersion}/site-packages/numpy $sitePackagesDir/
+#cp -r /usr/local/lib/python${pythonVersion}/site-packages/scipy $sitePackagesDir/
+#cp -r /usr/local/lib/python${pythonVersion}/site-packages/yaml $sitePackagesDir/
+#cp -r /usr/local/lib/python${pythonVersion}/site-packages/lxml $sitePackagesDir/
 
-
-python $scriptDir/fixup_mach_o.py $superbuildInstallDir $bundleDir $libDir
+python3 $scriptDir/fixup_mach_o.py $superbuildInstallDir $bundleDir $libDir
 
 # remove broken symlink to homebrew python site-packages
-rm $libDir/Python.framework/Versions/Current/lib/python${pythonVersion}/site-packages
+#rm $libDir/Python.framework/Versions/${pythonVersion}/lib/python${pythonVersion}/site-packages
 
 cd $scriptDir
 mkdir $packageName

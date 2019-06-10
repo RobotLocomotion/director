@@ -1,18 +1,18 @@
 import os
 import sys
 import subprocess
-import commands
+import subprocess
 import re
 import shutil
 
 def findMachOFiles(searchPath, recursive=True):
     maxDepthArg = '-maxdepth 1' if not recursive else ''
-    filenames = commands.getoutput('find "%s" %s -exec file {} \;| grep Mach-O | sed "s/:.*//"' % (searchPath, maxDepthArg)).splitlines()
+    filenames = subprocess.getoutput('find "%s" %s -exec file {} \;| grep Mach-O | sed "s/:.*//"' % (searchPath, maxDepthArg)).splitlines()
     return filenames
 
 
 def findDependencies(filename):
-    filenames = commands.getoutput('otool -l "%s" | grep " name" | sort | uniq | sed -e "s/ *name //g" | grep -v "@" | sed "s/ (offset.*)//"' % filename).splitlines()
+    filenames = subprocess.getoutput('otool -l "%s" | grep " name" | sort | uniq | sed -e "s/ *name //g" | grep -v "@" | sed "s/ (offset.*)//"' % filename).splitlines()
 
     if 'executable' not in getMachOType(filename):
         try:
@@ -27,12 +27,12 @@ def findDependencies(filename):
 
 
 def getMachOType(filename):
-    return commands.getoutput('file "%s" | sed "s/.*: //"' % filename)
+    return subprocess.getoutput('file "%s" | sed "s/.*: //"' % filename)
 
 
 def getMachOId(filename):
 
-    output = commands.getoutput('otool -D %s' % filename)
+    output = subprocess.getoutput('otool -D %s' % filename)
     match = re.match('[^:]+:\s*([^\s]+)', output)
     if not match:
         raise RuntimeError('Could not determine id for %s' % filename)
@@ -76,7 +76,7 @@ class Dependency(object):
             destDir = os.path.join(directory, m.group(2))
 
             if not os.path.isdir(destDir):
-                print '    --> copy:', frameworkDir, destDir
+                print('    --> copy:', frameworkDir, destDir)
                 shutil.copytree(frameworkDir, destDir, symlinks=True)
                 self.copied = True
 
@@ -92,7 +92,7 @@ class Dependency(object):
             self.new_path = self.new_realpath
 
             if not os.path.isfile(self.new_realpath):
-                print '    --> copy:', self.old_realpath, self.new_realpath
+                print('    --> copy:', self.old_realpath, self.new_realpath)
                 shutil.copy(self.old_realpath, self.new_realpath)
                 self.copied = True
 
@@ -102,8 +102,8 @@ class Dependency(object):
 
 
     def _changeId(self):
-        commands.getoutput('chmod u+w "%s"' % self.new_realpath)
-        commands.getoutput('install_name_tool -id "%s" "%s"' % (self.new_id, self.new_realpath))
+        subprocess.getoutput('chmod u+w "%s"' % self.new_realpath)
+        subprocess.getoutput('install_name_tool -id "%s" "%s"' % (self.new_id, self.new_realpath))
         #commands.getoutput('chmod a-w "%s"' % filedest)
 
 
@@ -116,8 +116,8 @@ def resolveDependencyName(dep, libraryDir):
 
     depInLibDir = os.path.join(buildDir, 'lib', dep)
 
-    print '  dep name is not file:', dep
-    print '  trying depInLibDir:', depInLibDir
+    print('  dep name is not file:', dep)
+    print('  trying depInLibDir:', depInLibDir)
 
     if os.path.isfile(depInLibDir):
         return depInLibDir
@@ -133,7 +133,7 @@ def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
     for filename in files:
 
         if not os.path.isfile(filename):
-            print 'warning, skipping unexpected mach-o file:', filename
+            print('warning, skipping unexpected mach-o file:', filename)
             continue
 
         filename = os.path.realpath(filename)
@@ -143,7 +143,7 @@ def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
 
         processed.add(filename)
 
-        print 'processing:', filename
+        print('processing:', filename)
 
         deps = findDependencies(filename)
 
@@ -153,7 +153,7 @@ def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
 
             dep = resolveDependencyName(dep, libraryDir)
             if not os.path.isfile(dep):
-                print '  warning, skipping dependency not found:', dep
+                print('  warning, skipping dependency not found:', dep)
                 raise Exception()
                 continue
 
@@ -164,9 +164,9 @@ def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
             dep = Dependency(dep)
 
 
-            print '  dep:', dep.old_path
+            print('  dep:', dep.old_path)
             if dep.old_path != dep.old_realpath:
-                print '    realpath:', dep.old_realpath
+                print('    realpath:', dep.old_realpath)
 
 
             dep.copyToDirectory(libraryDir)
@@ -178,7 +178,7 @@ def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
             relativePathToDependency = os.path.relpath(dep.new_realpath, os.path.dirname(filename))
             newInstallName = '@loader_path/' + relativePathToDependency
 
-            print '    new relative name:', newInstallName
+            print('    new relative name:', newInstallName)
 
             for old in (dep.old_path, dep.old_realpath, dep.old_id):
                 installNameChanges.append((old, newInstallName))
@@ -189,10 +189,10 @@ def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
         #for arg in installNameArgs:
         #    print '    ', arg
 
-        commands.getoutput('chmod u+w "%s"' % filename)
-        commands.getoutput('install_name_tool %s "%s"' % (' '.join(installNameArgs), filename))
+        subprocess.getoutput('chmod u+w "%s"' % filename)
+        subprocess.getoutput('install_name_tool %s "%s"' % (' '.join(installNameArgs), filename))
         relativePathToLibraryDir = os.path.relpath(libraryDir, os.path.dirname(filename))
-        commands.getoutput('install_name_tool -add_rpath "@loader_path/%s" "%s"' % (relativePathToLibraryDir, filename))
+        subprocess.getoutput('install_name_tool -add_rpath "@loader_path/%s" "%s"' % (relativePathToLibraryDir, filename))
 
     return numCopied
 
@@ -210,7 +210,8 @@ def main():
     assert os.path.isdir(libraryDir)
     assert '..' not in os.path.relpath(libraryDir, packageDir)
 
-    prefixes = [os.path.realpath(buildDir), '/usr/local']
+    #prefixes = [os.path.realpath(buildDir), '/usr/local']
+    prefixes = [os.path.realpath(buildDir)]
 
     def isExcluded(filename):
         for prefix in prefixes:
@@ -228,10 +229,10 @@ def main():
 
 
     excludedDeps = sorted(list(excludedDeps))
-    print
-    print 'other dependencies:'
+    print()
+    print('other dependencies:')
     for filename in excludedDeps:
-        print filename
+        print(filename)
 
 
 if __name__ == '__main__':

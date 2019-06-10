@@ -76,23 +76,9 @@ else()
     )
 endif()
 
-
-if(APPLE)
-  find_program(PYTHON_CONFIG_EXECUTABLE python3-config)
-  if (NOT PYTHON_CONFIG_EXECUTABLE)
-    message(SEND_ERROR "python3-config executable not found, but python is required.")
-  endif()
-  # using "python-config --prefix" so that cmake always uses the python that is
-  # in the users path, this is a fix for homebrew on Mac:
-  # https://github.com/Homebrew/homebrew/issues/25118
-  execute_process(COMMAND ${PYTHON_CONFIG_EXECUTABLE} --prefix OUTPUT_VARIABLE python_prefix OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(PYTHON_INCLUDE_DIR ${python_prefix}/include/python3.6m)
-  set(PYTHON_LIBRARY ${python_prefix}/lib/libpython3.6m${CMAKE_SHARED_LIBRARY_SUFFIX})
-else()
-  set(Python_ADDITIONAL_VERSIONS 3.4) # required for cmake 2.8 on ubuntu 14.04
-  find_package(PythonLibs 3.4 REQUIRED)
-endif()
-find_package(PythonInterp 3.4 REQUIRED)
+set(min_python_version 3.4)
+find_package(PythonInterp ${min_python_version} REQUIRED)
+find_package(PythonLibs ${min_python_version} REQUIRED)
 
 set(python_args
   -DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}

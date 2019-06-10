@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd "$(dirname "$0")"
-./bin/drake-visualizer
+./bin/directorPython -m director.mainwindowapp
