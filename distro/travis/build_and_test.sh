@@ -25,18 +25,20 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
   site_name=docker-$osid-$osversion
   USE_SYSTEM_VTK=OFF
   nproc=$(nproc)
+  qt_version=4
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   osx_version=$(sw_vers -productVersion)
   xcode_version=$(xcodebuild -version | grep Xcode | sed s/Xcode\ //)
   site_name=osx-$osx_version-xcode-$xcode_version
   USE_SYSTEM_VTK=ON
+  qt_version=5
   nproc=2
 fi
 
 # build
 cd $TRAVIS_BUILD_DIR
 mkdir build && cd build
-cmake -DUSE_LCM=$USE_LCM -DUSE_LIBBOT=$USE_LIBBOT -DUSE_LCMGL=$USE_LCMGL -DUSE_SYSTEM_VTK=$USE_SYSTEM_VTK ../distro/superbuild
+cmake -DUSE_LCM=$USE_LCM -DUSE_LIBBOT=$USE_LIBBOT -DUSE_LCMGL=$USE_LCMGL -DUSE_SYSTEM_VTK=$USE_SYSTEM_VTK -DDD_QT_VERSION=$qt_version ../distro/superbuild
 make -j $nproc
 
 # test
