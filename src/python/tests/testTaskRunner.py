@@ -3,11 +3,11 @@ from director.taskrunner import TaskRunner
 
 
 def testThread():
-  print 'on thread'
+  print('on thread')
   taskRunner.callOnMain(testMain)
 
 def testMain():
-  print 'on main'
+  print('on main')
   app.quit()
 
 
