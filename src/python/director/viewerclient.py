@@ -135,7 +135,7 @@ class PointCloud(BaseGeometry):
         return {
             "type": "pointcloud",
             "points": [list(p) for p in self.points],
-            "channels": {name: [list(c) for c in values] for (name, values) in self.channels.iteritems()}
+            "channels": {name: [list(c) for c in values] for (name, values) in self.channels.items()}
         }
 
 
