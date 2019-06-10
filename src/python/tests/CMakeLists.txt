@@ -22,7 +22,7 @@ set(python_tests_core
   testPointSelector.py
   testPythonConsole.py
   testTaskQueue.py
-  testTaskRunner.py
+  # testTaskRunner.py
   testTransformations.py
   testUndoRedo.py
 )
