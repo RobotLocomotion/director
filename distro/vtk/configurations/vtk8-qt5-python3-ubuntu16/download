@@ -1,0 +1,5 @@
+set -ex
+
+wget http://www.vtk.org/files/release/8.0/VTK-8.0.0.tar.gz
+tar -zxf VTK-8.0.0.tar.gz
+

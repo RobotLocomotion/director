@@ -1,0 +1,16 @@
+set -ex
+
+mkdir build
+cd build
+cmake \
+  -DBUILD_SHARED_LIBS=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTING=OFF \
+  -DVTK_RENDERING_BACKEND=OpenGL \
+  -DModule_vtkGUISupportQt=ON \
+  -DVTK_WRAP_PYTHON=ON \
+  -DVTK_QT_VERSION=4 \
+  -DVTK_PYTHON_VERSION=3 \
+  -DPYTHON_EXECUTABLE=/usr/bin/python3.7 \
+  -DCMAKE_INSTALL_PREFIX=/root/install \
+  ../VTK-7.1.1
