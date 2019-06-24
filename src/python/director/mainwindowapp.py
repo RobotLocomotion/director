@@ -18,6 +18,7 @@ class MainWindowApp(object):
 
         self.mainWindow = QtGui.QMainWindow()
         self.mainWindow.resize(768 * (16/9.0), 768)
+        self.mainWindow.setAttribute(QtCore.Qt.WA_ShowWithoutActivating)
         self.settings = QtCore.QSettings()
 
         self.fileMenu = self.mainWindow.menuBar().addMenu('&File')
@@ -365,14 +366,16 @@ class MainWindowPanelFactory(object):
             'OutputConsole' : ['MainWindow'],
             'UndoRedo' : ['MainWindow'],
             'DrakeVisualizer' : ['MainWindow'],
-            'TreeViewer' : ['MainWindow'],
+            'LCMTreeViewer' : ['MainWindow'],
+            'ZMQTreeViewer' : ['MainWindow'],
             'LCMGLRenderer' : ['MainWindow']}
 
         # these components depend on lcm and lcmgl
         # so they are disabled by default
         disabledComponents = [
             'DrakeVisualizer',
-            'TreeViewer',
+            'LCMTreeViewer',
+            'ZMQTreeViewer',
             'LCMGLRenderer']
 
         return components, disabledComponents
@@ -475,15 +478,27 @@ class MainWindowPanelFactory(object):
           drakeVisualizer=drakeVisualizer
           )
 
-    def initTreeViewer(self, fields):
+    def initLCMTreeViewer(self, fields):
 
         from director import treeviewer
-        treeViewer = treeviewer.TreeViewer(fields.view)
+        treeViewer = treeviewer.LCMTreeViewer(fields.view)
 
         applogic.MenuActionToggleHelper('Tools', treeViewer.name, treeViewer.isEnabled, treeViewer.setEnabled)
 
         return FieldContainer(
-          treeViewer=treeViewer
+          lcmTreeViewer=treeViewer
+          )
+
+    def initZMQTreeViewer(self, fields):
+
+        from director import treeviewer
+        args = drcargs.args()
+        treeViewer = treeviewer.ZMQTreeViewer(fields.view, zmqUrl=args.treeviewer_zmq_url)
+
+        applogic.MenuActionToggleHelper('Tools', treeViewer.name, treeViewer.isEnabled, treeViewer.setEnabled)
+
+        return FieldContainer(
+          zmqTreeViewer=treeViewer
           )
 
     def initLCMGLRenderer(self, fields):

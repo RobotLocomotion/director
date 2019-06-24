@@ -177,6 +177,8 @@ set(python_files
   director/thirdparty/naming.py
   director/thirdparty/pysdf.py
   director/thirdparty/toposort.py
+  director/thirdparty/umsgpack.py
+  director/thirdparty/msgpack_numpy.py
 
   urdf_parser_py/__init__.py
   urdf_parser_py/sdf.py

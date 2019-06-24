@@ -23,11 +23,13 @@ def main(globalsDict=None):
     fact.register(mainwindowapp.MainWindowAppFactory)
     fact.register(mainwindowapp.MainWindowPanelFactory)
 
+    args = drcargs.args()
     options = fact.getDefaultOptions()
     fact.setDependentOptions(options,
-        useTreeViewer=HAVE_LCMRL,
-        useDrakeVisualizer=True,
-        useLCMGLRenderer=True)
+        useLCMTreeViewer=HAVE_LCMRL and args.treeviewer_lcm,
+        useZMQTreeViewer=args.treeviewer_zmq_url,
+        useDrakeVisualizer=args.drakevisualizer_lcm,
+        useLCMGLRenderer=args.lcmgl_renderer)
 
     fields = fact.construct(
         options=options,

@@ -66,7 +66,8 @@ set(python_tests_standalone
 # todo
 # need this special case until robotlocomotion/lcmtypes are added to openhumanoids
 if(NOT USE_DRC)
-  list(APPEND python_tests_lcm testTreeViewerInterface.py)
+  list(APPEND python_tests_lcm testTreeViewerLCMInterface.py)
+  list(APPEND python_tests_lcm testTreeViewerZMQInterface.py)
   list(APPEND python_tests_lcm testTreeViewerClient.py)
   list(APPEND python_tests_lcm testTreeViewerPolyLine.py)
 endif()

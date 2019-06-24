@@ -170,6 +170,24 @@ class DRCArgParser(object):
                             default=[], action='append', metavar='filename',
                             help='python scripts to run at startup')
 
+        parser.add_argument('--treeviewer-zmq-url', type=str,
+                            dest='treeviewer_zmq_url', default='tcp://*:57370')
+
+        tvlcm_parser = parser.add_mutually_exclusive_group(required=False)
+        tvlcm_parser.add_argument('--treeviewer-lcm', action='store_true', dest='treeviewer_lcm')
+        tvlcm_parser.add_argument('--no-treeviewer-lcm', action='store_false', dest='treeviewer_lcm')
+        parser.set_defaults(treeviewer_lcm=True)
+
+        dvlcm_parser = parser.add_mutually_exclusive_group(required=False)
+        dvlcm_parser.add_argument('--drakevisualizer-lcm', action='store_true', dest='drakevisualizer_lcm')
+        dvlcm_parser.add_argument('--no-drakevisualizer-lcm', action='store_false', dest='drakevisualizer_lcm')
+        parser.set_defaults(drakevisualizer_lcm=True)
+
+        lcmgl_parser = parser.add_mutually_exclusive_group(required=False)
+        lcmgl_parser.add_argument('--lcmgl-renderer', action='store_true', dest='lcmgl_renderer')
+        lcmgl_parser.add_argument('--no-lcmgl-renderer', action='store_false', dest='lcmgl_renderer')
+        parser.set_defaults(lcmgl_renderer=True)
+
 
 _argParser = None
 def getGlobalArgParser():

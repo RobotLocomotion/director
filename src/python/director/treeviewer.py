@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import Queue
 import re
 import time
 import warnings
@@ -9,7 +10,6 @@ from collections import namedtuple
 
 from director import objectmodel as om
 from director import applogic as app
-from director import lcmUtils
 from director import transformUtils
 from director.debugVis import DebugData
 from director import ioUtils
@@ -19,9 +19,24 @@ from director import vtkAll as vtk
 from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
-from director.shallowCopy import shallowCopy
+from director import taskrunner
+from director.timercallback import TimerCallback
 
-import robotlocomotion as lcmrl
+from director.thirdparty import umsgpack, msgpack_numpy
+
+try:
+    import zmq
+    HAVE_ZMQ = True
+except ImportError:
+    HAVE_ZMQ = False
+
+try:
+    import robotlocomotion as lcmrl
+    from director import lcmUtils
+    HAVE_LCMRL = True
+except ImportError:
+    HAVE_LCMRL = False
+
 
 from PythonQt import QtGui
 
@@ -39,7 +54,7 @@ class ViewerStatus:
 
 
 class ViewerResponse(namedtuple("ViewerResponse", ["status", "data"])):
-    def toJson(self):
+    def toDict(self):
         return dict(status=self.status, **self.data)
 
 
@@ -403,101 +418,14 @@ def findPathToAncestor(fromItem, toItem):
     return path
 
 
+
 class TreeViewer(object):
     name = "Remote Tree Viewer"
 
-    def __init__(self, view):
-
-        self.subscriber = None
+    def __init__(self, view, zmqUrl=None, useLcm=True):
         self.view = view
         self.itemToPathCache = {}
         self.pathToItemCache = {}
-        self.client_id_regex = re.compile(r'\<(.*)\>')
-        self.enable()
-        self.sendStatusMessage(
-            0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
-
-    def _addSubscriber(self):
-        self.subscriber = lcmUtils.addSubscriber(
-            'DIRECTOR_TREE_VIEWER_REQUEST.*',
-            lcmrl.viewer2_comms_t,
-            self.onViewerRequest,
-            callbackNeedsChannel=True)
-        # Note: from discussion with @patmarion, there's a bug in the lcmUtils subscriber
-        # when dealing with regex channels:
-        #   > If you subscribe to MY_CHANNEL_*, and two messages arrive back to back
-        #   > (MY_CHANNEL_FOO, foo_data) and (MY_CHANNEL_BAR, bar_data), then the default
-        #   > behavior in the lcm subscriber is to only call your callback once (if notify
-        #   > all messages = false), and it calls callback(MY_CHANNEL_FOO, bar_data)
-        #
-        # However, this can be avoided by notifying for *all* messages, which is what we
-        # want anyway:
-        self.subscriber.setNotifyAllMessagesEnabled(True)
-
-    def _removeSubscriber(self):
-        lcmUtils.removeSubscriber(self.subscriber)
-        self.subscriber = None
-
-    def isEnabled(self):
-        return self.subscriber is not None
-
-    def setEnabled(self, enabled):
-        if enabled and not self.isEnabled():
-            self._addSubscriber()
-        elif not enabled and self.isEnabled():
-            self._removeSubscriber()
-
-    def enable(self):
-        self.setEnabled(True)
-
-    def disable(self):
-        self.setEnabled(False)
-
-    def sendStatusMessage(self, timestamp, response, client_id=""):
-        msg = lcmrl.viewer2_comms_t()
-        msg.format = "treeviewer_json"
-        msg.format_version_major = 1
-        msg.format_version_minor = 0
-        data = dict(timestamp=timestamp, **response.toJson())
-        msg.data = bytearray(json.dumps(data), encoding='utf-8')
-        msg.num_bytes = len(msg.data)
-        if client_id:
-            channel = "DIRECTOR_TREE_VIEWER_RESPONSE_<{:s}>".format(client_id)
-        else:
-            channel = "DIRECTOR_TREE_VIEWER_RESPONSE"
-        lcmUtils.publish(channel, msg)
-
-    def decodeCommsMsg(self, msg):
-        if msg.format == "treeviewer_json":
-            if msg.format_version_major == 1 and msg.format_version_minor == 0:
-                data = json.loads(msg.data.decode())
-                return data, ViewerResponse(ViewerStatus.OK, {})
-            else:
-                return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT_VERSION,
-                                            {"supported_formats": {
-                                                 "treeviewer_json": ["1.0"]
-                                            }})
-        else:
-            return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT,
-                                        {"supported_formats": {
-                                             "treeviewer_json": ["1.0"]
-                                        }})
-
-    def onViewerRequest(self, msg, channel="DIRECTOR_TREE_VIEWER_REQUEST"):
-        match = self.client_id_regex.search(channel)
-        if match:
-            client_id = match.group(1)  # MatchObject.group is 1-indexed
-        else:
-            warnings.warn("To reduce cross-talk, clients should append a unique client ID inside <> characters to their DIRECTOR_TREE_VIEWER_REQUEST channel name. For example: DIRECTOR_TREE_VIEWER_REQUEST_<foo>. The client should also subscribe to the equivalent response channel: DIRECTOR_TREE_VIEWER_RESPONSE_<foo>")
-            client_id = ""
-        data, response = self.decodeCommsMsg(msg)
-        if data is None:
-            self.sendStatusMessage(msg.utime,
-                                   response, client_id)
-        else:
-            response = self.handleViewerRequest(data)
-            self.sendStatusMessage(msg.utime,
-                                   response, client_id)
 
     def handleViewerRequest(self, data):
         deletedPaths = set()
@@ -631,3 +559,137 @@ class TreeViewer(object):
             self.pathToItemCache[path] = folder
             self.itemToPathCache[folder] = path
             return folder
+
+
+class ZMQTreeViewer(TreeViewer):
+    name = "Remote Tree Viewer (ZeroMQ + MsgPack)"
+
+    def __init__(self, view, zmqUrl):
+        super(ZMQTreeViewer, self).__init__(view)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REP)
+        self.socket.bind(zmqUrl)
+        self.msgQueue = Queue.Queue()
+        self.taskRunner = taskrunner.TaskRunner()
+        self.taskRunner.callOnThread(self.listenZmq)
+        self.zmqTimer = TimerCallback(callback=self.handleZmq, targetFps=60)
+        self.zmqTimer.start()
+
+    def isEnabled(self):
+        return self.taskRunner.timer.isActive()
+
+    def setEnabled(self, enabled):
+        if enabled:
+            self.taskRunner.timer.start()
+        else:
+            self.taskRunner.timer.stop()
+
+    def listenZmq(self):
+        while True:
+            message = self.socket.recv()
+            data = umsgpack.unpackb(message,
+                ext_handlers = {
+                    0x50: lambda ext: msgpack_numpy.decode(umsgpack.unpackb(ext.data))
+                    })
+            self.socket.send("received")
+            self.msgQueue.put(data)
+
+    def handleZmq(self):
+        while not self.msgQueue.empty():
+            self.handleViewerRequest(self.msgQueue.get())
+
+
+class LCMTreeViewer(TreeViewer):
+    name = "Remote Tree Viewer (LCM)"
+
+    def __init__(self, view):
+        super(LCMTreeViewer, self).__init__(view)
+        self.subscriber = None
+        self.client_id_regex = re.compile(r'\<(.*)\>')
+        # warnings.warn("The TreeViewer LCM protocol is deprecated. Please switch to the new ZeroMQ/MsgPack protocol, which should offer much better performance and reliability.")
+        self.enable()
+        self.sendStatusMessage(
+            0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
+
+    def _addSubscriber(self):
+        self.subscriber = lcmUtils.addSubscriber(
+            'DIRECTOR_TREE_VIEWER_REQUEST.*',
+            lcmrl.viewer2_comms_t,
+            self.onViewerRequest,
+            callbackNeedsChannel=True)
+        # Note: from discussion with @patmarion, there's a bug in the lcmUtils subscriber
+        # when dealing with regex channels:
+        #   > If you subscribe to MY_CHANNEL_*, and two messages arrive back to back
+        #   > (MY_CHANNEL_FOO, foo_data) and (MY_CHANNEL_BAR, bar_data), then the default
+        #   > behavior in the lcm subscriber is to only call your callback once (if notify
+        #   > all messages = false), and it calls callback(MY_CHANNEL_FOO, bar_data)
+        #
+        # However, this can be avoided by notifying for *all* messages, which is what we
+        # want anyway:
+        self.subscriber.setNotifyAllMessagesEnabled(True)
+
+    def _removeSubscriber(self):
+        lcmUtils.removeSubscriber(self.subscriber)
+        self.subscriber = None
+
+    def isEnabled(self):
+        return self.subscriber is not None
+
+    def setEnabled(self, enabled):
+        if enabled and not self.isEnabled():
+            self._addSubscriber()
+        elif not enabled and self.isEnabled():
+            self._removeSubscriber()
+
+    def enable(self):
+        self.setEnabled(True)
+
+    def disable(self):
+        self.setEnabled(False)
+
+    def sendStatusMessage(self, timestamp, response, client_id=""):
+        msg = lcmrl.viewer2_comms_t()
+        msg.format = "treeviewer_json"
+        msg.format_version_major = 1
+        msg.format_version_minor = 0
+        data = dict(timestamp=timestamp, **response.toDict())
+        msg.data = bytearray(json.dumps(data), encoding='utf-8')
+        msg.num_bytes = len(msg.data)
+        if client_id:
+            channel = "DIRECTOR_TREE_VIEWER_RESPONSE_<{:s}>".format(client_id)
+        else:
+            channel = "DIRECTOR_TREE_VIEWER_RESPONSE"
+        lcmUtils.publish(channel, msg)
+
+    def decodeCommsMsg(self, msg):
+        if msg.format == "treeviewer_json":
+            if msg.format_version_major == 1 and msg.format_version_minor == 0:
+                data = json.loads(msg.data.decode())
+                return data, ViewerResponse(ViewerStatus.OK, {})
+            else:
+                return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT_VERSION,
+                                            {"supported_formats": {
+                                                 "treeviewer_json": ["1.0"]
+                                            }})
+        else:
+            return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT,
+                                        {"supported_formats": {
+                                             "treeviewer_json": ["1.0"]
+                                        }})
+
+    def onViewerRequest(self, msg, channel="DIRECTOR_TREE_VIEWER_REQUEST"):
+        match = self.client_id_regex.search(channel)
+        if match:
+            client_id = match.group(1)  # MatchObject.group is 1-indexed
+        else:
+            warnings.warn("To reduce cross-talk, clients should append a unique client ID inside <> characters to their DIRECTOR_TREE_VIEWER_REQUEST channel name. For example: DIRECTOR_TREE_VIEWER_REQUEST_<foo>. The client should also subscribe to the equivalent response channel: DIRECTOR_TREE_VIEWER_RESPONSE_<foo>")
+            client_id = ""
+        data, response = self.decodeCommsMsg(msg)
+        if data is None:
+            self.sendStatusMessage(msg.utime,
+                                   response, client_id)
+        else:
+            response = self.handleViewerRequest(data)
+            self.sendStatusMessage(msg.utime,
+                                   response, client_id)
+
