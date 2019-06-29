@@ -337,6 +337,7 @@ elseif(USE_PRECOMPILED_VTK)
     if(DD_QT_VERSION EQUAL 4)
       set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python3.4-ubuntu14.04.tar.gz)
       set(vtk_package_md5 5e9b52be15dccadefdd033c58f055705)
+      set(vtk_package_version 7.1)
     else()
       message(FATAL_ERROR "Compiling director with Qt5 is not supported on Ubuntu 14.04. "
                "Please set DD_QT_VERSION to 4.")
@@ -345,20 +346,24 @@ elseif(USE_PRECOMPILED_VTK)
     if(DD_QT_VERSION EQUAL 4)
       set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python3.5-ubuntu16.04.tar.gz)
       set(vtk_package_md5 185e718e13ef532e3af4a80397091058)
+      set(vtk_package_version 7.1)
     else()
       set(vtk_package_url ${url_base}/vtk7.1-qt5.5-python3.5-ubuntu16.04.tar.gz)
       set(vtk_package_md5 00000000000000000000000000000000)
+      set(vtk_package_version 7.1)
     endif()
   elseif(ubuntu_version EQUAL 18.04)
     if(DD_QT_VERSION EQUAL 4)
       message(FATAL_ERROR "Compiling director with Qt4 is not supported on Ubuntu 18.04. "
                "Please set DD_QT_VERSION to 5.")
     else()
-      set(vtk_package_url ${url_base}/vtk8.1-qt5.9-python2.7-ubuntu18.04.tar.gz)
-      set(vtk_package_md5 184f9cbb7d95756b4bdae74043611f17)
+      set(vtk_package_url ${url_base}/vtk8.2-qt5.9-python3.6-ubuntu18.04.tar.gz)
+      set(vtk_package_md5 b1c30e3fc0fdd918aed46e07a6b19426)
+      set(vtk_package_version 8.2)
+
     endif()
   else()
-    message(FATAL_ERROR "USE_PRECOMPILED_VTK requires Ubuntu 14.04 or 16.04 "
+    message(FATAL_ERROR "USE_PRECOMPILED_VTK requires Ubuntu 14.04, 16.04, or 18.04, "
             "but the detected system version does not match. "
             "Please disable USE_PRECOMPILED_VTK.")
   endif()
@@ -372,7 +377,7 @@ elseif(USE_PRECOMPILED_VTK)
       ${source_prefix}/vtk-precompiled ${install_prefix}
   )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-${vtk_package_version})
   set(vtk_depends vtk-precompiled)
 
 else()
