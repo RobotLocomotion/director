@@ -1,7 +1,7 @@
 docker build -f vtk.dockerfile -t vtk:tmp .
 
 
-docker run -it vtk:tmp bash -c "scp vtk*.tar.gz pmarion@patmarion.com:public_html/bottles/"
+docker run -it vtk:tmp bash -c "scp vtk*.tar.gz pat@patmarion.com:public_html/bottles/"
 
 
 #id=$(docker create vtk:tmp)

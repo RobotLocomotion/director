@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 WORKDIR /root
-ARG config=vtk8-qt5-python2-ubuntu18
+ARG config=vtk8-qt5-python3-ubuntu18
 COPY configurations/${config} commands
 
 RUN bash commands/install_deps
