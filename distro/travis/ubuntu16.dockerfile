@@ -15,6 +15,7 @@ ARG TRAVIS_BUILD_DIR
 ARG encrypted_444f3458e047_key
 ARG encrypted_444f3458e047_iv
 ARG encrypted_copyfiles_host
+ARG encrypted_copyfiles_password
 ARG encrypted_bintray_api_key
 
 ENV \
@@ -34,6 +35,7 @@ ENV \
     encrypted_444f3458e047_key="${encrypted_444f3458e047_key}" \
     encrypted_444f3458e047_iv="${encrypted_444f3458e047_iv}" \
     encrypted_copyfiles_host="${encrypted_copyfiles_host}" \
+    encrypted_copyfiles_password="${encrypted_copyfiles_password}" \
     encrypted_bintray_api_key="${encrypted_bintray_api_key}"
 
 
