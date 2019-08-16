@@ -72,13 +72,6 @@ class CameraInteractor(vieweventfilter.ViewEventFilter):
         displayPoint = self.getMousePositionInView(event)
         camera = self.view.camera()
 
-        if self.lastHitPoint is not None:
-            newFocalPoint = projectPointToLine(
-                                np.array(camera.GetPosition()),
-                                np.array(camera.GetFocalPoint()),
-                                self.lastHitPoint)
-            camera.SetFocalPoint(newFocalPoint)
-
         actors = self.view.renderer().GetActors()
         actors = [actors.GetItemAsObject(i) for i in range(actors.GetNumberOfItems())]
         pickableSettings = [actor.GetPickable() for actor in actors]
@@ -90,11 +83,10 @@ class CameraInteractor(vieweventfilter.ViewEventFilter):
         #if res.pickedProp:
         #    print('got pick with hardware')
         #if not res.pickedProp:
-
         res = vis.pickPoint(displayPoint, self.view, pickType='points', tolerance=0.0005)
         if not res.pickedProp:
             res = vis.pickPoint(displayPoint, self.view, pickType='points', tolerance=0.001)
-        if res.pickedProp is None:
+        if not res.pickedProp:
             res = vis.pickPoint(displayPoint, self.view, pickType='cells')
 
         for actor, pickable in zip(actors, pickableSettings):
@@ -104,29 +96,17 @@ class CameraInteractor(vieweventfilter.ViewEventFilter):
             worldPoint = res.pickedPoint
         else:
             pt1, pt2 = vis.getRayFromDisplayPoint(self.view, displayPoint)
-            rayOrigin = pt1
-
-            ray = pt2 - pt1
-            pt1 = np.array(camera.GetPosition())
-            pt2 = pt1 + ray
-
-            #print('cam to ray origin:', rayOrigin - pt1)
-
             if self.lastHitPoint is None:
                 worldPoint = projectPointToLine(pt1, pt2, np.array(camera.GetFocalPoint()))
             else:
-                #print('no prop was picked, finding a point on the pick ray...')
                 projectedWorldPoint, pcoord = projectPointToLineParam(pt1, pt2, self.lastHitPoint)
-                #print('pcoord of last hit point:', pcoord)
                 if pcoord >= 0.1:
-                    #print('using last hit point projected to pick ray')
                     worldPoint = projectedWorldPoint
                 else:
-                    #print('pcoord was bad so using current focal projected to pick ray')
                     worldPoint = projectPointToLine(pt1, pt2, np.array(camera.GetFocalPoint()))
 
-
-        self.lastHitPoint = np.array(worldPoint)
+        # don't use last hit point
+        # self.lastHitPoint = np.array(worldPoint)
 
         t = vtk.vtkTransform()
         t.Translate(worldPoint[:3])
@@ -137,20 +117,6 @@ class CameraInteractor(vieweventfilter.ViewEventFilter):
     def onEndRender(self, renderWindow, event):
         if not self._enabled:
             return
-
-        # reset the focal point along the view ray to have
-        # using the projection of the custom center of rotation
-        # this prevents the focal point from moving too far away
-        # when dollying (zooming) the camera in toward the center of rotation
-        camera = self.view.camera()
-        newFocal, param = projectPointToLineParam(
-                        np.array(camera.GetPosition()),
-                        np.array(camera.GetFocalPoint()),
-                        np.array(self.style.GetCustomCenterOfRotation()))
-
-        #if param >= 0:
-        #    camera.SetFocalPoint(newFocal)
-
 
     def onStartRender(self, renderWindow, event):
         if not self._enabled:

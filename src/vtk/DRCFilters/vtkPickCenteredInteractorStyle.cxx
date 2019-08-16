@@ -98,14 +98,19 @@ void MoveCamera(vtkCamera* camera, double* offset)
   camera->SetFocalPoint(newF);
 }
 
-const vtkVector3d operator-(const vtkVector3d &lhs, const vtkVector3d &rhs)
+vtkVector3d operator-(const vtkVector3d &lhs, const vtkVector3d &rhs)
 {
   return vtkVector3d(lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]);
 }
 
-const vtkVector3d operator+(const vtkVector3d &lhs, const vtkVector3d &rhs)
+vtkVector3d operator+(const vtkVector3d &lhs, const vtkVector3d &rhs)
 {
   return vtkVector3d(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]);
+}
+
+vtkVector3d operator*(const vtkVector3d &lhs, const double rhs)
+{
+  return vtkVector3d(lhs[0] * rhs, lhs[1] * rhs, lhs[2] * rhs);
 }
 
 }
@@ -474,6 +479,18 @@ void vtkPickCenteredInteractorStyle::Dolly()
 
     MoveCamera(camera, offset);
 
+    // Update focal point using projection of center of rotation to view direction
+    double viewDirection[3];
+    camera->GetDirectionOfProjection(viewDirection);
+
+    vtkVector3d linePoint1(camera->GetPosition());
+    vtkVector3d linePoint2(camera->GetFocalPoint());
+    vtkVector3d lineVector = linePoint2 - linePoint1;
+    vtkVector3d pt(this->CustomCenterOfRotation);
+
+    double pcoord =  vtkVector3d(pt - linePoint1).Dot(lineVector) / lineVector.Dot(lineVector);
+    vtkVector3d projectedFocalPoint = linePoint1 + (lineVector * pcoord);
+    camera->SetFocalPoint(projectedFocalPoint.GetData());
     }
 
 
