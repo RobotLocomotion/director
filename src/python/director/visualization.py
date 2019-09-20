@@ -1211,7 +1211,7 @@ def updateFrame(frame, name, **kwargs):
     return obj
 
 
-def showFrame(frame, name, view=None, parent='data', scale=0.35, visible=True):
+def showFrame(frame, name, view=None, parent='data', scale=0.35, visible=True, alpha=1.0):
 
     view = view or app.getCurrentRenderView()
     assert view
@@ -1219,6 +1219,7 @@ def showFrame(frame, name, view=None, parent='data', scale=0.35, visible=True):
     item = FrameItem(name, frame, view)
     om.addToObjectModel(item, getParentObj(parent))
     item.setProperty('Visible', visible)
+    item.setProperty('Alpha', alpha)
     item.setProperty('Scale', scale)
     return item
 
