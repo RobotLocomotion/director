@@ -72,6 +72,9 @@ class PolyDataItem(om.ObjectModelItem):
     def hasDataSet(self, dataSet):
         return dataSet == self.polyData
 
+    def hasActor(self, actor):
+        return actor == self.actor
+
     def setPolyData(self, polyData):
 
         self.polyData = polyData
@@ -378,6 +381,9 @@ class Image2DItem(om.ObjectModelItem):
     def hasDataSet(self, dataSet):
         return dataSet == self.image
 
+    def hasActor(self, actor):
+        return actor == self.actor
+
     def setImage(self, image):
         self.image = image
         self.actor.SetImage(image)
@@ -655,6 +661,12 @@ class FrameItem(PolyDataItem):
 
     def addToView(self, view):
         PolyDataItem.addToView(self, view)
+
+    def hasDataSet(self, dataSet):
+        return dataSet == self.transform
+
+    def hasActor(self, actor):
+        return actor == self.widget.GetRepresentation() or PolyDataItem.hasActor(self, actor)
 
     def copyFrame(self, transform):
         self._blockSignals = True
@@ -1503,25 +1515,26 @@ def mapMousePosition(widget, mouseEvent):
     return mousePosition.x(), widget.height - mousePosition.y()
 
 
-def getObjectByDataSet(polyData):
+def getObjectByDataSet(dataSet):
+    if not dataSet:
+        return None
     for obj in om.getObjects():
-        if obj.hasDataSet(polyData):
+        if obj.hasDataSet(dataSet):
             return obj
+
 
 def getObjectByProp(prop):
     if not prop:
         return None
     for obj in om.getObjects():
-        if isinstance(obj, FrameItem) and obj.widget.GetRepresentation() == prop:
+        if obj.hasActor(prop):
             return obj
-    if isinstance(prop, vtk.vtkActor):
-        return getObjectByDataSet(prop.GetMapper().GetInput())
 
 
 def findPickedObject(displayPoint, view):
 
     pickedPoint, pickedProp, pickedDataset = pickProp(displayPoint, view)
-    obj = getObjectByProp(pickedProp)
+    obj = getObjectByProp(pickedProp) or getObjectByDataSet(pickedDataset)
     return obj, pickedPoint
 
 """

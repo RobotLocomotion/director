@@ -105,6 +105,9 @@ class ObjectModelItem(object):
     def hasDataSet(self, dataSet):
         return False
 
+    def hasActor(self, actor):
+        return False
+
     def getActionNames(self):
         actions = ['Rename']
         for delegate in self.actionDelegates:
