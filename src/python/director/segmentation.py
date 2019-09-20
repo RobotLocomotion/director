@@ -1741,7 +1741,7 @@ def applyDiskGlyphs(polyData, computeNormals=True):
     glyph = vtk.vtkGlyph3D()
     glyph.ScalingOff()
     glyph.OrientOn()
-    glyph.SetSource(disk)
+    glyph.SetSourceData(disk)
     glyph.SetInputData(pd)
     glyph.SetVectorModeToUseNormal()
     glyph.Update()
@@ -1765,7 +1765,7 @@ def applyArrowGlyphs(polyData, computeNormals=True, voxelGridLeafSize=0.03, norm
 
     glyph = vtk.vtkGlyph3D()
     glyph.SetScaleFactor(arrowSize)
-    glyph.SetSource(arrow.GetOutput())
+    glyph.SetSourceData(arrow.GetOutput())
     glyph.SetInputData(polyData)
     glyph.SetVectorModeToUseNormal()
     glyph.Update()
