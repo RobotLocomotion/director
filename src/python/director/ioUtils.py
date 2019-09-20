@@ -29,6 +29,12 @@ def readPolyData(filename, computeNormals=False):
     reader.Update()
     polyData = shallowCopy(reader.GetOutput())
 
+    if polyData.GetNumberOfPoints() and not polyData.GetNumberOfCells():
+        f = vtk.vtkVertexGlyphFilter()
+        f.SetInputData(polyData)
+        f.Update()
+        polyData = shallowCopy(f.GetOutput())
+
     if computeNormals:
         return _computeNormals(polyData)
     else:
