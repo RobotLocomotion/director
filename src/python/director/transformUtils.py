@@ -170,6 +170,7 @@ def poseFromTransform(transform):
     mat = getNumpyFromTransform(transform)
     return np.array(mat[:3,3]), transformations.quaternion_from_matrix(mat, isprecise=True)
 
+
 def frameFromPositionAndRPY(position, rpy):
     '''
     rpy specified in degrees
@@ -179,6 +180,13 @@ def frameFromPositionAndRPY(position, rpy):
     mat = transformations.euler_matrix(rpy[0], rpy[1], rpy[2])
     mat[:3,3] = position
     return getTransformFromNumpy(mat)
+
+
+def frameWithoutRollAndPitch(transform):
+    pos, quat = poseFromTransform(transform)
+    rpy = quaternionToRollPitchYaw(quat)
+    quat = rollPitchYawToQuaternion([0.0, 0.0, rpy[2]])
+    return transformFromPose(pos, quat)
 
 
 def rollPitchYawToQuaternion(rpy):
