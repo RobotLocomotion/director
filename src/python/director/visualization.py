@@ -1457,9 +1457,11 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01):
         obj = om.findObjectByName(obj)
         assert obj
 
-
+    wasTexturedBackground = False
     if pickType == 'render':
         picker = vtk.vtkPropPicker()
+        wasTexturedBackground = view.renderer().GetTexturedBackground()
+        view.renderer().TexturedBackgroundOff()
     else:
         picker = vtk.vtkPointPicker() if pickType == 'points' else vtk.vtkCellPicker()
         picker.SetTolerance(tolerance)
@@ -1475,6 +1477,8 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01):
         picker.PickFromListOn()
 
     picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
+    if wasTexturedBackground:
+        view.renderer().TexturedBackgroundOn()
     pickedProp = picker.GetViewProp()
     pickedPoint = np.array(picker.GetPickPosition())
     pickedDataset = pickedProp.GetMapper().GetInput() if isinstance(pickedProp, vtk.vtkActor) else None
