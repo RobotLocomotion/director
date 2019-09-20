@@ -633,3 +633,8 @@ def addParentPropertySync(obj):
             continue
         parent._syncedProperties.add(propertyName)
         parent.properties.addProperty(propertyName, obj.properties.getProperty(propertyName), attributes=obj.properties._attributes[propertyName])
+
+def addChildPropertySync(obj):
+    children = obj.children()
+    if children:
+        addParentPropertySync(children[0])
