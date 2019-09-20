@@ -583,11 +583,12 @@ def updateImage(image, name, **kwargs):
     return obj
 
 
-def showImage(image, name, parent=None, view=None):
+def showImage(image, name, anchor='Top Left', parent=None, view=None):
     view = view or app.getCurrentRenderView()
     assert view
 
     item = Image2DItem(name, image, view=view)
+    item.setProperty('Anchor', anchor)
     om.addToObjectModel(item, getParentObj(parent))
     return item
 
