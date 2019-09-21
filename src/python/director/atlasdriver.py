@@ -1,5 +1,5 @@
 import os
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import numpy as np
 from collections import deque
@@ -33,7 +33,7 @@ class SystemStatusListener(object):
         if self.outputConsole is not None:
             self.outputConsole.append(message)
         else:
-            print message
+            print(message)
 
 
 class AtlasDriver(object):

@@ -54,7 +54,7 @@ class SafeTerrainRegion:
     @property
     def point(self):
         point = self.tform.GetPosition()
-        print "point", point
+        print("point", point)
         return self.tform.GetPosition()
 
     @property

@@ -46,17 +46,12 @@ class TaskRunner(object):
         if self.threads:
             # Give up control to other python threads that are running
             time.sleep(self.interval)
-        else:
-            # return false to stop the timer
-            return False
 
     def callOnMain(self, func, *args, **kwargs):
         self.pendingTasks.append(lambda: func(*args, **kwargs))
-        self.timer.start()
 
     def callOnThread(self, func, *args, **kwargs):
         t = Thread(target=lambda: func(*args, **kwargs))
         self.threads.append(t)
         t.start()
-        self.timer.start()
         return t

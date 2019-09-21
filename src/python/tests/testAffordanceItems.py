@@ -92,24 +92,24 @@ def testCollection():
 
 def testAffordanceToUrdf():
 
-    affs = [func() for func in newSphere, newBox, newCylinder, newCapsule, newMesh]
-    print affordanceurdf.urdfStringFromAffordances(affs)
+    affs = [func() for func in (newSphere, newBox, newCylinder, newCapsule, newMesh)]
+    print(affordanceurdf.urdfStringFromAffordances(affs))
 
     for aff in affs:
         om.removeFromObjectModel(aff)
 
 def testSDF():
-    print "Testind SDF loader"
+    print("Testind SDF loader")
     n_pre=len(affordanceManager.getAffordances())
 
     dataDir = app.getTestingDataDirectory()
     filename=os.environ['DRC_BASE'] + '/software/models/worlds/tabledemo.sdf'
     sc=sceneloader.SceneLoader()
-    print "Loading "+filename
+    print("Loading "+filename)
     sc.loadSDF(filename)
 
     n_post=len(affordanceManager.getAffordances())
-    print "Number of affordances loaded: "+str(n_post-n_pre)
+    print("Number of affordances loaded: "+str(n_post-n_pre))
     assert n_post>n_pre
 
 

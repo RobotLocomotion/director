@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import itertools
 import os
@@ -7,8 +7,8 @@ import xml.dom.minidom
 
 import numpy
 from director.thirdparty import transformations
-from naming import *
-from conversions import *
+from .naming import *
+from .conversions import *
 
 models_path = os.path.expanduser('~/.gazebo/models/')
 catkin_ws_path = os.path.expanduser('~') + '/catkin_ws/src/'

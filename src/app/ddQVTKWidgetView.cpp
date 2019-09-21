@@ -117,11 +117,6 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   } else {
     this->Internal->RenderWindow->SetMultiSamples(0);
   }
-
-  this->Internal->RenderWindow->StereoCapableWindowOn();
-  this->Internal->RenderWindow->SetStereoTypeToRedBlue();
-  this->Internal->RenderWindow->StereoRenderOff();
-  this->Internal->RenderWindow->StereoUpdate();
   this->Internal->RenderWindow->SetSize(width(), height());
 
   this->Internal->LightKit = vtkSmartPointer<vtkLightKit>::New();

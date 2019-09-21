@@ -27,4 +27,4 @@ def updateSysPath(path):
 _initCoverage()
 
 # this is for mac homebrew users
-#updateSysPath('/usr/local/opt/vtk7/lib/python2.7/site-packages')
+#updateSysPath('/usr/local/opt/vtk7/lib/python3.6/site-packages')

@@ -84,7 +84,7 @@ class AffordanceObjectModelManager(object):
             try:
                 self.collection.updateDescription(self.getAffordanceDescription(aff), notify=False)
             except:
-                print traceback.format_exc()
+                print(traceback.format_exc())
 
         self._pendingUpdates.clear()
 

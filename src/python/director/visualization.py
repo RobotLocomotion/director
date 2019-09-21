@@ -1,6 +1,6 @@
 import director.objectmodel as om
 import director.applogic as app
-from shallowCopy import shallowCopy
+from .shallowCopy import shallowCopy
 import director.vtkAll as vtk
 from director import filterUtils
 from director import transformUtils
@@ -72,6 +72,9 @@ class PolyDataItem(om.ObjectModelItem):
     def hasDataSet(self, dataSet):
         return dataSet == self.polyData
 
+    def hasActor(self, actor):
+        return actor == self.actor
+
     def setPolyData(self, polyData):
 
         self.polyData = polyData
@@ -89,7 +92,7 @@ class PolyDataItem(om.ObjectModelItem):
 
     def getArrayNames(self):
         pointData = self.polyData.GetPointData()
-        return [pointData.GetArrayName(i) for i in xrange(pointData.GetNumberOfArrays())]
+        return [pointData.GetArrayName(i) for i in range(pointData.GetNumberOfArrays())]
 
     def setSolidColor(self, color):
         self.setProperty('Color', [float(c) for c in color])
@@ -108,7 +111,7 @@ class PolyDataItem(om.ObjectModelItem):
 
         array = self.polyData.GetPointData().GetArray(arrayName)
         if not array:
-            print 'colorBy(%s): array not found' % arrayName
+            print('colorBy(%s): array not found' % arrayName)
             self.mapper.ScalarVisibilityOff()
             self.polyData.GetPointData().SetActiveScalars(None)
             return
@@ -378,6 +381,9 @@ class Image2DItem(om.ObjectModelItem):
     def hasDataSet(self, dataSet):
         return dataSet == self.image
 
+    def hasActor(self, actor):
+        return actor == self.actor
+
     def setImage(self, image):
         self.image = image
         self.actor.SetImage(image)
@@ -577,11 +583,12 @@ def updateImage(image, name, **kwargs):
     return obj
 
 
-def showImage(image, name, parent=None, view=None):
+def showImage(image, name, anchor='Top Left', parent=None, view=None):
     view = view or app.getCurrentRenderView()
     assert view
 
     item = Image2DItem(name, image, view=view)
+    item.setProperty('Anchor', anchor)
     om.addToObjectModel(item, getParentObj(parent))
     return item
 
@@ -655,6 +662,12 @@ class FrameItem(PolyDataItem):
 
     def addToView(self, view):
         PolyDataItem.addToView(self, view)
+
+    def hasDataSet(self, dataSet):
+        return dataSet == self.transform
+
+    def hasActor(self, actor):
+        return actor == self.widget.GetRepresentation() or PolyDataItem.hasActor(self, actor)
 
     def copyFrame(self, transform):
         self._blockSignals = True
@@ -777,7 +790,7 @@ class FrameSync(object):
         if self._findFrameId(frame) is not None:
             return
 
-        frameId = self._ids.next()
+        frameId = next(self._ids)
         callbackId = frame.connectFrameModified(self._onFrameModified)
 
         self.frames[frameId] = FrameSync.FrameData(
@@ -798,7 +811,7 @@ class FrameSync(object):
     def _computeBaseTransform(self, frame):
 
         currentDelta = None
-        for frameId, frameData in self.frames.items():
+        for frameId, frameData in list(self.frames.items()):
 
             if frameData.ref() is None:
                 self._removeFrameId(frameId)
@@ -821,7 +834,7 @@ class FrameSync(object):
 
     def _findFrameId(self, frame):
 
-        for frameId, frameData in self.frames.items():
+        for frameId, frameData in list(self.frames.items()):
 
             if frameData.ref() is None:
                 self._removeFrameId(frameId)
@@ -856,7 +869,7 @@ class FrameSync(object):
 
         self._blockCallbacks = True
 
-        for frameId, frameData in self.frames.items():
+        for frameId, frameData in list(self.frames.items()):
             if frameData.ref() is None:
                 self._removeFrameId(frameId)
             elif frameId != modifiedFrameId:
@@ -995,6 +1008,8 @@ class GridItem(PolyDataItem):
         self.addProperty('Major Tick Rings', True)
         self.addProperty('Minor Tick Rings', False)
         self.addProperty('Show Text', True)
+        self.addProperty('Text Angle', 0,
+                         attributes=om.PropertyAttributes(minimum=-999, maximum=999, singleStep=5))
         self.addProperty('Text Size', 10, attributes=om.PropertyAttributes(minimum=4, maximum=100, singleStep=1))
         self.addProperty('Text Color', [1.0, 1.0, 1.0])
         self.addProperty('Text Alpha', 1.0,
@@ -1007,7 +1022,7 @@ class GridItem(PolyDataItem):
         if propertyName in ('Grid Half Width', 'Major Tick Resolution',
                             'Minor Tick Resolution', 'Major Tick Rings', 'Minor Tick Rings'):
             self._updateGrid()
-        if propertyName in ('Visible', 'Show Text', 'Text Color', 'Text Alpha', 'Text Size'):
+        if propertyName in ('Visible', 'Show Text', 'Text Color', 'Text Alpha', 'Text Size', 'Text Angle'):
             self._updateTextActorProperties()
 
     def _updateGrid(self):
@@ -1024,6 +1039,7 @@ class GridItem(PolyDataItem):
         self._buildTextActors()
 
     def _updateTextActorProperties(self):
+        self._repositionTextActors()
 
         visible = self.getProperty('Visible') and self.getProperty('Show Text')
         textAlpha = self.getProperty('Text Alpha')
@@ -1036,7 +1052,6 @@ class GridItem(PolyDataItem):
             prop.SetColor(color)
             prop.SetFontSize(textSize)
             prop.SetOpacity(textAlpha)
-
 
     def addToView(self, view):
         if view in self.views:
@@ -1057,22 +1072,38 @@ class GridItem(PolyDataItem):
           self._removeTextActorsFromView(view)
         self.textActors = []
 
+    def _repositionTextActors(self):
+        if not self.textActors:
+            return
+
+        angle = np.radians(self.getProperty('Text Angle'))
+        sinAngle = np.sin(angle)
+        cosAngle = np.cos(angle)
+
+        gridHalfWidth = self.getProperty('Grid Half Width')
+        majorTickSize = gridHalfWidth / self.getProperty('Major Tick Resolution')
+        transform = self.actor.GetUserTransform() or vtk.vtkTransform()
+        for i, actor in enumerate(self.textActors):
+            distance = i * majorTickSize
+            actor = self.textActors[i]
+            prop = actor.GetTextProperty()
+            coord = actor.GetPositionCoordinate()
+            coord.SetCoordinateSystemToWorld()
+            p = transform.TransformPoint((distance*cosAngle, distance*sinAngle, 0.0))
+            coord.SetValue(p)
+
     def _buildTextActors(self):
 
         self._clearTextActors()
         gridHalfWidth = self.getProperty('Grid Half Width')
         majorTickSize = gridHalfWidth / self.getProperty('Major Tick Resolution')
-
+        suffix = 'm'
         for i in range(int(gridHalfWidth / majorTickSize)):
-            ringDistance = (i+1) * majorTickSize
-            edgeLength = np.sqrt(ringDistance**2 * 0.5)
+            ringDistance = i * majorTickSize
             actor = vtk.vtkTextActor()
             prop = actor.GetTextProperty()
-            actor.SetInput('{}m'.format(int(ringDistance)))
+            actor.SetInput('{:.3f}'.format(ringDistance).rstrip('0').rstrip('.') + suffix)
             actor.SetPickable(False)
-            coord = actor.GetPositionCoordinate()
-            coord.SetCoordinateSystemToWorld()
-            coord.SetValue(edgeLength, edgeLength, 0.0)
             self.textActors.append(actor)
 
         self._updateTextActorProperties()
@@ -1094,20 +1125,21 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='scene', 
     gridObj.setProperty('Minor Tick Rings', False)
     gridObj.setProperty('Alpha', alpha)
     gridObj.setProperty('Text Alpha', 0.5)
-
     gridObj.addToView(view)
     om.addToObjectModel(gridObj, getParentObj(parent))
-    addChildFrame(gridObj)
-
-    viewBoundsFunction = viewBoundsFunction or computeViewBoundsNoGrid
+    gridFrame = addChildFrame(gridObj)
+    gridFrame.connectFrameModified(lambda x: gridObj._repositionTextActors())
+    gridFrame.setProperty('Scale', 1.0)
+    gridObj.viewBoundsFunction = viewBoundsFunction or computeViewBoundsNoGrid
+    gridObj.emptyBoundsSize = 1.0
     def onViewBoundsRequest():
         if view not in gridObj.views or not gridObj.getProperty('Visible'):
             return
-        bounds = viewBoundsFunction(view, gridObj)
+        bounds = gridObj.viewBoundsFunction(view, gridObj)
         if vtk.vtkMath.AreBoundsInitialized(bounds):
             view.addCustomBounds(bounds)
         else:
-            view.addCustomBounds([-1, 1, -1, 1, -1, 1])
+            view.addCustomBounds(np.array([-1, 1, -1, 1, -1, 1]) * gridObj.emptyBoundsSize)
     view.connect('computeBoundsRequest(ddQVTKWidgetView*)', onViewBoundsRequest)
 
     return gridObj
@@ -1179,7 +1211,7 @@ def updateFrame(frame, name, **kwargs):
     return obj
 
 
-def showFrame(frame, name, view=None, parent='data', scale=0.35, visible=True):
+def showFrame(frame, name, view=None, parent='data', scale=0.35, visible=True, alpha=1.0):
 
     view = view or app.getCurrentRenderView()
     assert view
@@ -1187,6 +1219,7 @@ def showFrame(frame, name, view=None, parent='data', scale=0.35, visible=True):
     item = FrameItem(name, frame, view)
     om.addToObjectModel(item, getParentObj(parent))
     item.setProperty('Visible', visible)
+    item.setProperty('Alpha', alpha)
     item.setProperty('Scale', scale)
     return item
 
@@ -1204,7 +1237,7 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     item.setProperty('Alpha', alpha)
 
     if colorByName and colorByName not in item.getArrayNames():
-        print 'showPolyData(colorByName=%s): array not found' % colorByName
+        print('showPolyData(colorByName=%s): array not found' % colorByName)
         colorByName = None
 
     if colorByName:
@@ -1425,9 +1458,11 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01):
         obj = om.findObjectByName(obj)
         assert obj
 
-
+    wasTexturedBackground = False
     if pickType == 'render':
         picker = vtk.vtkPropPicker()
+        wasTexturedBackground = view.renderer().GetTexturedBackground()
+        view.renderer().TexturedBackgroundOff()
     else:
         picker = vtk.vtkPointPicker() if pickType == 'points' else vtk.vtkCellPicker()
         picker.SetTolerance(tolerance)
@@ -1443,6 +1478,8 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01):
         picker.PickFromListOn()
 
     picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
+    if wasTexturedBackground:
+        view.renderer().TexturedBackgroundOn()
     pickedProp = picker.GetViewProp()
     pickedPoint = np.array(picker.GetPickPosition())
     pickedDataset = pickedProp.GetMapper().GetInput() if isinstance(pickedProp, vtk.vtkActor) else None
@@ -1484,25 +1521,26 @@ def mapMousePosition(widget, mouseEvent):
     return mousePosition.x(), widget.height - mousePosition.y()
 
 
-def getObjectByDataSet(polyData):
+def getObjectByDataSet(dataSet):
+    if not dataSet:
+        return None
     for obj in om.getObjects():
-        if obj.hasDataSet(polyData):
+        if obj.hasDataSet(dataSet):
             return obj
+
 
 def getObjectByProp(prop):
     if not prop:
         return None
     for obj in om.getObjects():
-        if isinstance(obj, FrameItem) and obj.widget.GetRepresentation() == prop:
+        if obj.hasActor(prop):
             return obj
-    if isinstance(prop, vtk.vtkActor):
-        return getObjectByDataSet(prop.GetMapper().GetInput())
 
 
 def findPickedObject(displayPoint, view):
 
     pickedPoint, pickedProp, pickedDataset = pickProp(displayPoint, view)
-    obj = getObjectByProp(pickedProp)
+    obj = getObjectByProp(pickedProp) or getObjectByDataSet(pickedDataset)
     return obj, pickedPoint
 
 """

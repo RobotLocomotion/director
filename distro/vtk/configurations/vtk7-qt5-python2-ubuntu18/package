@@ -1,0 +1,3 @@
+set -ex
+
+tar -czf vtk7.1-qt5.9-python2.7-ubuntu18.04.tar.gz install

@@ -59,7 +59,7 @@ def reconstructConstraints(constraints):
         obj = objClass()
         objs.append(obj)
 
-        for attr, value in c.iteritems():
+        for attr, value in c.items():
             if isinstance(value, dict) and 'position' in value and 'quaternion' in value:
                 value = transformUtils.transformFromPose(value['position'], value['quaternion'])
             setattr(obj, attr, value)
@@ -78,17 +78,17 @@ def testPlanConstraints():
     poseJsonStr = json.dumps(poses, indent=4)
     constraintsJsonStr = ce.encodeConstraints(constraints, indent=4)
 
-    print poseJsonStr
-    print constraintsJsonStr
+    print(poseJsonStr)
+    print(constraintsJsonStr)
 
-    print '--------------decoding--------------------'
+    print('--------------decoding--------------------')
     constraints = ce.decodeConstraints(constraintsJsonStr)
     pprint.pprint(constraints)
 
-    print '--------------reconstructing--------------'
+    print('--------------reconstructing--------------')
     constraints = reconstructConstraints(constraints)
 
-    print '--------------matlab commands---------------'
+    print('--------------matlab commands---------------')
     for c in constraints:
         c.printCommands()
 

@@ -1,5 +1,5 @@
 from weakref import ref
-import new
+import types
 
 '''
 CallbackRegistry is a class taken from matplotlib.cbook.
@@ -75,7 +75,7 @@ class CallbackRegistry:
         """
         self._check_signal(s)
         proxy = BoundMethodProxy(func)
-        for cid, callback in self.callbacks[s].items():
+        for cid, callback in list(self.callbacks[s].items()):
             # Clean out dead references
             if callback.inst is not None and callback.inst() is None:
                 del self.callbacks[s][cid]
@@ -89,7 +89,7 @@ class CallbackRegistry:
         """
         disconnect the callback registered with callback id *cid*
         """
-        for eventname, callbackd in self.callbacks.items():
+        for eventname, callbackd in list(self.callbacks.items()):
             try:
                 del callbackd[cid]
             except KeyError:
@@ -103,7 +103,7 @@ class CallbackRegistry:
         callbacks on *s* will be called with *\*args* and *\*\*kwargs*
         """
         self._check_signal(s)
-        for cid, proxy in self.callbacks[s].items():
+        for cid, proxy in list(self.callbacks[s].items()):
             # Clean out dead references
             if proxy.inst is not None and proxy.inst() is None:
                 del self.callbacks[s][cid]
@@ -116,7 +116,7 @@ class CallbackRegistry:
         """
         self._check_signal(s)
         callbacks = []
-        for cid, proxy in self.callbacks[s].items():
+        for cid, proxy in list(self.callbacks[s].items()):
             # Clean out dead references
             if proxy.inst is not None and proxy.inst() is None:
                 del self.callbacks[s][cid]
@@ -141,11 +141,11 @@ class BoundMethodProxy(object):
     def __init__(self, cb):
         try:
             try:
-                self.inst = ref(cb.im_self)
+                self.inst = ref(cb.__self__)
             except TypeError:
                 self.inst = None
-            self.func = cb.im_func
-            self.klass = cb.im_class
+            self.func = cb.__func__
+            self.klass = cb.__self__.__class__
         except AttributeError:
             self.inst = None
             self.func = cb
@@ -163,7 +163,7 @@ class BoundMethodProxy(object):
             raise ReferenceError
         elif self.inst is not None:
             # build a new instance method with a strong reference to the instance
-            mtd = new.instancemethod(self.func, self.inst(), self.klass)
+            mtd = types.MethodType(self.func, self.inst())
         else:
             # not a bound method, just return the func
             mtd = self.func

@@ -25,8 +25,8 @@ class StateListener(object):
 
     def describe(self):
 
-        print '----------'
-        print '%d transforms' % len(self.transforms)
+        print('----------')
+        print('%d transforms' % len(self.transforms))
         if not self.transforms:
             return
 
@@ -38,7 +38,7 @@ class StateListener(object):
             pN = np.array(transformN.GetPosition())
             oD = oN - o0
             pD = pN - p0
-            print '%.2f: [%.3f, %.3f, %.3f]  [%.3f, %.3f, %.3f]  ' % ((timeN - time0), oD[0], oD[1], oD[2], pD[0], pD[1], pD[2])
+            print('%.2f: [%.3f, %.3f, %.3f]  [%.3f, %.3f, %.3f]  ' % ((timeN - time0), oD[0], oD[1], oD[2], pD[0], pD[1], pD[2]))
 
     def init(self):
         self.subscriber = lcmUtils.addSubscriber('POSE_BODY', lcmbotcore.pose_t, self.onBDIPose)

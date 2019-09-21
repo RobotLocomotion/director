@@ -104,7 +104,7 @@ class Geometry(object):
 
         assert len(faces) % 3 == 0
         cells = vtk.vtkCellArray()
-        for i in xrange(len(faces)/3):
+        for i in range(len(faces)/3):
             tri = vtk.vtkTriangle()
             tri.GetPointIds().SetId(0, faces[i*3 + 0])
             tri.GetPointIds().SetId(1, faces[i*3 + 1])
@@ -168,12 +168,12 @@ class Geometry(object):
             imageFile = textureFileName
 
         if not os.path.isfile(imageFile):
-            print 'failed to find image file:', imageFile
+            print('failed to find image file:', imageFile)
             return
 
         image = ioUtils.readImage(imageFile)
         if not image:
-            print 'failed to load image file:', imageFile
+            print('failed to load image file:', imageFile)
             return
 
         texture = vtk.vtkTexture()
@@ -215,7 +215,7 @@ class Geometry(object):
                 break
 
         if not os.path.isfile(filename):
-            print 'warning, cannot find file:', filename
+            print('warning, cannot find file:', filename)
             return []
 
         visInfo = None
@@ -415,7 +415,7 @@ class DrakeVisualizer(object):
 
     def onViewerDraw(self, msg):
 
-        for i in xrange(msg.num_links):
+        for i in range(msg.num_links):
 
             pos = msg.position[i]
             quat = msg.quaternion[i]
@@ -426,7 +426,7 @@ class DrakeVisualizer(object):
                 link = self.getLink(robotNum, linkName)
             except KeyError:
                 if linkName not in self.linkWarnings:
-                    print 'Error locating link name:', linkName
+                    print('Error locating link name:', linkName)
                     self.linkWarnings.add(linkName)
             else:
                 link.setTransform(pos, quat)
@@ -443,7 +443,7 @@ class DrakeVisualizer(object):
             link = self.getLink(robotNum, linkName)
         except KeyError:
             if linkName not in self.linkWarnings:
-                print 'Error locating link name:', linkName
+                print('Error locating link name:', linkName)
                 self.linkWarnings.add(linkName)
         else:
             if len(link.geometry):

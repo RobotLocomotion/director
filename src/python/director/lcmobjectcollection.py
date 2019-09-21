@@ -58,7 +58,7 @@ class LCMObjectCollection(object):
         return desc['uuid']
 
     def prettyPrintCollection(self):
-        print json.dumps(json.loads(numpyjsoncoder.encode(self.collection)), indent=2)
+        print(json.dumps(json.loads(numpyjsoncoder.encode(self.collection)), indent=2))
 
     def getDescription(self, descriptionId):
         return self.collection[descriptionId]
@@ -105,7 +105,7 @@ class LCMObjectCollection(object):
         #    return
 
         self.sentRequest = None
-        for desc in data['descriptions'].values():
+        for desc in list(data['descriptions'].values()):
             self.updateDescription(desc, publish=False)
 
     def _modified(self):

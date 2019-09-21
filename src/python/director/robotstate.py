@@ -43,7 +43,7 @@ def getDrakePoseToRobotStateJointMap():
 
     if _drakePoseToRobotStateJointMap is None:
         _drakePoseToRobotStateJointMap = dict()
-        for key, value in getRobotStateToDrakePoseJointMap().iteritems():
+        for key, value in getRobotStateToDrakePoseJointMap().items():
             _drakePoseToRobotStateJointMap[value] = key
 
     return _drakePoseToRobotStateJointMap
@@ -81,14 +81,14 @@ def convertStateMessageToDrakePose(msg, strict=True):
 def atlasCommandToDrakePose(msg):
     jointIndexMap = getRobotStateToDrakePoseJointMap()
     drakePose = np.zeros(len(getDrakePoseJointNames()))
-    for jointIdx, drakeIdx in jointIndexMap.iteritems():
+    for jointIdx, drakeIdx in jointIndexMap.items():
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
 
 def robotStateToDrakePose(robotState):
 
-    drakePose = range(getNumPositions())
+    drakePose = list(range(getNumPositions()))
     jointIndexMap = getRobotStateToDrakePoseJointMap()
 
     pos = getPositionFromRobotState(robotState)
@@ -98,7 +98,7 @@ def robotStateToDrakePose(robotState):
     assert len(jointIndexMap) == getNumJoints()
     assert len(robotState) >= len(jointIndexMap)
 
-    for jointIdx in xrange(len(jointIndexMap)):
+    for jointIdx in range(len(jointIndexMap)):
         drakePose[jointIndexMap[jointIdx]] = robotState[jointIdx]
 
     drakePose[0] = pos[0]
@@ -130,7 +130,7 @@ def getPoseLCMFromXYZRPY(xyz, rpy):
 
 def drakePoseToRobotState(drakePose):
 
-    robotState = range(getNumJoints())
+    robotState = list(range(getNumJoints()))
     jointIndexMap = getDrakePoseToRobotStateJointMap()
 
     for jointIdx, jointAngle in enumerate(drakePose):

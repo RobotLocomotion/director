@@ -18,19 +18,19 @@ class ViewBackgroundLightHandler(object):
     def storeProperties(self):
 
         def grab(obj, props):
-            for key in props.keys():
+            for key in list(props.keys()):
                 self.cachedProperties.setdefault(obj, dict())[key] = obj.getProperty(key)
 
-        for obj, props in self.properties.iteritems():
+        for obj, props in list(self.properties.items()):
             grab(obj, props)
 
     def applyProperties(self, properties):
 
         def send(obj, props):
-            for key, value in props.iteritems():
+            for key, value in list(props.items()):
                 obj.setProperty(key, value)
 
-        for obj, props in properties.iteritems():
+        for obj, props in list(properties.items()):
             send(obj, props)
 
     def setEnabled(self, enabled):

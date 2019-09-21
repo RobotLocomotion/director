@@ -335,7 +335,8 @@ class MainWindowAppFactory(object):
                     prev_args[k] = globalsDict[k]
                 globalsDict[k] = v
             try:
-                execfile(filename, globalsDict)
+                code = compile(open(filename, 'r').read(), filename, 'exec')
+                exec(code, globalsDict)
             finally:
                 for k in args.keys():
                     del globalsDict[k]

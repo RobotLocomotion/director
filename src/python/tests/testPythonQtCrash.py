@@ -1,2 +1,2 @@
 import PythonQt
-print PythonQt.QtCore.Qt.RightDockWidgetArea
+print(PythonQt.QtCore.Qt.RightDockWidgetArea)

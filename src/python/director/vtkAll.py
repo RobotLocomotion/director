@@ -1,5 +1,5 @@
 from vtk import *
-from vtkDRCFiltersPython import *
+from director.vtkDRCFiltersPython import *
 
 try:
     from vtkPCLFiltersPython import *

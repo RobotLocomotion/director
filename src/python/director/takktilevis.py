@@ -93,7 +93,7 @@ class TakktileVis(object):
 
     def getFrameNames(self):
         names = []
-        for key in self.sensorLocations.keys():
+        for key in list(self.sensorLocations.keys()):
             if not self.sensorLocations[key][0] in names:
                 names.append(self.sensorLocations[key][0])
         return names
@@ -102,13 +102,13 @@ class TakktileVis(object):
         if not self.frames:
             for name in self.frameNames:
                 self.frames[name] = vtk.vtkTransform()
-        for name, frame in self.frames.iteritems():
+        for name, frame in self.frames.items():
             frame.SetMatrix(self.robotStateModel.getLinkFrame(name).GetMatrix())
 
     def createSpheres(self, sensorValues):
         d = DebugData()
 
-        for key in sensorValues.keys():
+        for key in list(sensorValues.keys()):
             frame, pos, rpy = self.sensorLocations[key]
 
             t = transformUtils.frameFromPositionAndRPY(pos, rpy)

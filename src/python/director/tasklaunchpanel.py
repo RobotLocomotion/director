@@ -9,11 +9,11 @@ class TaskLaunchPanel(object):
         self.widget = QtGui.QTabWidget()
         self.widget.setWindowTitle('Task Panel')
 
-        for name, widget in widgetMap.iteritems():
+        for name, widget in widgetMap.items():
             self.addTaskPanel(name, widget)
 
     def getTaskPanelNames(self):
-        return [self.widget.tabText(i) for i in xrange(self.widget.count)]
+        return [self.widget.tabText(i) for i in range(self.widget.count)]
 
     def removeTaskPanel(self, taskPanelName):
         names = self.getTaskPanelNames()

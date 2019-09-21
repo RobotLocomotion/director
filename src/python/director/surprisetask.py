@@ -1,6 +1,6 @@
 import os
 import sys
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import types
@@ -122,7 +122,7 @@ class SurpriseTaskPanel(TaskUserPanel):
 
 
     def test(self):
-        print 'test'
+        print('test')
 
     def addButtons(self):
 
@@ -274,7 +274,7 @@ class SurpriseTaskPanel(TaskUserPanel):
 
 
     def fitSwitchBox(self):
-        print 'fitting switch box'
+        print('fitting switch box')
         self.fitter.imagePicker.numberOfPoints = 2
         self.fitter.pointCloudSource = 'lidar'
         self.fitter.fitFunc = self.fitter.fitSwitchBox

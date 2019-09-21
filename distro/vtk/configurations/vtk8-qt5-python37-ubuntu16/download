@@ -1,0 +1,7 @@
+set -ex
+
+wget http://www.vtk.org/files/release/8.1/VTK-8.1.1.tar.gz
+tar -zxf VTK-8.1.1.tar.gz
+
+wget https://gitlab.kitware.com/vtk/vtk/raw/706f1b397df09a27ab8981ab9464547028d0c322/Wrapping/PythonCore/vtkPythonArgs.cxx
+mv vtkPythonArgs.cxx VTK-8.1.1/Wrapping/PythonCore/

@@ -1,5 +1,5 @@
 import os
-import vtkAll as vtk
+from . import vtkAll as vtk
 import math
 import time
 import numpy as np
@@ -137,10 +137,10 @@ class RobotiqHandDriver(object):
         avgPosition = (statusMsg.positionA +
                        statusMsg.positionB +
                        statusMsg.positionC)/3.0
-        print avgPosition
+        print(avgPosition)
 
         newPosition = avgPosition/254.0  * 100.0
-        print newPosition
+        print(newPosition)
         if newPosition > 5.0:
             self.sendCustom(newPosition-5.0, force, velocity, mode)
         else:

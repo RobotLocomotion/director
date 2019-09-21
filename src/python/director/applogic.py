@@ -68,7 +68,7 @@ def showPythonConsole():
 _exclusiveDockWidgets = {}
 
 def hideDockWidgets(action):
-    for a, w in _exclusiveDockWidgets.iteritems():
+    for a, w in _exclusiveDockWidgets.items():
         if a is not action:
             dock, widget = w
             if not dock.isFloating():

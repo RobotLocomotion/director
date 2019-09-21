@@ -286,7 +286,7 @@ def onModelPublisherString(msg):
     if updateModelPublisherString(msg) == lastStr:
         return
 
-    print 'reloading models with new model publisher string'
+    print('reloading models with new model publisher string')
 
     if lastStr is not None:
         app.showInfoMessage('A model publisher string was received that differs from the previous string. '
@@ -295,7 +295,7 @@ def onModelPublisherString(msg):
 
     objs = getExistingRobotModels()
     for obj, jointController in _modelsToReload:
-        print 'reloading model:', obj.getProperty('Name')
+        print('reloading model:', obj.getProperty('Name'))
         newModel = loadRobotModelFromString(getModelPublisherString())
         obj.setModel(newModel)
         jointController.push()
@@ -336,7 +336,7 @@ def getEnvironmentPackagePaths():
 
     packageMap = packagepath.PackageMap()
     packageMap.populateFromEnvironment(['ROS_PACKAGE_PATH'])
-    return packageMap.map.values()
+    return list(packageMap.map.values())
 
 
 def getPackagePaths():
@@ -354,7 +354,7 @@ def getPackagePaths():
 
 
 def addPathsFromPackageMap(packageMap):
-    for path in packageMap.map.values():
+    for path in list(packageMap.map.values()):
         if os.path.exists(path):
             PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
 
@@ -387,7 +387,7 @@ class HandFactory(object):
 
     def getLoader(self, side):
 
-        assert side in self.defaultHandTypes.keys()
+        assert side in list(self.defaultHandTypes.keys())
         handType = self.defaultHandTypes[side]
         loader = self.loaders.get(handType)
         if loader is None:

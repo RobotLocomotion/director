@@ -24,7 +24,7 @@ def storeInitialTransform():
     global _initialTransform
     _initialTransform = _icpTransforms[-1] if len(_icpTransforms) else None
     if _initialTransform:
-        print 'stored initial icp transform'
+        print('stored initial icp transform')
 
 
 def getInitialTransform():
@@ -36,7 +36,7 @@ def onICPCorrection(m):
     t = transformUtils.transformFromPose(m.trans, m.quat)
 
     _icpTransforms.append(t)
-    print 'appending icp transform %d' % len(_icpTransforms)
+    print('appending icp transform %d' % len(_icpTransforms))
 
     if len(_icpTransforms) == 1:
         storeInitialTransform()

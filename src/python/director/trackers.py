@@ -20,7 +20,7 @@ class TrackDrillOnTable(object):
         t0 = time.time()
         if (self.tableCentroid is None):
             # initial fit .75 sec
-            print "Boot Strapping tracker"
+            print("Boot Strapping tracker")
             self.tableCentroid = segmentation.findAndFitDrillBarrel(polyData)
         else:
             # refit .07 sec

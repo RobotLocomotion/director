@@ -309,7 +309,7 @@ class FootstepsDriver(object):
 
     def applyDefaults(self, set_name):
         defaults = self.default_step_params[set_name]
-        for k, v in defaults.iteritems():
+        for k, v in defaults.items():
             self.params.setProperty(k, v)
 
     def _setupSubscriptions(self):
@@ -447,10 +447,11 @@ class FootstepsDriver(object):
             om.removeFromObjectModel(step)
         allTransforms = []
         volFolder = getWalkingVolumesFolder()
-        map(om.removeFromObjectModel, volFolder.children())
+        for child in volFolder.children():
+          om.removeFromObjectModel(child)
         slicesFolder = getTerrainSlicesFolder()
-        map(om.removeFromObjectModel, slicesFolder.children())
-
+        for child in slicesFolder.children():
+          om.removeFromObjectModel(child)
 
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
@@ -540,7 +541,7 @@ class FootstepsDriver(object):
 
     def drawContactVolumes(self, footstepTransform, color):
         volFolder = getWalkingVolumesFolder()
-        for zs, xy in self.contact_slices.iteritems():
+        for zs, xy in self.contact_slices.items():
             points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
             points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
             points = np.hstack((points0, points1))
@@ -619,7 +620,7 @@ class FootstepsDriver(object):
             contact_pts_right = contact_pts_left.copy()
 
         else:
-                print _modelName
+                print(_modelName)
                 raise ValueError("modelName not recognised")
 
         return contact_pts_left, contact_pts_right

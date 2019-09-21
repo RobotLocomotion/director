@@ -1,0 +1,5 @@
+set -ex
+
+wget http://www.vtk.org/files/release/7.1/VTK-7.1.1.tar.gz
+tar -zxf VTK-7.1.1.tar.gz
+

@@ -56,7 +56,7 @@ def processSnippet():
     # Step 2: find all the surfaces in front of the robot (about 0.75sec)
     clusters = segmentation.findHorizontalSurfaces(polyData)
     if (clusters is None):
-        print "No cluster found, stop walking now!"
+        print("No cluster found, stop walking now!")
         return
 
     # Step 3: find the corners of the minimum bounding rectangles

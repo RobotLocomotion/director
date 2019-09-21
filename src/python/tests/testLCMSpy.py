@@ -32,16 +32,16 @@ def item(r, c):
 
 
 def printStats():
-    print '\n------------------------\n'
+    print('\n------------------------\n')
 
-    averages = [(channel, stat.getAverage()) for channel, stat in stats.iteritems()]
+    averages = [(channel, stat.getAverage()) for channel, stat in stats.items()]
 
     averages.sort(key=lambda x: x[1])
 
     table.setRowCount(len(averages))
     i = 0
     for channel, bytesPerSecond in reversed(averages):
-        print channel, '%.3f kbps' % (bytesPerSecond/1024.0)
+        print(channel, '%.3f kbps' % (bytesPerSecond/1024.0))
 
         item(i, 0).setText(channel)
         item(i, 1).setText(channelToMsg[channel])
@@ -74,7 +74,7 @@ def onMessage(messageData, channel):
         printStats()
         timer.reset()
 
-        for stat in stats.values():
+        for stat in list(stats.values()):
             stat.reset()
 
     #msg = lcmspy.decodeMessage(messageData)

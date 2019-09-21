@@ -4,7 +4,7 @@ import math
 import time
 import types
 import numpy as np
-import vtkAll as vtk
+from . import vtkAll as vtk
 from director.timercallback import TimerCallback
 
 from director import transformUtils
@@ -101,21 +101,21 @@ class Gamepad(object):
 
     def increaseTeleopSpeed(self):
         self.speedMultiplier = self.clampTeleopSpeed(self.speedMultiplier + 0.2)
-        print 'teleop speed: ' + str(self.speedMultiplier)
+        print('teleop speed: ' + str(self.speedMultiplier))
     
     def decreaseTeleopSpeed(self):
         self.speedMultiplier = self.clampTeleopSpeed(self.speedMultiplier - 0.2)
-        print 'teleop speed: ' + str(self.speedMultiplier)
+        print('teleop speed: ' + str(self.speedMultiplier))
 
     def clampTeleopSpeed(self, speed):
         return np.clip(speed, self.minSpeedMultiplier, self.maxSpeedMultiplier)
     
     def enableCameraMode(self):
-        print 'Gamepad camera mode on'
+        print('Gamepad camera mode on')
         self.cameraMode = True
     
     def disableCameraMode(self):
-        print 'Gamepad camera mode off'
+        print('Gamepad camera mode off')
         self.cameraMode = False
     
     def setCameraTarget(self):

@@ -76,22 +76,9 @@ else()
     )
 endif()
 
-
-if(APPLE)
-  find_program(PYTHON_CONFIG_EXECUTABLE python-config)
-  if (NOT PYTHON_CONFIG_EXECUTABLE)
-    message(SEND_ERROR "python-config executable not found, but python is required.")
-  endif()
-  # using "python-config --prefix" so that cmake always uses the python that is
-  # in the users path, this is a fix for homebrew on Mac:
-  # https://github.com/Homebrew/homebrew/issues/25118
-  execute_process(COMMAND ${PYTHON_CONFIG_EXECUTABLE} --prefix OUTPUT_VARIABLE python_prefix OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(PYTHON_INCLUDE_DIR ${python_prefix}/include/python2.7)
-  set(PYTHON_LIBRARY ${python_prefix}/lib/libpython2.7${CMAKE_SHARED_LIBRARY_SUFFIX})
-else()
-  find_package(PythonLibs 2.7 REQUIRED)
-endif()
-find_package(PythonInterp 2.7 REQUIRED)
+set(min_python_version 3.4)
+find_package(PythonInterp ${min_python_version} REQUIRED)
+find_package(PythonLibs ${min_python_version} REQUIRED)
 
 set(python_args
   -DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}
@@ -345,38 +332,38 @@ elseif(USE_PRECOMPILED_VTK)
 
   set(url_base "http://patmarion.com/bottles")
 
-  find_program(LSB_RELEASE lsb_release)
-  mark_as_advanced(LSB_RELEASE)
-  set(ubuntu_version)
-  if(LSB_RELEASE)
-    execute_process(COMMAND ${LSB_RELEASE} -is
-        OUTPUT_VARIABLE osname
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(osname STREQUAL Ubuntu)
-      execute_process(COMMAND ${LSB_RELEASE} -rs
-          OUTPUT_VARIABLE ubuntu_version
-          OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
-  endif()
-
+  get_ubuntu_version()
   if (ubuntu_version EQUAL 14.04)
     if(DD_QT_VERSION EQUAL 4)
-      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python2.7-ubuntu14.04.tar.gz)
-      set(vtk_package_md5 fe5c16f427a497b5713c52a68ecf564d)
+      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python3.4-ubuntu14.04.tar.gz)
+      set(vtk_package_md5 5e9b52be15dccadefdd033c58f055705)
+      set(vtk_package_version 7.1)
     else()
       message(FATAL_ERROR "Compiling director with Qt5 is not supported on Ubuntu 14.04. "
                "Please set DD_QT_VERSION to 4.")
     endif()
   elseif(ubuntu_version EQUAL 16.04)
     if(DD_QT_VERSION EQUAL 4)
-      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python2.7-ubuntu16.04.tar.gz)
-      set(vtk_package_md5 1291e072405a3982b559ec011c3cf2a1)
+      set(vtk_package_url ${url_base}/vtk7.1-qt4.8-python3.5-ubuntu16.04.tar.gz)
+      set(vtk_package_md5 185e718e13ef532e3af4a80397091058)
+      set(vtk_package_version 7.1)
     else()
-      set(vtk_package_url ${url_base}/vtk7.1-qt5.5-python2.7-ubuntu16.04.tar.gz)
-      set(vtk_package_md5 5ac930a7b1c083f975115d5970fb1a34)
+      set(vtk_package_url ${url_base}/vtk7.1-qt5.5-python3.5-ubuntu16.04.tar.gz)
+      set(vtk_package_md5 00000000000000000000000000000000)
+      set(vtk_package_version 7.1)
+    endif()
+  elseif(ubuntu_version EQUAL 18.04)
+    if(DD_QT_VERSION EQUAL 4)
+      message(FATAL_ERROR "Compiling director with Qt4 is not supported on Ubuntu 18.04. "
+               "Please set DD_QT_VERSION to 5.")
+    else()
+      set(vtk_package_url ${url_base}/vtk8.2-qt5.9-python3.6-ubuntu18.04.tar.gz)
+      set(vtk_package_md5 b1c30e3fc0fdd918aed46e07a6b19426)
+      set(vtk_package_version 8.2)
+
     endif()
   else()
-    message(FATAL_ERROR "USE_PRECOMPILED_VTK requires Ubuntu 14.04 or 16.04 "
+    message(FATAL_ERROR "USE_PRECOMPILED_VTK requires Ubuntu 14.04, 16.04, or 18.04, "
             "but the detected system version does not match. "
             "Please disable USE_PRECOMPILED_VTK.")
   endif()
@@ -390,7 +377,7 @@ elseif(USE_PRECOMPILED_VTK)
       ${source_prefix}/vtk-precompiled ${install_prefix}
   )
 
-  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-7.1)
+  set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/cmake/vtk-${vtk_package_version})
   set(vtk_depends vtk-precompiled)
 
 else()
@@ -407,7 +394,7 @@ else()
       -DBUILD_EXAMPLES:BOOL=OFF
       -DVTK_RENDERING_BACKEND:STRING=OpenGL2
       -DVTK_QT_VERSION:STRING=${DD_QT_VERSION}
-      -DVTK_PYTHON_VERSION:STRING=2
+      -DVTK_PYTHON_VERSION:STRING=3
       -DModule_vtkGUISupportQt:BOOL=ON
       -DVTK_WRAP_PYTHON:BOOL=ON
     )

@@ -276,12 +276,12 @@ class Geometry(object):
             imageFile = textureFileName
 
         if not os.path.isfile(imageFile):
-            print 'cannot find texture file:', textureFileName
+            print('cannot find texture file:', textureFileName)
             return
 
         image = ioUtils.readImage(imageFile)
         if not image:
-            print 'failed to load image file:', imageFile
+            print('failed to load image file:', imageFile)
             return
 
         texture = vtk.vtkTexture()
@@ -320,7 +320,7 @@ class Geometry(object):
                 break
 
         if not os.path.isfile(filename):
-            print 'warning, cannot find file:', filename
+            print('warning, cannot find file:', filename)
             return []
 
         if filename.endswith('vtm'):

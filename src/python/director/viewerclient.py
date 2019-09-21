@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function
+
 
 import time
 import json
@@ -135,7 +135,7 @@ class PointCloud(BaseGeometry):
         return {
             "type": "pointcloud",
             "points": [list(p) for p in self.points],
-            "channels": {name: [list(c) for c in values] for (name, values) in self.channels.iteritems()}
+            "channels": {name: [list(c) for c in values] for (name, values) in self.channels.items()}
         }
 
 
@@ -187,7 +187,7 @@ class LazyTree(object):
 
     def descendants(self, prefix=tuple()):
         result = []
-        for (key, val) in self.children.items():
+        for (key, val) in list(self.children.items()):
             childpath = prefix + (key,)
             result.append(childpath)
             result.extend(val.descendants(childpath))

@@ -1,6 +1,6 @@
 import os
-import vtkAll as vtk
-from shallowCopy import shallowCopy
+import director.vtkAll as vtk
+from director.shallowCopy import shallowCopy
 import shelve
 import os.path
 
@@ -28,6 +28,12 @@ def readPolyData(filename, computeNormals=False):
     reader.SetFileName(filename)
     reader.Update()
     polyData = shallowCopy(reader.GetOutput())
+
+    if polyData.GetNumberOfPoints() and not polyData.GetNumberOfCells():
+        f = vtk.vtkVertexGlyphFilter()
+        f.SetInputData(polyData)
+        f.Update()
+        polyData = shallowCopy(f.GetOutput())
 
     if computeNormals:
         return _computeNormals(polyData)
@@ -65,7 +71,7 @@ def readMultiBlock(filename):
 
     polyDataList = []
     mb = reader.GetOutput()
-    for i in xrange(mb.GetNumberOfBlocks()):
+    for i in range(mb.GetNumberOfBlocks()):
         polyData = vtk.vtkPolyData.SafeDownCast(mb.GetBlock(i))
         if polyData and polyData.GetNumberOfPoints():
             polyDataList.append(shallowCopy(polyData))
@@ -103,7 +109,7 @@ def readVrml(filename):
     w = l.GetRenderWindow()
     ren = w.GetRenderers().GetItemAsObject(0)
     actors = ren.GetActors()
-    actors = [actors.GetItemAsObject(i) for i in xrange(actors.GetNumberOfItems())]
+    actors = [actors.GetItemAsObject(i) for i in range(actors.GetNumberOfItems())]
     meshes = [a.GetMapper().GetInput() for a in actors]
     colors = [ac.GetProperty().GetColor() for ac in actors]
     return meshes, colors
@@ -137,7 +143,7 @@ def readObjMtl(filename):
     w = l.GetRenderWindow()
     ren = w.GetRenderers().GetItemAsObject(0)
     actors = ren.GetActors()
-    actors = [actors.GetItemAsObject(i) for i in xrange(actors.GetNumberOfItems())]
+    actors = [actors.GetItemAsObject(i) for i in range(actors.GetNumberOfItems())]
     meshes = [a.GetMapper().GetInput() for a in actors]
 
     if mtlFilename:

@@ -60,7 +60,7 @@ class OtdfParser(object):
     def parseAttributeExpression(self, matchObj):
         expression = matchObj.group(1)
         #print '\nexpression:', expression
-        paramNames = reversed(sorted(self.paramDict.keys(), key=len))
+        paramNames = reversed(sorted(list(self.paramDict.keys()), key=len))
         for paramName in paramNames:
             if paramName in expression:
                 paramValue = self.getParamValue(paramName)
@@ -71,7 +71,7 @@ class OtdfParser(object):
         try:
             evaluated = NumericStringParser.NumericStringParser().eval(expression)
         except:
-            print 'parser error:', expression
+            print('parser error:', expression)
             return '0.0'
         #print 'evaluated:', evaluated
         return str(evaluated)
@@ -93,7 +93,7 @@ class OtdfParser(object):
 
         for elementNode in elementNodes:
             #print 'element node:', elementNode.nodeName
-            for attrName, attrValue in elementNode.attributes.items():
+            for attrName, attrValue in list(elementNode.attributes.items()):
                 #print '  ', attrName, '=', attrValue
                 attrValue = self.processAttribute(attrValue)
                 elementNode.setAttribute(attrName, attrValue)
@@ -126,9 +126,9 @@ class OtdfModelItem(roboturdf.RobotModelItem):
         self.setPropertyAttribute('Color Mode', 'hidden', True)
         # add otdf properties
 
-        basePropertyKeys = self.properties._properties.keys()
+        basePropertyKeys = list(self.properties._properties.keys())
         otdfPropertyKeys = []
-        for paramName, paramData in self.parser.paramDict.iteritems():
+        for paramName, paramData in self.parser.paramDict.items():
             otdfPropertyKeys.append(paramName)
             valueDefault, valueMin, valueMax, valueIncrement = paramData
             self.addProperty(paramName, float(valueDefault), om.PropertyAttributes(decimals=4, minimum=valueMin, maximum=valueMax, singleStep=valueIncrement, hidden=False))

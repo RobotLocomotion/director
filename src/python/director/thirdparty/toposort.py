@@ -53,22 +53,22 @@ items in the preceeding sets.
     data = data.copy()
 
     # Ignore self dependencies.
-    for k, v in data.items():
+    for k, v in list(data.items()):
         v.discard(k)
     # Find all items that don't depend on anything.
-    extra_items_in_deps = _reduce(set.union, data.values()) - set(data.keys())
+    extra_items_in_deps = _reduce(set.union, list(data.values())) - set(data.keys())
     # Add empty dependences where needed.
     data.update({item:set() for item in extra_items_in_deps})
     while True:
-        ordered = set(item for item, dep in data.items() if len(dep) == 0)
+        ordered = set(item for item, dep in list(data.items()) if len(dep) == 0)
         if not ordered:
             break
         yield ordered
         data = {item: (dep - ordered)
-                for item, dep in data.items()
+                for item, dep in list(data.items())
                     if item not in ordered}
     if len(data) != 0:
-        raise ValueError('Cyclic dependencies exist among these items: {}'.format(', '.join(repr(x) for x in data.items())))
+        raise ValueError('Cyclic dependencies exist among these items: {}'.format(', '.join(repr(x) for x in list(data.items()))))
 
 
 def toposort_flatten(data, sort=True):

@@ -72,7 +72,7 @@ if useVoxelGrid:
 
 if testNormals:
 
-    print 'computing normals...'
+    print('computing normals...')
     f = vtk.vtkRobustNormalEstimator()
     f.SetInput(polyData)
     f.SetMaxIterations(100)
@@ -82,7 +82,7 @@ if testNormals:
     f.SetRadius(0.1)
     f.Update()
     polyData = shallowCopy(f.GetOutput())
-    print 'done.'
+    print('done.')
 
 
     # filter points without normals
@@ -100,7 +100,7 @@ if testNormals:
     polyData = segmentation.thresholdPoints(polyData, 'normals_valid', [1, 1])
     vis.showPolyData(polyData, 'cloud normals', colorByName='curvature', visible=True)
 
-    print 'number of filtered points:', numPoints - polyData.GetNumberOfPoints()
+    print('number of filtered points:', numPoints - polyData.GetNumberOfPoints())
 
     if showGlyphs:
         polyData.GetPointData().SetNormals(polyData.GetPointData().GetArray('normals'))
@@ -125,10 +125,10 @@ def getMergedConvexHullsMesh(chulls):
 def saveConvexHulls(chulls, outputDir):
 
     if os.path.isdir(outputDir):
-        print 'removing directory:', outputDir
+        print('removing directory:', outputDir)
         shutil.rmtree(outputDir)
 
-    print 'making directory:', outputDir
+    print('making directory:', outputDir)
     os.makedirs(outputDir)
 
     for i, chull in enumerate(chulls):
@@ -200,7 +200,7 @@ if testPlaneSegmentation:
 
     chulls = []
 
-    for i in xrange(1, maxLabel+1):
+    for i in range(1, maxLabel+1):
 
         planePoints = segmentation.thresholdPoints(polyData, 'plane_segmentation_labels', [i, i])
 

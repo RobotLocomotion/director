@@ -5,6 +5,7 @@ import PythonQt
 from PythonQt import QtCore, QtGui
 from director.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper, PropertyPanelConnector
 from director import callbacks
+import functools
 
 class Icons(object):
 
@@ -22,6 +23,7 @@ class Icons(object):
   Collections = ':/images/rubix_cube.jpg'
 
   @staticmethod
+  @functools.lru_cache()
   def getIcon(iconId):
       '''
       Return a QIcon given an icon id as a string or int.
@@ -101,6 +103,9 @@ class ObjectModelItem(object):
         pass
 
     def hasDataSet(self, dataSet):
+        return False
+
+    def hasActor(self, actor):
         return False
 
     def getActionNames(self):
@@ -219,11 +224,11 @@ class ObjectModelTree(object):
 
     def getObjectChildren(self, obj):
         item = self._getItemForObject(obj)
-        return [self._getObjectForItem(item.child(i)) for i in xrange(item.childCount())]
+        return [self._getObjectForItem(item.child(i)) for i in range(item.childCount())]
 
     def getTopLevelObjects(self):
         return [self._getObjectForItem(self._treeWidget.topLevelItem(i))
-                  for i in xrange(self._treeWidget.topLevelItemCount)]
+                  for i in range(self._treeWidget.topLevelItemCount)]
 
     def getActiveObject(self):
         item = self._getSelectedItem()
@@ -242,7 +247,7 @@ class ObjectModelTree(object):
         self.getTreeWidget().setCurrentItem(None)
 
     def getObjects(self):
-        return self._itemToObject.values()
+        return list(self._itemToObject.values())
 
     def _getSelectedItem(self):
         items = self.getTreeWidget().selectedItems()
@@ -628,3 +633,8 @@ def addParentPropertySync(obj):
             continue
         parent._syncedProperties.add(propertyName)
         parent.properties.addProperty(propertyName, obj.properties.getProperty(propertyName), attributes=obj.properties._attributes[propertyName])
+
+def addChildPropertySync(obj):
+    children = obj.children()
+    if children:
+        addParentPropertySync(children[0])

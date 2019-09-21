@@ -6,5 +6,5 @@ if success:
     file = open('./compile_complete', 'w')
     file.write('Done')
 else:
-    print '\nPython byte compile failed.\n'
+    print('\nPython byte compile failed.\n')
     sys.exit(1)

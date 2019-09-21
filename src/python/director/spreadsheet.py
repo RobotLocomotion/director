@@ -73,7 +73,7 @@ def initSpreadsheetColumns(costCollection):
       0.0,
     ]
 
-    costData += [100.0 for i in xrange(len(jointNames) - len(costData))]
+    costData += [100.0 for i in range(len(jointNames) - len(costData))]
     costCollection.setItem('default_costs', costData)
 
     setSpreadsheetColumnData(0, 'joint_names', jointNames)

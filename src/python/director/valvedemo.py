@@ -749,7 +749,7 @@ class ValvePlannerDemo(object):
         self.initConstraintSet(faceFrameDesired)
         facePath.append(faceFrameDesired)
 
-        for i in xrange(numberOfSamples):
+        for i in range(numberOfSamples):
             # reachAngle += self.scribeDirection*degreeStep
             reachAngle += degreeStep
             faceFrameDesired = self.computeHumanTouchFrame(touchValve=True, reachAngle=reachAngle)
@@ -810,20 +810,20 @@ class ValvePlannerDemo(object):
         self.multisenseDriver.setNeckPitch(15)
 
     def waitForAtlasBehaviorAsync(self, behaviorName):
-        assert behaviorName in self.atlasDriver.getBehaviorMap().values()
+        assert behaviorName in list(self.atlasDriver.getBehaviorMap().values())
         while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
     def printAsync(self, s):
         yield
-        print s
+        print(s)
 
     def optionalUserPrompt(self, message):
         if not self.optionalUserPromptEnabled:
             return
 
         yield
-        result = raw_input(message)
+        result = input(message)
         if result != 'y':
             raise Exception('user abort.')
 
@@ -832,7 +832,7 @@ class ValvePlannerDemo(object):
             return
 
         yield
-        result = raw_input(message)
+        result = input(message)
         if result != 'y':
             raise Exception('user abort.')
 

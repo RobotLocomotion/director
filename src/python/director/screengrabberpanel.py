@@ -296,7 +296,7 @@ def test(n=30, height=1080, aspect=16/9.0, ext='tiff', shouldRender=True, should
 
 
 
-    for i in xrange(n):
+    for i in range(n):
 
         tNow = time.time()
         elapsed = tNow - tPrev
@@ -306,9 +306,9 @@ def test(n=30, height=1080, aspect=16/9.0, ext='tiff', shouldRender=True, should
         saveScreenshot('out_%04d.%s' % (i,ext), shouldRender, shouldWrite )
 
     elapsed = time.time() - tStart
-    print n, 'frames'
-    print '%.3f' % elapsed, 'seconds'
-    print '%.2f' % (n/elapsed), 'fps'
+    print(n, 'frames')
+    print('%.3f' % elapsed, 'seconds')
+    print('%.2f' % (n/elapsed), 'fps')
 
 
 def _getAction():
