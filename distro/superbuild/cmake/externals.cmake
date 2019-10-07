@@ -587,6 +587,20 @@ if(USE_SIGNAL_SCOPE)
 
 endif()
 
+
+###############################################################################
+# pybind11
+
+ExternalProject_Add(pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11.git
+  GIT_TAG v2.4.2
+  CMAKE_CACHE_ARGS
+    ${default_cmake_args}
+    ${python_args}
+    -DPYBIND11_TEST:BOOL=OFF
+)
+
+
 ###############################################################################
 # director
 
