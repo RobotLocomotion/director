@@ -353,3 +353,11 @@ add_custom_command(OUTPUT ${decorator_file}
 
 install_headers(${hdrs})
 install(FILES WrapPythonQt.py DESTINATION ${DD_INSTALL_CONFIG_DIR})
+
+
+find_package(pybind11 REQUIRED)
+pybind11_add_module(_pythonqt pythonqt_init.cpp)
+target_link_libraries(_pythonqt PRIVATE ddApp)
+set_target_properties(_pythonqt
+  PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
+install(TARGETS _pythonqt DESTINATION ${DD_INSTALL_PYTHON_DIR}/director)

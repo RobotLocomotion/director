@@ -1,6 +1,13 @@
 import os
 import sys
 
+try:
+    import PythonQt
+except ImportError:
+    from director import _pythonqt
+    _pythonqt.init()
+    import PythonQt
+
 
 def _initCoverage():
     if  'COVERAGE_PROCESS_START' in os.environ:
