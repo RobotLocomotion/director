@@ -443,6 +443,39 @@ void ddBotImageQueue::onImageMessage(const QByteArray& data, const QString& chan
   //printf("got image %s: %d %d\n", cameraData->mName.c_str(), cameraData->mImageMessage.width, cameraData->mImageMessage.height);
 }
 
+void ddBotImageQueue::openLCMFile(const QString& filename)
+{
+  std::string file = filename.toStdString();
+  assert(pangolin::FileExists(file.c_str()));
+  this->logFile = new lcm::LogFile(file, "r");
+}
+
+bool ddBotImageQueue::readNextImagesMessage()
+{
+  // returns false if there is no more messages in log
+  // gets the next images_t message and calls onImagesMessage()
+  std::string channel = "";
+  const lcm::LogEvent* event = 0;
+
+  while (channel != "OPENNI_FRAME") {
+      event = logFile->readNextEvent();
+      if (event==NULL){
+        // this means we made it to end of the file
+        return false;
+      }
+      channel = event->channel;
+      //std::cout << "read event on channel: " << channel << std::endl;
+  }
+
+  // event->data is a void*
+  char* data_char_ptr = (char*) event->data;
+  QByteArray data = QByteArray(data_char_ptr, event->datalen);
+
+  QString channel_qstr = QString::fromStdString(channel);
+  this->onImagesMessage(data, channel_qstr);
+  return true;
+}
+
 //-----------------------------------------------------------------------------
 vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData)
 {

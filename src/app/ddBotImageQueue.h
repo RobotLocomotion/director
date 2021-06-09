@@ -133,6 +133,9 @@ public:
 
   QStringList getBotFrameNames() const;
   QStringList getCameraNames() const;
+  
+  void openLCMFile(const QString& filename);
+  bool readNextImagesMessage();
 
 protected slots:
 
@@ -163,6 +166,8 @@ protected:
   QMap<QString, bot_core::images_t> mImagesMessageMap;
   QMap<QString, ddLCMSubscriber*> mSubscribers;
   QMap<QString, CameraData*> mCameraData;
+
+  lcm::LogFile* logFile;
 };
 
 #endif

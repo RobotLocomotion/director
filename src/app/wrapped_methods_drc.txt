@@ -20,6 +20,8 @@ bool ddBotImageQueue::addCameraStream(const QString&);
 bool ddBotImageQueue::addCameraStream(const QString&, const QString&, int);
 QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString&);
 QList<double> ddBotImageQueue::unprojectPixel(const QString&, int, int);
+void ddBotImageQueue::openLCMFile(const QString&);
+bool ddBotImageQueue::readNextImagesMessage();
 //ddKinectLCM::ddKinectLCM(QObject*);
 //void ddKinectLCM::init(ddLCMThread*, const QString&);
 //qint64 ddKinectLCM::getPointCloudFromKinect(vtkPolyData*)
